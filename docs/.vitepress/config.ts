@@ -51,6 +51,17 @@ export default defineConfig({
           { text: "Monitoring locks", link: "/03-locking/monitoring-locks" },
         ],
       },
+      {
+        text: "4. MVCC under the hood",
+        items: [
+          { text: "Row versions: xmin, xmax, ctid", link: "/04-mvcc/row-versions" },
+          { text: "Snapshots under the hood", link: "/04-mvcc/snapshots-under-the-hood" },
+          { text: "Dead tuples & bloat", link: "/04-mvcc/dead-tuples-and-bloat" },
+          { text: "VACUUM", link: "/04-mvcc/vacuum" },
+          { text: "Long transactions", link: "/04-mvcc/long-transactions" },
+          { text: "Transaction ID wraparound", link: "/04-mvcc/wraparound" },
+        ],
+      },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/svyatov/postgres-transactions" }],
     search: { provider: "local" },

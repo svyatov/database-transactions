@@ -44,7 +44,7 @@ the Postgres client is built into Bun.
 | 1. Transactions 101 — ACID, BEGIN/COMMIT/ROLLBACK, savepoints | ✅ |
 | 2. Isolation levels & anomalies — dirty reads, non-repeatable reads, phantoms, lost updates, write skew | ✅ |
 | 3. Locking — row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | ✅ |
-| 4. MVCC internals — xmin/xmax, snapshots, bloat, VACUUM, long transactions | 🚧 planned |
+| 4. MVCC internals — xmin/xmax, snapshots, bloat, VACUUM, long transactions | ✅ |
 | 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | 🚧 planned |
 | 6. Transactions across services — outbox, LISTEN/NOTIFY, sagas, two-phase commit | 🚧 planned |
 | 7. Pitfalls compendium — symptom → broken pattern → fix | 🚧 planned |
