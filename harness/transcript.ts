@@ -33,6 +33,12 @@ export function renderMarkdown(run: RunResult): string {
   return chunks.join("\n\n") + "\n";
 }
 
+/** Event-by-event renderer for live console replay (`bun lesson`). */
+export function liveRenderer(pids: Record<string, number>): (e: Event) => string {
+  const norm = new Normalizer(pids);
+  return (e) => (e.kind === "note" ? `— ${e.text}` : renderEvent(e, norm)) + "\n";
+}
+
 function renderEvent(e: Exclude<Event, { kind: "note" }>, norm: Normalizer): string {
   switch (e.kind) {
     case "query":
@@ -111,7 +117,7 @@ const XID_COLUMNS = new Set([
   "transactionid",
 ]);
 
-const PID_COLUMNS = new Set(["pid", "pg_backend_pid", "pg_blocking_pids", "blocking_pids"]);
+const PID_COLUMNS = new Set(["pid", "pg_backend_pid", "pg_blocking_pids", "blocking_pids", "blocked_by"]);
 
 class Normalizer {
   private xids = new Map<string, number>();
@@ -123,13 +129,15 @@ class Normalizer {
 
   cell(column: string, value: unknown): string {
     if (value === null || value === undefined) return "";
+    // Bun.sql decodes int arrays as plain JS arrays on a statement's first execution,
+    // but as Int32Array on re-executions (cached statement, binary protocol). Same thing.
+    const arr = Array.isArray(value) ? value : ArrayBuffer.isView(value) ? Array.from(value as any) : null;
     if (XID_COLUMNS.has(column)) return String(this.xid(value));
     if (PID_COLUMNS.has(column)) {
-      if (Array.isArray(value)) return `{${value.map((v) => this.pid(v)).join(",")}}`;
-      return this.pid(value);
+      return arr ? `{${arr.map((v) => this.pid(v)).join(",")}}` : this.pid(value);
     }
     if (typeof value === "boolean") return value ? "t" : "f";
-    if (Array.isArray(value)) return `{${value.join(",")}}`;
+    if (arr) return `{${arr.join(",")}}`;
     return String(value);
   }
 

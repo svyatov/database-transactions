@@ -17,12 +17,26 @@ export interface RunResult {
   pids: Record<string, number>;
 }
 
+/** Optional observers, used by `bun lesson` to replay a scenario live on the console. */
+export interface RunHooks {
+  /** Sessions are open; pids are known (a live renderer needs them to normalize). */
+  ready?(pids: Record<string, number>): void;
+  /** About to execute a statement. Step mode pauses here. */
+  before?(session: string, sql: string): void | Promise<void>;
+  /** A transcript event just happened. */
+  event?(e: Event): void;
+}
+
 /** How long we wait for an expected lock wait to show up before calling the claim false. */
 const BLOCK_DEADLINE_MS = 10_000;
 
-export async function runScenario(s: Scenario<any>): Promise<RunResult> {
+export async function runScenario(s: Scenario<any>, hooks?: RunHooks): Promise<RunResult> {
   const sql = connect(s.sessions.length + 1);
   const events: Event[] = [];
+  const emit = (e: Event) => {
+    events.push(e);
+    hooks?.event?.(e);
+  };
   const pids: Record<string, number> = {};
   const unconsumed = new Set<PendingImpl>();
 
@@ -40,13 +54,17 @@ export async function runScenario(s: Scenario<any>): Promise<RunResult> {
     const sessions: Record<string, Session> = {};
     for (const name of s.sessions) {
       const conn = await sql.reserve();
-      const [row] = await conn`SELECT pg_backend_pid() AS pid`;
+      // application_name = session name, so monitoring queries (pg_stat_activity,
+      // pg_locks) can identify sessions deterministically in transcripts.
+      const [row] = await conn`
+        SELECT set_config('application_name', ${name}, false), pg_backend_pid() AS pid`;
       pids[name] = row!.pid;
-      sessions[name] = makeSession(name, row!.pid, conn, admin, events, unconsumed);
+      sessions[name] = makeSession(name, row!.pid, conn, admin, emit, unconsumed, hooks);
     }
+    hooks?.ready?.(pids);
 
     try {
-      await s.run(sessions, { note: (text) => events.push({ kind: "note", text }) });
+      await s.run(sessions, { note: (text) => emit({ kind: "note", text }) });
     } catch (e: any) {
       // Append the transcript so far — a failing scenario is debugged from its own story.
       e.message += `\n\n--- transcript up to the failure ---\n${renderMarkdown({ events, pids })}`;
@@ -78,29 +96,32 @@ function makeSession(
   pid: number,
   conn: ReservedSQL,
   monitor: ReservedSQL,
-  events: Event[],
+  emit: (e: Event) => void,
   unconsumed: Set<PendingImpl>,
+  hooks?: RunHooks,
 ): Session {
   const call = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<Rows> => {
     const text = renderSql(strings, values);
+    await hooks?.before?.(name, text);
     try {
       const rows = (await conn(strings, ...values)) as Rows;
-      events.push({ kind: "query", session: name, sql: text, rows });
+      emit({ kind: "query", session: name, sql: text, rows });
       return rows;
     } catch (raw: any) {
       const e = pgError(raw);
-      events.push({ kind: "error", session: name, sql: text, error: e });
+      emit({ kind: "error", session: name, sql: text, error: e });
       throw new Error(`[${name}] unexpected error (${e.code}) on: ${text}\n${e.message}`);
     }
   };
 
   call.fails = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<PgError> => {
     const text = renderSql(strings, values);
+    await hooks?.before?.(name, text);
     try {
       await conn(strings, ...values);
     } catch (raw: any) {
       const e = pgError(raw);
-      events.push({ kind: "error", session: name, sql: text, error: e });
+      emit({ kind: "error", session: name, sql: text, error: e });
       return e;
     }
     throw new Error(`[${name}] expected an error, but statement succeeded: ${text}`);
@@ -108,6 +129,7 @@ function makeSession(
 
   call.blocked = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<Pending> => {
     const text = renderSql(strings, values);
+    await hooks?.before?.(name, text);
     const executing = conn(strings, ...values) as Promise<Rows>;
     executing.catch(() => {}); // consumed later via pending.success() / pending.failure()
 
@@ -134,8 +156,8 @@ function makeSession(
       }
     }
 
-    events.push({ kind: "blocked", session: name, sql: text });
-    const pending = new PendingImpl(name, text, executing, events, unconsumed);
+    emit({ kind: "blocked", session: name, sql: text });
+    const pending = new PendingImpl(name, text, executing, emit, unconsumed);
     unconsumed.add(pending);
     return pending;
   };
@@ -148,7 +170,7 @@ class PendingImpl implements Pending {
     readonly session: string,
     readonly sql: string,
     private executing: Promise<Rows>,
-    private events: Event[],
+    private emit: (e: Event) => void,
     private unconsumed: Set<PendingImpl>,
   ) {}
 
@@ -156,12 +178,12 @@ class PendingImpl implements Pending {
     this.unconsumed.delete(this);
     return this.executing.then(
       (rows) => {
-        this.events.push({ kind: "resume", session: this.session, rows });
+        this.emit({ kind: "resume", session: this.session, rows });
         return rows;
       },
       (raw: any) => {
         const e = pgError(raw);
-        this.events.push({ kind: "resume-error", session: this.session, error: e });
+        this.emit({ kind: "resume-error", session: this.session, error: e });
         throw new Error(
           `[${this.session}] blocked statement failed unexpectedly (${e.code}): ${this.sql}\n${e.message}`,
         );
@@ -179,7 +201,7 @@ class PendingImpl implements Pending {
       },
       (raw: any) => {
         const e = pgError(raw);
-        this.events.push({ kind: "resume-error", session: this.session, error: e });
+        this.emit({ kind: "resume-error", session: this.session, error: e });
         return e;
       },
     );
