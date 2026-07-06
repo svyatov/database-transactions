@@ -7,6 +7,7 @@
  *
  * <id> is any unique part of the scenario path: "deadlock", "02-isolation/write-skew-rr", …
  */
+import { dialectFor } from "../harness/dialect";
 import type { Scenario } from "../harness/scenario";
 import { runScenario, type Event } from "../harness/run";
 import { liveRenderer } from "../harness/transcript";
@@ -43,12 +44,13 @@ if (matches.length !== 1) {
 }
 
 const s = await load(matches[0]!);
+const dialect = dialectFor(matches[0]!);
 console.log(`\n${s.title}\nClaim: ${s.claim}\n`);
 
 const stdin = console[Symbol.asyncIterator]();
 let render = (e: Event): string => JSON.stringify(e);
-await runScenario(s, {
-  ready: (pids) => (render = liveRenderer(pids)),
+await runScenario(s, dialect, {
+  ready: (pids) => (render = liveRenderer(pids, dialect)),
   before: step
     ? async (session, sql) => {
         process.stdout.write(`⏎ next up — [${session}] ${sql.split("\n")[0]}`);

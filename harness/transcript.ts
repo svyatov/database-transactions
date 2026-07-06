@@ -1,17 +1,19 @@
+import type { Dialect } from "./dialect";
 import type { Event, RunResult } from "./run";
 import type { Row, Rows } from "./scenario";
 
 /**
- * Renders a scenario run as psql-flavored markdown.
+ * Renders a scenario run as CLI-flavored markdown.
  *
  * Values that vary between runs are normalized so committed transcripts diff cleanly:
  *  - transaction ids  → 1001, 1002, … in order of first appearance
- *  - backend pids     → pid(A), pid(B), …
- * Everything else must be deterministic by scenario convention (ORDER BY on multi-row
- * SELECTs, no timestamps, `::regclass` instead of raw oids).
+ *  - backend ids      → pid(A), pid(B), …
+ * Which columns hold those values is dialect-specific. Everything else must be
+ * deterministic by scenario convention (ORDER BY on multi-row SELECTs, no timestamps,
+ * `::regclass` instead of raw oids).
  */
-export function renderMarkdown(run: RunResult): string {
-  const norm = new Normalizer(run.pids);
+export function renderMarkdown(run: RunResult, dialect: Dialect): string {
+  const norm = new Normalizer(run.pids, dialect);
   const chunks: string[] = [];
   let fence: string[] = [];
   const flush = () => {
@@ -26,7 +28,7 @@ export function renderMarkdown(run: RunResult): string {
       flush();
       chunks.push(`*${e.text}*`);
     } else {
-      fence.push(renderEvent(e, norm), "");
+      fence.push(renderEvent(e, norm, dialect), "");
     }
   }
   flush();
@@ -34,23 +36,23 @@ export function renderMarkdown(run: RunResult): string {
 }
 
 /** Event-by-event renderer for live console replay (`bun lesson`). */
-export function liveRenderer(pids: Record<string, number>): (e: Event) => string {
-  const norm = new Normalizer(pids);
-  return (e) => (e.kind === "note" ? `— ${e.text}` : renderEvent(e, norm)) + "\n";
+export function liveRenderer(pids: Record<string, number>, dialect: Dialect): (e: Event) => string {
+  const norm = new Normalizer(pids, dialect);
+  return (e) => (e.kind === "note" ? `— ${e.text}` : renderEvent(e, norm, dialect)) + "\n";
 }
 
-function renderEvent(e: Exclude<Event, { kind: "note" }>, norm: Normalizer): string {
+function renderEvent(e: Exclude<Event, { kind: "note" }>, norm: Normalizer, dialect: Dialect): string {
   switch (e.kind) {
     case "query":
-      return `${prompt(e.session, e.sql)}\n${formatResult(e.rows, norm)}`;
+      return `${prompt(e.session, e.sql)}\n${formatResult(e.rows, e.sql, norm, dialect)}`;
     case "error":
-      return `${prompt(e.session, e.sql)}\n${formatError(e.error)}`;
+      return `${prompt(e.session, e.sql)}\n${dialect.errorLine(e.error)}`;
     case "blocked":
       return `${prompt(e.session, e.sql)}\n⏳ ${e.session} is waiting for a lock…`;
     case "resume":
-      return `⏵ ${e.session} resumes:\n${formatResult(e.rows, norm)}`;
+      return `⏵ ${e.session} resumes:\n${formatResult(e.rows, e.sql, norm, dialect)}`;
     case "resume-error":
-      return `⏵ ${e.session}'s blocked statement fails:\n${formatError(e.error)}`;
+      return `⏵ ${e.session}'s blocked statement fails:\n${dialect.errorLine(e.error)}`;
   }
 }
 
@@ -59,27 +61,12 @@ function prompt(session: string, sql: string): string {
   const [first = "", ...rest] = sql.split("\n");
   const lines = [`${session}> ${first}`, ...rest.map((l) => `${" ".repeat(session.length)}  ${l}`)];
   const text = lines.join("\n");
-  // Append the ; psql would require — unless one is already there or a trailing comment is in the way.
+  // Append the ; the CLI would require — unless one is already there or a trailing comment is in the way.
   return /;\s*$/.test(text) || /--/.test(lines.at(-1)!) ? text : text + ";";
 }
 
-function formatError(error: { code: string; message: string }): string {
-  return `ERROR:  ${error.code}: ${error.message}`;
-}
-
-function formatResult(rows: Rows, norm: Normalizer): string {
-  if (rows.length > 0) return formatTable(rows, norm);
-  switch (rows.command) {
-    case "SELECT":
-      return "(0 rows)";
-    case "INSERT":
-      return `INSERT 0 ${rows.count ?? 0}`;
-    case "UPDATE":
-    case "DELETE":
-      return `${rows.command} ${rows.count ?? 0}`;
-    default:
-      return rows.command ?? "OK";
-  }
+function formatResult(rows: Rows, sql: string, norm: Normalizer, dialect: Dialect): string {
+  return rows.length > 0 ? formatTable(rows, norm) : dialect.statusLine(rows, sql);
 }
 
 function formatTable(rows: Row[], norm: Normalizer): string {
@@ -105,25 +92,14 @@ function center(text: string, width: number): string {
   return " ".repeat(left) + text + " ".repeat(pad - left);
 }
 
-/** Column names whose values are transaction ids and must be remapped. */
-const XID_COLUMNS = new Set([
-  "xmin",
-  "xmax",
-  "t_xmin",
-  "t_xmax",
-  "xid",
-  "backend_xid",
-  "backend_xmin",
-  "transactionid",
-]);
-
-const PID_COLUMNS = new Set(["pid", "pg_backend_pid", "pg_blocking_pids", "blocking_pids", "blocked_by"]);
-
 class Normalizer {
   private xids = new Map<string, number>();
   private pidNames: Map<number, string>;
 
-  constructor(pids: Record<string, number>) {
+  constructor(
+    pids: Record<string, number>,
+    private dialect: Dialect,
+  ) {
     this.pidNames = new Map(Object.entries(pids).map(([name, pid]) => [pid, name]));
   }
 
@@ -132,8 +108,8 @@ class Normalizer {
     // Bun.sql decodes int arrays as plain JS arrays on a statement's first execution,
     // but as Int32Array on re-executions (cached statement, binary protocol). Same thing.
     const arr = Array.isArray(value) ? value : ArrayBuffer.isView(value) ? Array.from(value as any) : null;
-    if (XID_COLUMNS.has(column)) return String(this.xid(value));
-    if (PID_COLUMNS.has(column)) {
+    if (this.dialect.xidColumns.has(column)) return String(this.xid(value));
+    if (this.dialect.idColumns.has(column)) {
       return arr ? `{${arr.map((v) => this.pid(v)).join(",")}}` : this.pid(value);
     }
     if (typeof value === "boolean") return value ? "t" : "f";

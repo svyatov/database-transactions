@@ -1,19 +1,19 @@
 import type { ReservedSQL } from "bun";
-import { connect } from "./db";
-import type { PgError, Pending, Rows, Scenario, Session } from "./scenario";
+import type { Dialect } from "./dialect";
+import type { DbError, Pending, Rows, Scenario, Session } from "./scenario";
 import { renderMarkdown } from "./transcript";
 
 export type Event =
   | { kind: "query"; session: string; sql: string; rows: Rows }
-  | { kind: "error"; session: string; sql: string; error: PgError }
+  | { kind: "error"; session: string; sql: string; error: DbError }
   | { kind: "blocked"; session: string; sql: string }
-  | { kind: "resume"; session: string; rows: Rows }
-  | { kind: "resume-error"; session: string; error: PgError }
+  | { kind: "resume"; session: string; sql: string; rows: Rows }
+  | { kind: "resume-error"; session: string; sql: string; error: DbError }
   | { kind: "note"; text: string };
 
 export interface RunResult {
   events: Event[];
-  /** session name → backend pid, used to normalize pids in transcripts */
+  /** session name → backend/connection id, used to normalize ids in transcripts */
   pids: Record<string, number>;
 }
 
@@ -30,8 +30,8 @@ export interface RunHooks {
 /** How long we wait for an expected lock wait to show up before calling the claim false. */
 const BLOCK_DEADLINE_MS = 10_000;
 
-export async function runScenario(s: Scenario<any>, hooks?: RunHooks): Promise<RunResult> {
-  const sql = connect(s.sessions.length + 1);
+export async function runScenario(s: Scenario<any>, dialect: Dialect, hooks?: RunHooks): Promise<RunResult> {
+  const sql = dialect.connect(s.sessions.length + 1);
   const events: Event[] = [];
   const emit = (e: Event) => {
     events.push(e);
@@ -41,38 +41,27 @@ export async function runScenario(s: Scenario<any>, hooks?: RunHooks): Promise<R
   const unconsumed = new Set<PendingImpl>();
 
   try {
-    // Clean slate: drop everything the previous scenario left behind, including
-    // prepared transactions (they survive disconnects — that's their whole point).
+    // Clean slate: drop everything the previous scenario left behind.
     const admin = await sql.reserve();
-    for (const { gid } of await admin`SELECT gid FROM pg_prepared_xacts`) {
-      await admin.unsafe(`ROLLBACK PREPARED '${String(gid).replace(/'/g, "''")}'`);
-    }
-    await admin.unsafe("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
+    await dialect.reset(admin);
     await admin.unsafe(s.setup);
 
     // The admin connection doubles as the monitor for blocked-statement detection.
     const sessions: Record<string, Session> = {};
     for (const name of s.sessions) {
       const conn = await sql.reserve();
-      // application_name = session name, so monitoring queries (pg_stat_activity,
-      // pg_locks) can identify sessions deterministically in transcripts.
-      const [row] = await conn`
-        SELECT set_config('application_name', ${name}, false), pg_backend_pid() AS pid`;
-      pids[name] = row!.pid;
-      sessions[name] = makeSession(name, row!.pid, conn, admin, emit, unconsumed, hooks);
+      pids[name] = await dialect.openSession(conn, name);
+      sessions[name] = makeSession(name, pids[name]!, conn, admin, dialect, emit, unconsumed, hooks);
     }
     hooks?.ready?.(pids);
 
     // When a lock holder releases, waiters further down the queue briefly wake up to
     // requeue — a monitoring query fired in that window sees them as not waiting. This
     // fence (invisible in transcripts) polls until the backend is provably back in a
-    // Lock wait, the same signal `.blocked` uses.
+    // lock wait, the same signal `.blocked` uses.
     const locked = async (name: string) => {
       const deadline = Date.now() + BLOCK_DEADLINE_MS;
-      while (true) {
-        const [row] = await admin`
-          SELECT wait_event_type FROM pg_stat_activity WHERE pid = ${pids[name]}`;
-        if (row?.wait_event_type === "Lock") return;
+      while (!(await dialect.isBlocked(admin, pids[name]!))) {
         if (Date.now() > deadline) {
           throw new Error(`[${name}] not in a lock wait within ${BLOCK_DEADLINE_MS}ms`);
         }
@@ -84,7 +73,7 @@ export async function runScenario(s: Scenario<any>, hooks?: RunHooks): Promise<R
       await s.run(sessions, { note: (text) => emit({ kind: "note", text }), locked });
     } catch (e: any) {
       // Append the transcript so far — a failing scenario is debugged from its own story.
-      e.message += `\n\n--- transcript up to the failure ---\n${renderMarkdown({ events, pids })}`;
+      e.message += `\n\n--- transcript up to the failure ---\n${renderMarkdown({ events, pids }, dialect)}`;
       throw e;
     }
 
@@ -96,11 +85,11 @@ export async function runScenario(s: Scenario<any>, hooks?: RunHooks): Promise<R
     return { events, pids };
   } finally {
     // Cancel anything still running (e.g. a blocked statement in a failed scenario),
-    // then drop the pool. PostgreSQL rolls back open transactions on disconnect.
+    // then drop the pool. The server rolls back open transactions on disconnect.
     try {
-      const canceller = connect(1);
+      const canceller = dialect.connect(1);
       for (const pid of Object.values(pids)) {
-        await canceller`SELECT pg_cancel_backend(${pid})`;
+        await dialect.cancel(canceller, pid);
       }
       await canceller.close();
     } catch {}
@@ -113,6 +102,7 @@ function makeSession(
   pid: number,
   conn: ReservedSQL,
   monitor: ReservedSQL,
+  dialect: Dialect,
   emit: (e: Event) => void,
   unconsumed: Set<PendingImpl>,
   hooks?: RunHooks,
@@ -121,23 +111,23 @@ function makeSession(
     const text = renderSql(strings, values);
     await hooks?.before?.(name, text);
     try {
-      const rows = (await conn(strings, ...values)) as Rows;
+      const rows = await dialect.exec(conn, strings, values, text);
       emit({ kind: "query", session: name, sql: text, rows });
       return rows;
     } catch (raw: any) {
-      const e = pgError(raw);
+      const e = dialect.toError(raw);
       emit({ kind: "error", session: name, sql: text, error: e });
       throw new Error(`[${name}] unexpected error (${e.code}) on: ${text}\n${e.message}`);
     }
   };
 
-  call.fails = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<PgError> => {
+  call.fails = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<DbError> => {
     const text = renderSql(strings, values);
     await hooks?.before?.(name, text);
     try {
-      await conn(strings, ...values);
+      await dialect.exec(conn, strings, values, text);
     } catch (raw: any) {
-      const e = pgError(raw);
+      const e = dialect.toError(raw);
       emit({ kind: "error", session: name, sql: text, error: e });
       return e;
     }
@@ -147,12 +137,12 @@ function makeSession(
   call.blocked = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<Pending> => {
     const text = renderSql(strings, values);
     await hooks?.before?.(name, text);
-    const executing = conn(strings, ...values) as Promise<Rows>;
+    const executing = dialect.exec(conn, strings, values, text);
     executing.catch(() => {}); // consumed later via pending.success() / pending.failure()
 
-    // The claim "this statement blocks" is itself verified: we poll pg_stat_activity
-    // until the backend reports a Lock wait. If the statement completes instead, the
-    // scenario fails — exactly what a false claim deserves.
+    // The claim "this statement blocks" is itself verified: we poll the database's
+    // lock-wait view until the backend reports a lock wait. If the statement completes
+    // instead, the scenario fails — exactly what a false claim deserves.
     const deadline = Date.now() + BLOCK_DEADLINE_MS;
     while (true) {
       const state = await Promise.race([
@@ -165,16 +155,14 @@ function makeSession(
       if (state !== "waiting") {
         throw new Error(`[${name}] expected to block, but statement ${state}: ${text}`);
       }
-      const [row] = await monitor`
-        SELECT wait_event_type FROM pg_stat_activity WHERE pid = ${pid}`;
-      if (row?.wait_event_type === "Lock") break;
+      if (await dialect.isBlocked(monitor, pid)) break;
       if (Date.now() > deadline) {
         throw new Error(`[${name}] statement never blocked within ${BLOCK_DEADLINE_MS}ms: ${text}`);
       }
     }
 
     emit({ kind: "blocked", session: name, sql: text });
-    const pending = new PendingImpl(name, text, executing, emit, unconsumed);
+    const pending = new PendingImpl(name, text, executing, dialect, emit, unconsumed);
     unconsumed.add(pending);
     return pending;
   };
@@ -187,6 +175,7 @@ class PendingImpl implements Pending {
     readonly session: string,
     readonly sql: string,
     private executing: Promise<Rows>,
+    private dialect: Dialect,
     private emit: (e: Event) => void,
     private unconsumed: Set<PendingImpl>,
   ) {}
@@ -195,12 +184,12 @@ class PendingImpl implements Pending {
     this.unconsumed.delete(this);
     return this.executing.then(
       (rows) => {
-        this.emit({ kind: "resume", session: this.session, rows });
+        this.emit({ kind: "resume", session: this.session, sql: this.sql, rows });
         return rows;
       },
       (raw: any) => {
-        const e = pgError(raw);
-        this.emit({ kind: "resume-error", session: this.session, error: e });
+        const e = this.dialect.toError(raw);
+        this.emit({ kind: "resume-error", session: this.session, sql: this.sql, error: e });
         throw new Error(
           `[${this.session}] blocked statement failed unexpectedly (${e.code}): ${this.sql}\n${e.message}`,
         );
@@ -208,7 +197,7 @@ class PendingImpl implements Pending {
     );
   }
 
-  failure(): Promise<PgError> {
+  failure(): Promise<DbError> {
     this.unconsumed.delete(this);
     return this.executing.then(
       () => {
@@ -217,18 +206,12 @@ class PendingImpl implements Pending {
         );
       },
       (raw: any) => {
-        const e = pgError(raw);
-        this.emit({ kind: "resume-error", session: this.session, error: e });
+        const e = this.dialect.toError(raw);
+        this.emit({ kind: "resume-error", session: this.session, sql: this.sql, error: e });
         return e;
       },
     );
   }
-}
-
-/** Bun puts the SQLSTATE in `errno`; move it to `code`, where scenarios expect it. */
-function pgError(e: any): PgError {
-  if (e?.errno) e.code = String(e.errno);
-  return e;
 }
 
 /** Render a tagged-template statement as the literal SQL shown in transcripts. */

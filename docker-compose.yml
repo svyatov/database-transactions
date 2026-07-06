@@ -1,4 +1,4 @@
-# The single source of truth for the PostgreSQL version every claim is verified against.
+# The single source of truth for the database versions every claim is verified against.
 # Used identically by local dev and CI.
 services:
   postgres:
@@ -15,3 +15,17 @@ services:
       interval: 2s
       timeout: 2s
       retries: 15
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: app
+    ports:
+      # Same convention as 54321: off the default port, no clash with a local MySQL on 3306.
+      - "33061:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pmysql"]
+      interval: 2s
+      timeout: 2s
+      # First boot initializes the data directory — slower than postgres.
+      retries: 30

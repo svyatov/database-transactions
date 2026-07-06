@@ -1,17 +1,21 @@
 /**
  * The API scenario files are written against. Deliberately tiny — read it top to bottom.
  *
- * A scenario opens one dedicated PostgreSQL connection per named session and interleaves
+ * A scenario opens one dedicated database connection per named session and interleaves
  * their statements using plain `await` order. Everything it claims, it asserts.
  */
 
 export type Row = Record<string, any>;
-export type Rows = Row[] & { command?: string; count?: number };
+export type Rows = Row[] & { command?: string; count?: number; affectedRows?: number };
 
-/** A PostgreSQL error; `code` is the SQLSTATE, e.g. "40001". */
-export interface PgError extends Error {
+/**
+ * A database error. `code` is what that database's users grep for: the SQLSTATE on
+ * PostgreSQL (e.g. "40001"), the error number on MySQL (e.g. "1213").
+ */
+export interface DbError extends Error {
   code: string;
   detail?: string;
+  sqlState?: string;
 }
 
 /**
@@ -22,18 +26,19 @@ export interface PgError extends Error {
  */
 export interface Pending {
   success(): Promise<Rows>;
-  failure(): Promise<PgError>;
+  failure(): Promise<DbError>;
 }
 
-/** One named database session — a dedicated PostgreSQL connection. */
+/** One named database session — a dedicated connection. */
 export interface Session {
   /** Run a statement. The scenario fails if it errors. */
   (sql: TemplateStringsArray, ...values: unknown[]): Promise<Rows>;
   /** Run a statement that MUST error. Returns the error for assertions. */
-  fails(sql: TemplateStringsArray, ...values: unknown[]): Promise<PgError>;
+  fails(sql: TemplateStringsArray, ...values: unknown[]): Promise<DbError>;
   /**
    * Fire a statement that MUST block on a lock. Resolves once the backend is provably
-   * waiting (observed via pg_stat_activity), so the interleaving is deterministic.
+   * waiting (observed via the database's lock-wait views), so the interleaving is
+   * deterministic.
    */
   blocked(sql: TemplateStringsArray, ...values: unknown[]): Promise<Pending>;
 }
