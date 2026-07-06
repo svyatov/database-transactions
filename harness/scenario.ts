@@ -41,6 +41,12 @@ export interface Session {
 export interface Tools {
   /** Add a narrator line to the transcript. */
   note(text: string): void;
+  /**
+   * Wait until a session (blocked earlier via `.blocked`) is back in a lock wait.
+   * Needed before monitoring queries fired right after another session released a
+   * lock: waiters briefly wake up to requeue and momentarily aren't "waiting".
+   */
+  locked(session: string): Promise<void>;
 }
 
 export interface Scenario<S extends readonly string[] = readonly string[]> {

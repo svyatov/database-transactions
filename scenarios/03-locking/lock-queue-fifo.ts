@@ -30,6 +30,7 @@ export default scenario({
     t.note("A commits. The lock goes to B — the head of the queue — not to C.");
     await A`COMMIT`;
     await second.success();
+    await t.locked("C"); // C wakes to requeue behind B; wait until it's provably waiting again
 
     const after = await M`
       SELECT application_name AS waiting, pg_blocking_pids(pid) AS blocked_by

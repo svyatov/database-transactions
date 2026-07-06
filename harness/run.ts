@@ -63,8 +63,25 @@ export async function runScenario(s: Scenario<any>, hooks?: RunHooks): Promise<R
     }
     hooks?.ready?.(pids);
 
+    // When a lock holder releases, waiters further down the queue briefly wake up to
+    // requeue — a monitoring query fired in that window sees them as not waiting. This
+    // fence (invisible in transcripts) polls until the backend is provably back in a
+    // Lock wait, the same signal `.blocked` uses.
+    const locked = async (name: string) => {
+      const deadline = Date.now() + BLOCK_DEADLINE_MS;
+      while (true) {
+        const [row] = await admin`
+          SELECT wait_event_type FROM pg_stat_activity WHERE pid = ${pids[name]}`;
+        if (row?.wait_event_type === "Lock") return;
+        if (Date.now() > deadline) {
+          throw new Error(`[${name}] not in a lock wait within ${BLOCK_DEADLINE_MS}ms`);
+        }
+        await Bun.sleep(15);
+      }
+    };
+
     try {
-      await s.run(sessions, { note: (text) => emit({ kind: "note", text }) });
+      await s.run(sessions, { note: (text) => emit({ kind: "note", text }), locked });
     } catch (e: any) {
       // Append the transcript so far — a failing scenario is debugged from its own story.
       e.message += `\n\n--- transcript up to the failure ---\n${renderMarkdown({ events, pids })}`;
