@@ -32,8 +32,8 @@ overwrite a row modified after B's snapshot — and refuses:
   If you remember one thing from this chapter, make it this.
 - REPEATABLE READ (and SERIALIZABLE) convert the silent loss into SQLSTATE `40001` — data
   is safe, and the losing transaction retries.
-- Raising the isolation level is only one of the fixes, and often not the best one. The
-  patterns chapter (coming) demonstrates the alternatives:
+- Raising the isolation level is only one of the fixes, and often not the best one.
+  [Fixing lost updates](/05-patterns/fixing-lost-updates) demonstrates the alternatives:
   - **atomic updates** — `SET balance = balance + 10`: race-free even at READ COMMITTED;
   - **pessimistic locking** — `SELECT … FOR UPDATE`;
   - **optimistic locking** — a version column checked in the WHERE clause.

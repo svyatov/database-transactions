@@ -42,8 +42,8 @@ would invalidate the already-committed report:
 ## The fine print
 
 - **Retries are part of the deal.** Any serializable transaction — even a read-only one — can
-  be aborted with `40001`. Your application must retry; a small wrapper makes this painless
-  (patterns chapter, coming).
+  be aborted with `40001`. Your application must retry;
+  [a small wrapper makes this painless](/05-patterns/retrying-serialization-failures).
 - **False positives exist.** SSI's dependency tracking is deliberately conservative: it can
   abort transactions that would in fact have been fine. The
   [manual](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-SERIALIZABLE)

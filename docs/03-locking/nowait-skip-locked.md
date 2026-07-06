@@ -38,7 +38,7 @@ gives you three ways out, and they answer three different questions:
   ["skipping locked rows provides an inconsistent view of the data, so this is not suitable for
   general purpose work, but can be used to avoid lock contention with multiple consumers
   accessing a queue-like table"](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE).
-  The patterns chapter builds a full worker queue on it.
+  The patterns chapter builds a [full worker queue](/05-patterns/job-queue) on it.
 - A rolled-back worker's row simply reappears for the next taker — crash safety for free.
 
 ## Further reading

@@ -21,7 +21,8 @@ strictly-stronger level).
 ## How to use this table
 
 - Staying on the default? Then **know that lost updates are on you**: fix read-modify-write
-  code with atomic updates, `FOR UPDATE`, or version columns (patterns chapter).
+  code with atomic updates, `FOR UPDATE`, or version columns
+  ([fixing lost updates](/05-patterns/fixing-lost-updates)).
 - Invariants that span multiple rows ("at least one on call", "sum must stay positive",
   "unique-ish under concurrency") are only automatic at **SERIALIZABLE** — anything less needs
   explicit locking.

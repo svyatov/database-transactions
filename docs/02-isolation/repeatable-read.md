@@ -42,7 +42,8 @@ comes when it commits (fail) or rolls back (proceed):
   ([`serialization_failure`](https://www.postgresql.org/docs/current/errcodes-appendix.html)).
   This is not an error to log-and-swallow — the manual's own instruction is to
   ["retry the whole transaction from the beginning"](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-REPEATABLE-READ)
-  (a ready-made retry helper is coming in the patterns chapter).
+  (the patterns chapter has a
+  [ready-made retry helper](/05-patterns/retrying-serialization-failures)).
 - Stale reads are still reads: two REPEATABLE READ transactions can each make decisions on
   their snapshots that are jointly impossible — that's [write skew](/02-isolation/serializable),
   and this level does *not* stop it.

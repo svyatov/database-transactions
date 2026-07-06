@@ -62,6 +62,18 @@ export default defineConfig({
           { text: "Transaction ID wraparound", link: "/04-mvcc/wraparound" },
         ],
       },
+      {
+        text: "5. Real-world patterns",
+        items: [
+          { text: "Fixing lost updates", link: "/05-patterns/fixing-lost-updates" },
+          { text: "Retrying serialization failures", link: "/05-patterns/retrying-serialization-failures" },
+          { text: "A SKIP LOCKED job queue", link: "/05-patterns/job-queue" },
+          { text: "Advisory locks", link: "/05-patterns/advisory-locks" },
+          { text: "Check-then-insert", link: "/05-patterns/check-then-insert" },
+          { text: "Idempotency keys", link: "/05-patterns/idempotency" },
+          { text: "ORM pitfalls", link: "/05-patterns/orm-pitfalls" },
+        ],
+      },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/svyatov/postgres-transactions" }],
     search: { provider: "local" },
