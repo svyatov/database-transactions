@@ -40,6 +40,17 @@ export default defineConfig({
           { text: "The anomaly catalog", link: "/02-isolation/anomaly-catalog" },
         ],
       },
+      {
+        text: "3. Locking",
+        items: [
+          { text: "Row locks", link: "/03-locking/row-locks" },
+          { text: "Lock queues", link: "/03-locking/lock-queues" },
+          { text: "NOWAIT, lock_timeout, SKIP LOCKED", link: "/03-locking/nowait-skip-locked" },
+          { text: "Table locks & DDL", link: "/03-locking/table-locks-and-ddl" },
+          { text: "Deadlocks", link: "/03-locking/deadlocks" },
+          { text: "Monitoring locks", link: "/03-locking/monitoring-locks" },
+        ],
+      },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/svyatov/postgres-transactions" }],
     search: { provider: "local" },

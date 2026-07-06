@@ -28,6 +28,8 @@ cd postgres-transactions
 bun install
 docker compose up -d --wait   # PostgreSQL 18.4 on localhost:54321
 bun test                      # run every scenario, assert every claim
+bun lesson                    # list every lesson scenario…
+bun lesson deadlock --step    # …and replay one live, statement by statement
 bun run gen                   # regenerate all transcripts from real runs
 bun run docs:dev              # browse the site locally
 ```
@@ -41,7 +43,7 @@ the Postgres client is built into Bun.
 |---|---|
 | 1. Transactions 101 — ACID, BEGIN/COMMIT/ROLLBACK, savepoints | ✅ |
 | 2. Isolation levels & anomalies — dirty reads, non-repeatable reads, phantoms, lost updates, write skew | ✅ |
-| 3. Locking — row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | 🚧 planned |
+| 3. Locking — row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | ✅ |
 | 4. MVCC internals — xmin/xmax, snapshots, bloat, VACUUM, long transactions | 🚧 planned |
 | 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | 🚧 planned |
 | 6. Transactions across services — outbox, LISTEN/NOTIFY, sagas, two-phase commit | 🚧 planned |

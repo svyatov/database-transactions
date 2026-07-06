@@ -20,6 +20,17 @@ bun test
 This runs every scenario in `scenarios/` against the database and asserts every outcome —
 the same check CI runs before anything is published.
 
+## Replay a lesson in your terminal
+
+```sh
+bun lesson                    # list every scenario
+bun lesson deadlock           # replay one, streaming the transcript live
+bun lesson deadlock --step    # you press Enter before each statement fires
+```
+
+`--step` is the closest thing to driving the two psql windows yourself: you decide when each
+session's next statement runs, and watch who blocks whom in real time.
+
 ## Tinker
 
 The best way to learn is to break things. Open any scenario, change something, and watch:
