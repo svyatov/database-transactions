@@ -46,7 +46,7 @@ the Postgres client is built into Bun.
 | 3. Locking — row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | ✅ |
 | 4. MVCC internals — xmin/xmax, snapshots, bloat, VACUUM, long transactions | ✅ |
 | 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | ✅ |
-| 6. Transactions across services — outbox, LISTEN/NOTIFY, sagas, two-phase commit | 🚧 planned |
+| 6. Transactions across services — outbox, LISTEN/NOTIFY, sagas, two-phase commit | ✅ |
 | 7. Pitfalls compendium — symptom → broken pattern → fix | 🚧 planned |
 | 8. Production — spotting, debugging, and monitoring transaction bugs live | 🚧 planned |
 

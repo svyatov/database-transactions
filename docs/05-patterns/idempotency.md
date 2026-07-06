@@ -42,8 +42,8 @@ check, only an insert with one winner.
   back means "do the work", nothing back means "done already — return the stored
   result". Store whatever the caller needs re-answered alongside the key.
 - Only effects **inside** the transaction are protected. An email sent mid-transaction
-  still sends twice; anything external needs its own idempotency story (chapter 6,
-  coming, builds one: the transactional outbox).
+  still sends twice; anything external needs its own idempotency story — chapter 6
+  builds one: the [transactional outbox](/06-distributed/transactional-outbox).
 
 ## Further reading
 

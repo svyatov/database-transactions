@@ -74,6 +74,15 @@ export default defineConfig({
           { text: "ORM pitfalls", link: "/05-patterns/orm-pitfalls" },
         ],
       },
+      {
+        text: "6. Transactions across services",
+        items: [
+          { text: "Dual writes & the outbox", link: "/06-distributed/transactional-outbox" },
+          { text: "LISTEN/NOTIFY", link: "/06-distributed/listen-notify" },
+          { text: "Sagas", link: "/06-distributed/sagas" },
+          { text: "Two-phase commit", link: "/06-distributed/two-phase-commit" },
+        ],
+      },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/svyatov/postgres-transactions" }],
     search: { provider: "local" },
