@@ -3,7 +3,9 @@
 Here's the part many working devs never learned: **there is no such thing as "outside a
 transaction" in PostgreSQL.** Every statement you've ever run was in one. Without `BEGIN`,
 PostgreSQL wraps each statement in its own tiny transaction and commits it the moment it
-finishes — that's *autocommit*.
+finishes — that's [*autocommit*](https://www.postgresql.org/docs/current/tutorial-transactions.html)
+(the manual: "each individual statement has an implicit `BEGIN` and (if successful) `COMMIT`
+wrapped around it").
 
 `BEGIN` (or `START TRANSACTION`) simply says: *keep the transaction open, I have more
 statements coming.* From then on, nothing is visible to anyone else until `COMMIT`, and
@@ -41,3 +43,5 @@ PostgreSQL refuses **all** further statements — even perfectly valid ones — 
 - [PostgreSQL docs: BEGIN](https://www.postgresql.org/docs/current/sql-begin.html) ·
   [COMMIT](https://www.postgresql.org/docs/current/sql-commit.html) ·
   [ROLLBACK](https://www.postgresql.org/docs/current/sql-rollback.html)
+- [PostgreSQL docs: SQLSTATE codes (Appendix A)](https://www.postgresql.org/docs/current/errcodes-appendix.html) —
+  `25P02` is `in_failed_sql_transaction`

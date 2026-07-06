@@ -7,7 +7,9 @@ This chapter shows you exactly what each trade buys — and what it silently giv
 
 ## The SQL standard's view
 
-The SQL standard defines four levels by which *anomalies* they permit:
+The SQL standard defines four levels by which *anomalies* they permit
+([Table 13.1](https://www.postgresql.org/docs/current/transaction-iso.html#MVCC-ISOLEVEL-TABLE)
+in the manual):
 
 | Level | Dirty read | Non-repeatable read | Phantom read |
 |---|---|---|---|
@@ -33,7 +35,8 @@ them to the level that stops it.
 PostgreSQL implements isolation with **MVCC** (multi-version concurrency control): writers
 create new row *versions* instead of overwriting, and every query reads from a **snapshot** —
 a frozen view of which transactions' work is visible. That architecture has one famous
-consequence: **readers never block writers, and writers never block readers.** Only writers
+consequence — in [the manual's words](https://www.postgresql.org/docs/current/mvcc-intro.html),
+"reading never blocks writing and writing never blocks reading". Only writers
 competing for the *same rows* wait for each other (you'll see plenty of that in this chapter).
 
 The levels differ mainly in *when the snapshot is taken*:
@@ -48,7 +51,9 @@ The levels differ mainly in *when the snapshot is taken*:
 Two PostgreSQL-specific facts worth internalizing now, both proven in the next lessons:
 
 1. **Dirty reads are impossible at every level.** READ UNCOMMITTED is accepted as syntax and
-   silently behaves as READ COMMITTED — [proof](/02-isolation/read-committed).
+   silently behaves as READ COMMITTED ("In PostgreSQL READ UNCOMMITTED is treated as READ
+   COMMITTED" — [SET TRANSACTION](https://www.postgresql.org/docs/current/sql-set-transaction.html)) —
+   [proof](/02-isolation/read-committed).
 2. **REPEATABLE READ also prevents phantoms**, which the standard doesn't require —
    [proof](/02-isolation/repeatable-read).
 
@@ -60,11 +65,14 @@ BEGIN; SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;  -- same thing, two steps
 SET default_transaction_isolation = 'repeatable read'; -- session/server default
 ```
 
-The level must be chosen before the transaction's first query — at REPEATABLE READ and above,
-that first query is what takes the snapshot.
+The level ["cannot be changed after the first query or data-modification statement"](https://www.postgresql.org/docs/current/sql-set-transaction.html)
+of the transaction — and at REPEATABLE READ and above, that first statement (not `BEGIN`
+itself) is what takes the snapshot.
 
 ## Further reading
 
 - [PostgreSQL docs: Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html) —
   the single best chapter of the official manual; this chapter of the tutorial is essentially
   that page with executable proofs.
+- [PostgreSQL docs: Introduction to MVCC](https://www.postgresql.org/docs/current/mvcc-intro.html) ·
+  [SET TRANSACTION](https://www.postgresql.org/docs/current/sql-set-transaction.html)

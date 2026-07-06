@@ -25,15 +25,18 @@ strictly-stronger level).
 - Invariants that span multiple rows ("at least one on call", "sum must stay positive",
   "unique-ish under concurrency") are only automatic at **SERIALIZABLE** — anything less needs
   explicit locking.
-- Anything running at REPEATABLE READ or SERIALIZABLE **must retry on SQLSTATE 40001**. If you
-  see that error in your logs being swallowed, you've found a bug.
+- Anything running at REPEATABLE READ or SERIALIZABLE **must retry on
+  [SQLSTATE 40001](https://www.postgresql.org/docs/current/errcodes-appendix.html)**
+  (`serialization_failure`). If you see that error in your logs being swallowed, you've found
+  a bug.
 
 ## What the standard's table doesn't tell you
 
 The SQL standard's three-anomaly table (dirty / non-repeatable / phantom) dates from 1992.
-Lost updates, write skew, and the read-only anomaly were formalized later¹ — and they're the
+Lost updates, write skew, and the read-only anomaly were formalized later² — and they're the
 ones that actually bite in modern applications, because they emerge from *application logic*
 (read, decide, write) rather than from raw statement visibility.
 
-¹ Berenson et al., [*A Critique of ANSI SQL Isolation Levels*](https://www.microsoft.com/en-us/research/publication/a-critique-of-ansi-sql-isolation-levels/) (1995);
-Fekete et al., *Making Snapshot Isolation Serializable* (2005).
+² Berenson et al., [*A Critique of ANSI SQL Isolation Levels*](https://www.microsoft.com/en-us/research/publication/a-critique-of-ansi-sql-isolation-levels/) (1995);
+Fekete et al., [*Making Snapshot Isolation Serializable*](https://doi.org/10.1145/1071610.1071615)
+(ACM TODS, 2005).

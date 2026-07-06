@@ -32,8 +32,8 @@ already-successful credit:
 
 ## Key takeaways
 
-- A failed statement doesn't just fail itself — it dooms the transaction; the only exit is
-  `ROLLBACK` (or a [savepoint](/01-basics/savepoints)).
+- A failed statement doesn't just fail itself — it dooms the transaction: nothing in it can
+  ever commit; all you can do is roll back — fully, or to a [savepoint](/01-basics/savepoints).
 - Statements that succeeded *inside* a rolled-back transaction leave **no trace**. There is no
   "partial commit".
 - Other sessions never see intermediate states: B read bob's balance mid-transfer and got the

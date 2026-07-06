@@ -36,7 +36,9 @@ your statements:
 
 What happens when your UPDATE has to *wait* for a lock, and the row changes while you wait?
 At READ COMMITTED, PostgreSQL re-evaluates the WHERE clause against the **new** row version —
-and silently skips rows that no longer match:
+and silently skips rows that no longer match ("The search condition of the command (the
+`WHERE` clause) is re-evaluated to see if the updated version of the row still matches the
+search condition" — [the manual](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED)):
 
 <<< ../../scenarios/02-isolation/update-recheck.ts#demo{ts}
 

@@ -44,14 +44,21 @@ would invalidate the already-committed report:
 - **Retries are part of the deal.** Any serializable transaction — even a read-only one — can
   be aborted with `40001`. Your application must retry; a small wrapper makes this painless
   (patterns chapter, coming).
-- **False positives exist.** SSI's dependency tracking is conservative; it sometimes aborts
-  transactions that would have been fine. That's a performance cost, never a correctness bug.
+- **False positives exist.** SSI's dependency tracking is deliberately conservative: it can
+  abort transactions that would in fact have been fine. The
+  [manual](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-SERIALIZABLE)
+  notes, for instance, that when memory pressure forces page-level predicate locks to be
+  combined into relation-level ones, "an increase in the rate of serialization failures may
+  occur". A false positive is a performance cost, never a correctness bug.
 - **Keep transactions short and small.** Dependency tracking is bounded by
-  `max_pred_locks_per_transaction`; long transactions and sequential scans widen the
-  conflict surface.
+  [`max_pred_locks_per_transaction`](https://www.postgresql.org/docs/current/runtime-config-locks.html#GUC-MAX-PRED-LOCKS-PER-TRANSACTION)
+  (and its `_per_relation` / `_per_page` siblings); long transactions and sequential scans
+  widen the conflict surface.
 - For read-only work that must never be aborted *or* contribute to aborting others:
-  `BEGIN ISOLATION LEVEL SERIALIZABLE READ ONLY DEFERRABLE` — it may wait for a safe snapshot
-  before starting, then runs with zero serialization risk.
+  `BEGIN ISOLATION LEVEL SERIALIZABLE READ ONLY DEFERRABLE` — it may block while acquiring a
+  safe snapshot, then runs "without any risk of contributing to or being canceled by a
+  serialization failure"; the manual calls it
+  ["well suited for long-running reports or backups"](https://www.postgresql.org/docs/current/sql-set-transaction.html).
 
 ## Key takeaways
 
@@ -67,3 +74,5 @@ would invalidate the already-committed report:
 - [PostgreSQL docs: Serializable Isolation Level](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-SERIALIZABLE)
 - [PostgreSQL wiki: SSI examples](https://wiki.postgresql.org/wiki/SSI) — the source of the
   deposit-report example above
+- Ports & Grittner, [*Serializable Snapshot Isolation in PostgreSQL*](https://arxiv.org/abs/1208.4179)
+  (VLDB 2012) — the paper behind PostgreSQL's SSI implementation
