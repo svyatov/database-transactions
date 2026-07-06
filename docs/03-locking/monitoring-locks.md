@@ -55,6 +55,8 @@ and went off to do something else. That second kind never resolves on its own.
 - Row locks are invisible in `pg_locks` — you'll see the waiter camped on the blocker's
   `transactionid` instead.
 - The wait-chain query + `blocker_state` answers the incident question: slow, or stuck?
+  [Chapter 8 turns it into a runbook](/08-production/who-is-blocking-whom), including
+  what to do once you've found the culprit.
 
 ## Further reading
 

@@ -83,6 +83,21 @@ export default defineConfig({
           { text: "Two-phase commit", link: "/06-distributed/two-phase-commit" },
         ],
       },
+      {
+        text: "7. Pitfalls compendium",
+        items: [{ text: "Symptom → cause → fix", link: "/07-pitfalls/compendium" }],
+      },
+      {
+        text: "8. Production",
+        items: [
+          { text: "Symptom triage", link: "/08-production/symptom-triage" },
+          { text: "Who is blocking whom", link: "/08-production/who-is-blocking-whom" },
+          { text: "Long & idle transactions", link: "/08-production/long-and-idle-transactions" },
+          { text: "Logs & counters", link: "/08-production/logs-and-counters" },
+          { text: "Bloat & vacuum health", link: "/08-production/bloat-and-vacuum-health" },
+          { text: "Alerting checklist", link: "/08-production/alerting-checklist" },
+        ],
+      },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/svyatov/postgres-transactions" }],
     search: { provider: "local" },

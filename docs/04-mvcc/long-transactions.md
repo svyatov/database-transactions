@@ -58,7 +58,8 @@ primary, a stuck migration. Guardrails exist for each:
 - VACUUM (and autovacuum) silently degrade to no-ops behind an old snapshot; the failure
   is invisible until the bloat is.
 - Keep transactions short by design; set `idle_in_transaction_session_timeout` as a
-  seatbelt. Chapter 8 builds the alerting version of the query above.
+  seatbelt. Chapter 8 builds the
+  [alerting version of the query above](/08-production/long-and-idle-transactions).
 
 ## Further reading
 

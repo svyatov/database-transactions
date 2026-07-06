@@ -1,0 +1,90 @@
+# Pitfalls compendium
+
+Every transaction bug this site can prove, in one place — keyed by what you'd actually
+observe. Each entry links to the scenario that reproduces it and the lesson that fixes
+it. If you're staring at a live incident, start with the
+[symptom triage table](/08-production/symptom-triage) instead.
+
+## 1. Increments vanish under load
+
+**Broken:** read a value, compute in application code, write it back — at the default
+READ COMMITTED, concurrent writers silently overwrite each other.
+**Fix:** atomic `SET x = x + …`, `SELECT … FOR UPDATE`, or a version column.
+**Proof:** [the lost update](/02-isolation/lost-update) ·
+[all three fixes](/05-patterns/fixing-lost-updates)
+
+## 2. Duplicates despite an "is it taken?" check
+
+**Broken:** `SELECT` then `INSERT` — both transactions honestly saw no row.
+**Fix:** a `UNIQUE` constraint, with `ON CONFLICT` for control flow.
+**Proof:** [check-then-insert](/05-patterns/check-then-insert)
+
+## 3. A customer is charged twice
+
+**Broken:** the client retried; the operation ran twice, each run individually correct.
+**Fix:** an idempotency key — gate and work in one transaction.
+**Proof:** [idempotency keys](/05-patterns/idempotency)
+
+## 4. An invariant across rows breaks with no error
+
+**Broken:** "at least one doctor on call" checked per-transaction; two transactions
+update *different* rows — write skew, invisible to every level below SERIALIZABLE.
+**Fix:** SERIALIZABLE (plus retries), or serialize explicitly with a lock.
+**Proof:** [write skew](/02-isolation/serializable)
+
+## 5. A "trivial" migration takes the site down
+
+**Broken:** `ALTER TABLE` queued behind one long reader; every later query queued
+behind the `ALTER` — the queue, not the DDL, is the outage.
+**Fix:** `lock_timeout` around DDL, split risky changes into stages.
+**Proof:** [table locks & DDL](/03-locking/table-locks-and-ddl)
+
+## 6. The connection pool is empty, but the database is idle
+
+**Broken:** sessions parked `idle in transaction` — an ORM or a stray `await` between
+BEGIN and COMMIT — each holding locks and a pooled connection.
+**Fix:** `idle_in_transaction_session_timeout` / `transaction_timeout`, and fix the code.
+**Proof:** [ORM pitfalls](/05-patterns/orm-pitfalls) ·
+[find & kill them](/08-production/long-and-idle-transactions)
+
+## 7. A table keeps growing though rows are deleted
+
+**Broken:** DELETE only [marks tuples dead](/04-mvcc/dead-tuples-and-bloat); one old
+transaction — even read-only — keeps VACUUM from reclaiming anything.
+**Fix:** keep transactions short; monitor the vacuum dashboard; hunt the oldest xact.
+**Proof:** [long transactions](/04-mvcc/long-transactions) ·
+[bloat & vacuum health](/08-production/bloat-and-vacuum-health)
+
+## 8. Random `40001` errors under load
+
+**Broken:** treating serialization failures as bugs (or worse, ignoring them) — at
+REPEATABLE READ and SERIALIZABLE they are the *design*.
+**Fix:** a retry loop around every RR/SSI transaction; keep transaction bodies re-runnable.
+**Proof:** [the retry wrapper](/05-patterns/retrying-serialization-failures)
+
+## 9. Two workers process the same job
+
+**Broken:** claiming jobs with a plain `SELECT`, or marking them "running" in a
+transaction that then crashes and revives nothing.
+**Fix:** claim–work–complete inside one transaction with `FOR UPDATE SKIP LOCKED`.
+**Proof:** [the job queue](/05-patterns/job-queue)
+
+## 10. Events reach the broker for data that doesn't exist (or never reach it)
+
+**Broken:** writing the database and publishing to a broker as two separate writes.
+**Fix:** the transactional outbox; accept at-least-once, make consumers idempotent.
+**Proof:** [dual writes & the outbox](/06-distributed/transactional-outbox)
+
+## 11. Locks are held, VACUUM is stuck — and no session owns any of it
+
+**Broken:** an orphaned prepared transaction from a two-phase commit whose coordinator
+died between the phases. Nothing expires it.
+**Fix:** `SELECT gid FROM pg_prepared_xacts;` then `COMMIT PREPARED` / `ROLLBACK PREPARED`.
+**Proof:** [two-phase commit](/06-distributed/two-phase-commit)
+
+## 12. A deadlock — and both transactions looked innocent
+
+**Broken:** two code paths locking the same rows in different orders.
+**Fix:** consistent lock ordering; retry `40P01` like `40001`; watch the counter.
+**Proof:** [deadlocks](/03-locking/deadlocks) ·
+[the permanent trace](/08-production/logs-and-counters)

@@ -50,8 +50,8 @@ Two safety nets sit behind autovacuum:
 
 ## Watching the clock
 
-The distance to trouble is one query away (illustrative — chapter 8 turns it into an
-alert):
+The distance to trouble is one query away (illustrative —
+[chapter 8 turns it into an alert](/08-production/bloat-and-vacuum-health)):
 
 ```sql
 SELECT datname, age(datfrozenxid) AS oldest_unfrozen_age

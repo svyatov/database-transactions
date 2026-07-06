@@ -28,8 +28,8 @@ with SQLSTATE [`25P03`](https://www.postgresql.org/docs/current/errcodes-appendi
 shows, just finds a dead connection on its next statement, and the uncommitted UPDATE
 is gone. That rollback is the point: better a failed request than a database-wide
 pileup. Keep transactions free of network I/O, and set this timeout as a seatbelt —
-alongside `transaction_timeout` and `statement_timeout` from the
-[long-transactions lesson](/04-mvcc/long-transactions).
+alongside `transaction_timeout` and `statement_timeout`,
+[both proven in chapter 8](/08-production/long-and-idle-transactions).
 
 ## Pitfall #2: no transaction where you assumed one
 

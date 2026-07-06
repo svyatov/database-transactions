@@ -47,8 +47,8 @@ the Postgres client is built into Bun.
 | 4. MVCC internals — xmin/xmax, snapshots, bloat, VACUUM, long transactions | ✅ |
 | 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | ✅ |
 | 6. Transactions across services — outbox, LISTEN/NOTIFY, sagas, two-phase commit | ✅ |
-| 7. Pitfalls compendium — symptom → broken pattern → fix | 🚧 planned |
-| 8. Production — spotting, debugging, and monitoring transaction bugs live | 🚧 planned |
+| 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ |
+| 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ |
 
 ## How it works
 
@@ -59,6 +59,11 @@ the Postgres client is built into Bun.
   it's part of the learning material.
 - `docs/` — the VitePress site. Lesson pages include the *actual scenario source* (VitePress
   snippet imports) and the *generated transcripts* — nothing is duplicated by hand.
+
+## Contributing
+
+Found a wrong or unproven claim? That's a bug. See [CONTRIBUTING.md](CONTRIBUTING.md) —
+the golden rule is *no claim without a proving scenario*.
 
 ## License
 
