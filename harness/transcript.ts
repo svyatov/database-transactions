@@ -143,6 +143,7 @@ class Normalizer {
 
   private xid(value: unknown): number {
     const key = String(value);
+    if (key === "0") return 0; // xmax = 0 means "never deleted/updated", not a real xid
     if (!this.xids.has(key)) this.xids.set(key, 1001 + this.xids.size);
     return this.xids.get(key)!;
   }
