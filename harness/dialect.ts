@@ -132,11 +132,15 @@ export const mysql: Dialect = {
     return row!.pid;
   },
 
-  // Row-lock waits show up in innodb_trx; DDL blocked on metadata locks only in processlist.
+  // Row-lock waits are visible in performance_schema.data_locks (live engine state);
+  // DDL blocked on a metadata lock only in processlist. Do NOT poll
+  // information_schema.innodb_trx for this: it is served from a cache that refreshes
+  // only after 100ms of idle time — polling it faster than that reads stale data forever.
   async isBlocked(monitor, id) {
     const rows = await monitor`
-      SELECT 1 FROM information_schema.innodb_trx
-        WHERE trx_mysql_thread_id = ${id} AND trx_state = 'LOCK WAIT'
+      SELECT 1 FROM performance_schema.data_locks dl
+        JOIN performance_schema.threads th ON th.thread_id = dl.thread_id
+        WHERE th.processlist_id = ${id} AND dl.lock_status = 'WAITING'
       UNION ALL
       SELECT 1 FROM performance_schema.processlist
         WHERE id = ${id} AND state LIKE 'Waiting for%lock'`;

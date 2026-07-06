@@ -26,10 +26,10 @@ some other database. This project takes a different approach:
 git clone https://github.com/svyatov/database-transactions.git
 cd database-transactions
 bun install
-docker compose up -d --wait   # PostgreSQL 18.4 on localhost:54321
+docker compose up -d --wait   # PostgreSQL 18.4 on :54321, MySQL 8.4 on :33061
 bun test                      # run every scenario, assert every claim
 bun lesson                    # list every lesson scenario…
-bun lesson deadlock --step    # …and replay one live, statement by statement
+bun lesson mysql/deadlock --step   # …and replay one live, statement by statement
 bun run gen                   # regenerate all transcripts from real runs
 bun run docs:dev              # browse the site locally
 ```
@@ -39,19 +39,19 @@ the database client is built into Bun.
 
 ## Curriculum
 
-| Chapter | PostgreSQL |
-|---|---|
-| 1. Transactions 101 — ACID, BEGIN/COMMIT/ROLLBACK, savepoints | ✅ |
-| 2. Isolation levels & anomalies — dirty reads, non-repeatable reads, phantoms, lost updates, write skew | ✅ |
-| 3. Locking — row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | ✅ |
-| 4. MVCC internals — xmin/xmax, snapshots, bloat, VACUUM, long transactions | ✅ |
-| 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | ✅ |
-| 6. Transactions across services — outbox, LISTEN/NOTIFY, sagas, two-phase commit | ✅ |
-| 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ |
-| 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ |
+| Chapter | PostgreSQL | MySQL |
+|---|---|---|
+| 1. Transactions 101 — ACID, BEGIN/COMMIT/ROLLBACK, savepoints | ✅ | ✅ |
+| 2. Isolation levels & anomalies — dirty reads, non-repeatable reads, phantoms, lost updates, write skew | ✅ | ✅ |
+| 3. Locking — row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | ✅ | ✅ |
+| 4. MVCC internals — snapshots, bloat, VACUUM / undo logs, history length | ✅ | 🚧 |
+| 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | ✅ | 🚧 |
+| 6. Transactions across services — outbox, sagas, two-phase commit | ✅ | 🚧 |
+| 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ | 🚧 |
+| 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ | 🚧 |
 
-More databases (MySQL first) and more languages (Python first) are on the roadmap — the
-structure below is built for it.
+The same scenarios in more languages (Python first) are on the roadmap — the structure below
+is built for it.
 
 ## How it works
 

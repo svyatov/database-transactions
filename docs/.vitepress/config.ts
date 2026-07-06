@@ -89,6 +89,40 @@ const postgres: DefaultTheme.SidebarItem[] = [
   },
 ];
 
+const mysql: DefaultTheme.SidebarItem[] = [
+  about,
+  {
+    text: "1. Transactions 101",
+    items: [
+      { text: "What is a transaction?", link: "/mysql/01-basics/what-is-a-transaction" },
+      { text: "BEGIN, COMMIT, ROLLBACK", link: "/mysql/01-basics/begin-commit-rollback" },
+      { text: "Savepoints", link: "/mysql/01-basics/savepoints" },
+    ],
+  },
+  {
+    text: "2. Isolation levels & anomalies",
+    items: [
+      { text: "Snapshots & the four levels", link: "/mysql/02-isolation/snapshots-and-the-four-levels" },
+      { text: "Read Committed", link: "/mysql/02-isolation/read-committed" },
+      { text: "Repeatable Read", link: "/mysql/02-isolation/repeatable-read" },
+      { text: "Serializable", link: "/mysql/02-isolation/serializable" },
+      { text: "Lost updates", link: "/mysql/02-isolation/lost-update" },
+      { text: "The anomaly catalog", link: "/mysql/02-isolation/anomaly-catalog" },
+    ],
+  },
+  {
+    text: "3. Locking",
+    items: [
+      { text: "Row locks", link: "/mysql/03-locking/row-locks" },
+      { text: "Lock queues", link: "/mysql/03-locking/lock-queues" },
+      { text: "NOWAIT, lock timeouts, SKIP LOCKED", link: "/mysql/03-locking/nowait-skip-locked" },
+      { text: "Table locks & DDL", link: "/mysql/03-locking/table-locks-and-ddl" },
+      { text: "Deadlocks", link: "/mysql/03-locking/deadlocks" },
+      { text: "Monitoring locks", link: "/mysql/03-locking/monitoring-locks" },
+    ],
+  },
+];
+
 export default defineConfig({
   title: "Database Transactions",
   description:
@@ -100,10 +134,12 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },
+      { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
       { text: "Methodology", link: "/about/methodology" },
     ],
     sidebar: {
       "/postgres/": postgres,
+      "/mysql/": mysql,
       "/about/": postgres,
     },
     socialLinks: [{ icon: "github", link: "https://github.com/svyatov/database-transactions" }],

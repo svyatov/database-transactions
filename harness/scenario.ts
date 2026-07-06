@@ -47,6 +47,11 @@ export interface Tools {
   /** Add a narrator line to the transcript. */
   note(text: string): void;
   /**
+   * A session's backend/connection id — for asserting on monitoring-query results.
+   * (Transcripts normalize id columns to pid(A) automatically; assertions see raw ids.)
+   */
+  pid(session: string): number;
+  /**
    * Wait until a session (blocked earlier via `.blocked`) is back in a lock wait.
    * Needed before monitoring queries fired right after another session released a
    * lock: waiters briefly wake up to requeue and momentarily aren't "waiting".

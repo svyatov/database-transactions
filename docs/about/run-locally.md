@@ -1,14 +1,14 @@
 # Run it locally
 
 Everything on this site runs on your machine with two tools: [Bun](https://bun.com) and
-[Docker](https://www.docker.com/). The PostgreSQL client is built into Bun — there is nothing
+[Docker](https://www.docker.com/). The database clients are built into Bun — there is nothing
 else to install.
 
 ```sh
 git clone https://github.com/svyatov/database-transactions.git
 cd database-transactions
 bun install
-docker compose up -d --wait   # PostgreSQL on localhost:54321 (not 5432 — no clash with a local install)
+docker compose up -d --wait   # PostgreSQL on :54321, MySQL on :33061 — off-default ports, no clash with local installs
 ```
 
 ## Verify every claim
@@ -17,15 +17,16 @@ docker compose up -d --wait   # PostgreSQL on localhost:54321 (not 5432 — no c
 bun test
 ```
 
-This runs every scenario in `scenarios/` against the database and asserts every outcome —
-the same check CI runs before anything is published.
+This runs every scenario in `scenarios/` — both the `postgres/` and `mysql/` trees — against
+the real databases and asserts every outcome — the same check CI runs before anything is
+published.
 
 ## Replay a lesson in your terminal
 
 ```sh
-bun lesson                    # list every scenario
-bun lesson deadlock           # replay one, streaming the transcript live
-bun lesson deadlock --step    # you press Enter before each statement fires
+bun lesson                          # list every scenario, grouped by database and chapter
+bun lesson postgres/deadlock        # replay one, streaming the transcript live
+bun lesson mysql/deadlock --step    # you press Enter before each statement fires
 ```
 
 `--step` is the closest thing to driving the two psql windows yourself: you decide when each
@@ -55,4 +56,4 @@ bun run docs:dev   # browse the site locally
 ```
 
 If your regenerated transcripts differ from the committed ones, you've either changed a
-scenario — or found a behavior change in PostgreSQL itself.
+scenario — or found a behavior change in the database itself.

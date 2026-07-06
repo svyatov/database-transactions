@@ -9,6 +9,9 @@ hero:
     - theme: brand
       text: Learn PostgreSQL transactions
       link: /postgres/01-basics/what-is-a-transaction
+    - theme: brand
+      text: Learn MySQL transactions
+      link: /mysql/01-basics/what-is-a-transaction
     - theme: alt
       text: Why trust this site?
       link: /about/methodology

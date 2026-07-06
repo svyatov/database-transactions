@@ -70,7 +70,11 @@ export async function runScenario(s: Scenario<any>, dialect: Dialect, hooks?: Ru
     };
 
     try {
-      await s.run(sessions, { note: (text) => emit({ kind: "note", text }), locked });
+      await s.run(sessions, {
+        note: (text) => emit({ kind: "note", text }),
+        pid: (name) => pids[name]!,
+        locked,
+      });
     } catch (e: any) {
       // Append the transcript so far — a failing scenario is debugged from its own story.
       e.message += `\n\n--- transcript up to the failure ---\n${renderMarkdown({ events, pids }, dialect)}`;
