@@ -1,0 +1,17 @@
+# The single source of truth for the PostgreSQL version every claim is verified against.
+# Used identically by local dev and CI.
+services:
+  postgres:
+    image: postgres:18.4
+    # Chapter 6 (two-phase commit) needs prepared transactions, which are off by default.
+    command: -c max_prepared_transactions=10
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      # 54321 to avoid colliding with a locally installed PostgreSQL on 5432.
+      - "54321:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 15

@@ -1,0 +1,19 @@
+{
+  "name": "postgres-transactions",
+  "version": "0.1.0",
+  "description": "Learn PostgreSQL transactions from verified, runnable examples — every claim proven against a real database",
+  "license": "MIT",
+  "type": "module",
+  "repository": "github:svyatov/postgres-transactions",
+  "scripts": {
+    "test": "bun test",
+    "gen": "bun scripts/gen-transcripts.ts",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vitepress": "latest"
+  }
+}
