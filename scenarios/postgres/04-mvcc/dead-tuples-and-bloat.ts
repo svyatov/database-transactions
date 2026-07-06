@@ -30,7 +30,7 @@ export default scenario({
       { lp: 3, t_xmin: x2!.xmin, t_xmax: x3!.xmin, t_ctid: "(0,4)" },
       { lp: 4, t_xmin: x3!.xmin, t_xmax: 0, t_ctid: "(0,4)" },
     ]);
-    // #endregion
+    // #endregion demo
 
     // #region size
     t.note("The same effect at scale: 1000 rows fit in 5 pages of 8 kB.");
@@ -49,6 +49,6 @@ export default scenario({
     eq(gone!.live_rows, 0);
     const [s3] = await A`SELECT (pg_relation_size('bloat') / 8192)::int AS pages`;
     eq(s3!.pages, 9);
-    // #endregion
+    // #endregion size
   },
 });

@@ -29,6 +29,6 @@ export default scenario({
 
     const rows = await A`SELECT n FROM steps ORDER BY n`;
     eq([...rows], [{ n: 1 }, { n: 4 }]);
-    // #endregion
+    // #endregion demo
   },
 });

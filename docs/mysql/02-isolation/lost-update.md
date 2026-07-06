@@ -6,7 +6,10 @@ raised — the data is simply wrong.
 
 ## At READ COMMITTED
 
-<<< ../../../scenarios/mysql/02-isolation/lost-update-read-committed.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/02-isolation/lost-update-read-committed.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/02-isolation/lost-update-read-committed.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/lost-update-read-committed.md-->
 
@@ -17,7 +20,10 @@ REPEATABLE READ [detects the stale write and aborts it](/postgres/02-isolation/l
 with `40001`. MySQL's UPDATE is a [current read](/mysql/02-isolation/repeatable-read) — it
 applies your stale arithmetic to the newest row version and raises nothing:
 
-<<< ../../../scenarios/mysql/02-isolation/lost-update-repeatable-read.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/02-isolation/lost-update-repeatable-read.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/02-isolation/lost-update-repeatable-read.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/lost-update-repeatable-read.md-->
 

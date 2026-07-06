@@ -10,7 +10,10 @@ and the source of every anomaly on this page.
 
 ## No dirty reads — even if you ask for them
 
-<<< ../../../scenarios/postgres/02-isolation/no-dirty-reads.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/02-isolation/no-dirty-reads.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/02-isolation/no-dirty-reads.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/no-dirty-reads.md-->
 
@@ -19,7 +22,10 @@ and the source of every anomaly on this page.
 The flagship READ COMMITTED anomaly: the same query, twice, inside one transaction — two
 different answers.
 
-<<< ../../../scenarios/postgres/02-isolation/non-repeatable-read.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/02-isolation/non-repeatable-read.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/02-isolation/non-repeatable-read.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/non-repeatable-read.md-->
 
@@ -28,7 +34,10 @@ different answers.
 The same effect applies to *sets* of rows, not just values — new matching rows appear between
 your statements:
 
-<<< ../../../scenarios/postgres/02-isolation/phantom-read.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/02-isolation/phantom-read.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/02-isolation/phantom-read.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/phantom-read.md-->
 
@@ -40,7 +49,10 @@ and silently skips rows that no longer match ("The search condition of the comma
 `WHERE` clause) is re-evaluated to see if the updated version of the row still matches the
 search condition" — [the manual](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED)):
 
-<<< ../../../scenarios/postgres/02-isolation/update-recheck.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/02-isolation/update-recheck.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/02-isolation/update-recheck.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/update-recheck.md-->
 

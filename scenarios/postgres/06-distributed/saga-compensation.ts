@@ -35,6 +35,6 @@ export default scenario({
     const [comp] = await Saga`UPDATE flights SET seats = seats + 1 WHERE id = 1 RETURNING seats`;
     eq(comp!.seats, 5);
     await Saga`COMMIT`;
-    // #endregion
+    // #endregion demo
   },
 });

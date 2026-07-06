@@ -21,6 +21,13 @@ This runs every scenario in `scenarios/` — both the `postgres/` and `mysql/` t
 the real databases and asserts every outcome — the same check CI runs before anything is
 published.
 
+The Python ports run with [uv](https://docs.astral.sh/uv/):
+
+```sh
+uv sync --directory python
+uv run --directory python pytest
+```
+
 ## Replay a lesson in your terminal
 
 ```sh

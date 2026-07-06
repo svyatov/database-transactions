@@ -36,6 +36,6 @@ export default scenario({
 
     await B`COMMIT`;
     await C`COMMIT`;
-    // #endregion
+    // #endregion demo
   },
 });

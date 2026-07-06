@@ -35,6 +35,6 @@ export default scenario({
     eq(final!.on_call, 1); // the invariant survived
 
     t.note("B's job is to retry. On retry it would see only one doctor on call — and refuse the night off.");
-    // #endregion
+    // #endregion demo
   },
 });

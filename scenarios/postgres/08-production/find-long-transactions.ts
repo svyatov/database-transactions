@@ -15,7 +15,7 @@ export default scenario({
     t.note("A starts a 'quick report' at REPEATABLE READ… and never gets around to committing.");
     await A`BEGIN ISOLATION LEVEL REPEATABLE READ`;
     await A`SELECT count(*)::int AS orders FROM orders`;
-    // #endregion
+    // #endregion demo
 
     await Bun.sleep(1200); // let the forgotten transaction age past the detector's threshold
 
@@ -44,6 +44,6 @@ export default scenario({
     eq(horizon, [{ application_name: "A", wrote_anything: false, pins_vacuum_horizon: true }]);
 
     await A`COMMIT`;
-    // #endregion
+    // #endregion detect
   },
 });

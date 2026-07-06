@@ -26,6 +26,6 @@ export default scenario({
 
     await B`COMMIT`;
     await A`ROLLBACK`;
-    // #endregion
+    // #endregion demo
   },
 });

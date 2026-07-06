@@ -6,7 +6,10 @@ transactions with SQLSTATE `40P01` (`deadlock_detected`).
 
 ## Two transfers, opposite directions
 
-<<< ../../../scenarios/postgres/03-locking/deadlock.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/deadlock.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/deadlock.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/deadlock.md-->
 
@@ -27,7 +30,10 @@ consequences worth internalizing:
 Deadlocks need a cycle, and a cycle needs disagreement about order. Remove the disagreement
 and the deadlock is not "less likely" — it's **impossible**:
 
-<<< ../../../scenarios/postgres/03-locking/deadlock-avoidance.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/deadlock-avoidance.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/deadlock-avoidance.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/deadlock-avoidance.md-->
 

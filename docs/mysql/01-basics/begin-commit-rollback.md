@@ -6,7 +6,10 @@ is its own transaction, committed the instant it finishes. `BEGIN` (an alias for
 
 ## Autocommit and visibility
 
-<<< ../../../scenarios/mysql/01-basics/autocommit-visibility.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/01-basics/autocommit-visibility.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/01-basics/autocommit-visibility.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/autocommit-visibility.md-->
 
@@ -16,7 +19,10 @@ Here MySQL and PostgreSQL part ways completely. In PostgreSQL, any error aborts 
 transaction — every further statement is refused with `25P02` until you roll back. MySQL just
 rolls back the **failed statement** and carries on as if nothing happened:
 
-<<< ../../../scenarios/mysql/01-basics/aborted-transaction.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/01-basics/aborted-transaction.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/01-basics/aborted-transaction.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/aborted-transaction.md-->
 

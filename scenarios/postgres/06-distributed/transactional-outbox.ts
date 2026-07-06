@@ -25,7 +25,7 @@ export default scenario({
     await App`ROLLBACK`;
     const events = await App`SELECT id, event FROM outbox ORDER BY id`;
     eq(events, [{ id: 1, event: "order_placed: order 1" }]);
-    // #endregion
+    // #endregion demo
 
     // #region relay
     t.note("A relay claims the event exactly like a chapter-5 job-queue worker…");
@@ -48,6 +48,6 @@ export default scenario({
 
     const [drained] = await Relay`SELECT count(*)::int AS pending FROM outbox`;
     eq(drained!.pending, 0);
-    // #endregion
+    // #endregion relay
   },
 });

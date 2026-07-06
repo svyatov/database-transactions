@@ -12,7 +12,10 @@ you can't see.
 
 ## One snapshot, no phantoms
 
-<<< ../../../scenarios/postgres/02-isolation/stable-snapshot.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/02-isolation/stable-snapshot.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/02-isolation/stable-snapshot.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/stable-snapshot.md-->
 
@@ -22,12 +25,18 @@ Reading a stale snapshot is safe. *Writing through it* is not — if a row you'r
 changed by a transaction that committed after your snapshot, PostgreSQL aborts you with
 `could not serialize access due to concurrent update`:
 
-<<< ../../../scenarios/postgres/02-isolation/concurrent-update-40001.ts#committed{ts}
+::: code-group
+<<< ../../../scenarios/postgres/02-isolation/concurrent-update-40001.ts#committed{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/02-isolation/concurrent-update-40001.py#committed{py} [Python]
+:::
 
 And if the competing writer hasn't committed yet, you first wait on its lock — the verdict
 comes when it commits (fail) or rolls back (proceed):
 
-<<< ../../../scenarios/postgres/02-isolation/concurrent-update-40001.ts#uncommitted{ts}
+::: code-group
+<<< ../../../scenarios/postgres/02-isolation/concurrent-update-40001.ts#uncommitted{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/02-isolation/concurrent-update-40001.py#uncommitted{py} [Python]
+:::
 
 <!--@include: ./parts/concurrent-update-40001.md-->
 

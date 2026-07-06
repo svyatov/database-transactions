@@ -27,6 +27,6 @@ export default scenario({
     await A`COMMIT`;
     t.note("Retry the migration when it can actually get the lock — now it sails through.");
     await B`ALTER TABLE accounts ADD COLUMN note text`;
-    // #endregion
+    // #endregion demo
   },
 });

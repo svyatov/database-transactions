@@ -5,11 +5,17 @@ for whom?* MySQL answers both from `performance_schema`.
 
 ## What one UPDATE really holds
 
-<<< ../../../scenarios/mysql/03-locking/monitoring-locks.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/03-locking/monitoring-locks.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/03-locking/monitoring-locks.py#demo{py} [Python]
+:::
 
 ## Spotting the waiter
 
-<<< ../../../scenarios/mysql/03-locking/monitoring-locks.ts#waiter{ts}
+::: code-group
+<<< ../../../scenarios/mysql/03-locking/monitoring-locks.ts#waiter{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/03-locking/monitoring-locks.py#waiter{py} [Python]
+:::
 
 <!--@include: ./parts/monitoring-locks.md-->
 

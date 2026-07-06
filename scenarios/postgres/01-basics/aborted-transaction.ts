@@ -23,6 +23,6 @@ export default scenario({
 
     const [row] = await A`SELECT 1 AS innocent`;
     eq(row!.innocent, 1);
-    // #endregion
+    // #endregion demo
   },
 });

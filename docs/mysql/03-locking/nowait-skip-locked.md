@@ -5,7 +5,10 @@ instantly, give up after a deadline, or pretend locked rows don't exist.
 
 ## NOWAIT: fail fast
 
-<<< ../../../scenarios/mysql/03-locking/nowait.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/03-locking/nowait.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/03-locking/nowait.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/nowait.md-->
 
@@ -16,7 +19,10 @@ default, settable per session (whole seconds only). When it fires you get errno 
 easy to miss — **only the statement is rolled back; the transaction stays open**, keeping
 every lock it already holds:
 
-<<< ../../../scenarios/mysql/03-locking/lock-timeout.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/03-locking/lock-timeout.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/03-locking/lock-timeout.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/lock-timeout.md-->
 
@@ -30,7 +36,10 @@ the whole transaction.)
 
 ## SKIP LOCKED: the job-queue primitive
 
-<<< ../../../scenarios/mysql/03-locking/skip-locked.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/03-locking/skip-locked.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/03-locking/skip-locked.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/skip-locked.md-->
 

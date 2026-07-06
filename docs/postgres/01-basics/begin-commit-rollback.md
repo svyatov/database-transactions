@@ -13,7 +13,10 @@ everything can still be abandoned with `ROLLBACK`.
 
 ## Autocommit and visibility, demonstrated
 
-<<< ../../../scenarios/postgres/01-basics/autocommit-visibility.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/01-basics/autocommit-visibility.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/01-basics/autocommit-visibility.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/autocommit-visibility.md-->
 
@@ -23,7 +26,10 @@ A surprise that bites every ORM user eventually: after **any** error inside a tr
 PostgreSQL refuses **all** further statements — even perfectly valid ones — with SQLSTATE
 `25P02` (`in_failed_sql_transaction`), until you `ROLLBACK`.
 
-<<< ../../../scenarios/postgres/01-basics/aborted-transaction.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/01-basics/aborted-transaction.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/01-basics/aborted-transaction.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/aborted-transaction.md-->
 

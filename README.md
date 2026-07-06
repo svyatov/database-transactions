@@ -50,19 +50,28 @@ the database client is built into Bun.
 | 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ | 🚧 |
 | 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ | 🚧 |
 
-The same scenarios in more languages (Python first) are on the roadmap — the structure below
-is built for it.
+Chapters 1–3 are also available in **Python** — every lesson shows TypeScript and Python
+side by side, and both are executed in CI. More languages (Ruby, PHP) are on the roadmap —
+the structure below is built for them.
+
+```sh
+uv sync --directory python && uv run --directory python pytest   # the same claims, from Python
+```
 
 ## How it works
 
 - `scenarios/<db>/` — one TypeScript file per demo. Each opens named sessions (dedicated
   database connections), interleaves their statements with plain `await` order, and asserts
   outcomes — including "this query MUST block now" via live lock-wait monitoring.
-- `harness/` — ~400 lines that make the above work. Deliberately small and readable;
-  it's part of the learning material.
+- `harness/` — ~500 lines that make the above work, with everything database-specific
+  side by side in `harness/dialect.ts`. Deliberately small and readable; it's part of the
+  learning material.
+- `python/` — the same scenarios and a thin harness in Python (psycopg + PyMySQL), run by
+  pytest in CI. Transcripts come only from the TypeScript harness — other languages
+  re-verify the claims.
 - `docs/<db>/` — the VitePress site, one track per database. Lesson pages include the
-  *actual scenario source* (VitePress snippet imports) and the *generated transcripts* —
-  nothing is duplicated by hand.
+  *actual scenario source* (VitePress snippet imports, with a language tab per port) and
+  the *generated transcripts* — nothing is duplicated by hand.
 
 ## Contributing
 

@@ -40,7 +40,7 @@ export default scenario({
 
     const actual = await Report`SELECT receipt_no, amount FROM receipts WHERE deposit_no = 1 ORDER BY receipt_no`;
     eq(actual.length, 3); // the published report was wrong: no serial order of these three transactions produces it
-    // #endregion
+    // #endregion rr
 
     // #region serializable
     t.note("Rewind and replay the exact same interleaving — all three transactions SERIALIZABLE.");
@@ -69,6 +69,6 @@ export default scenario({
 
     const safe = await Report`SELECT receipt_no, amount FROM receipts WHERE deposit_no = 1 ORDER BY receipt_no`;
     eq(safe.length, 2); // batch 1 still matches the published report; the cashier retries into batch 2
-    // #endregion
+    // #endregion serializable
   },
 });

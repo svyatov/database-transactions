@@ -30,7 +30,7 @@ export default scenario({
 
     await A`COMMIT`;
     t.note("PostgreSQL would have aborted A's UPDATE with 40001 instead. MySQL quietly switches world views.");
-    // #endregion
+    // #endregion committed
 
     // #region uncommitted
     t.note("If the competing write is NOT yet committed, A first waits on the row lock…");
@@ -49,6 +49,6 @@ export default scenario({
     const [final] = await A`SELECT balance FROM accounts WHERE id = 1`;
     eq(final!.balance, 350); // 300 + 50
     await A`COMMIT`;
-    // #endregion
+    // #endregion uncommitted
   },
 });

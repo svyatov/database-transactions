@@ -17,7 +17,10 @@ anything back (the Rails docs [warn about exactly this](https://api.rubyonrails.
 
 ## Recovering from an error mid-transaction
 
-<<< ../../../scenarios/postgres/01-basics/savepoint-recovery.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/01-basics/savepoint-recovery.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/01-basics/savepoint-recovery.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/savepoint-recovery.md-->
 
@@ -26,7 +29,10 @@ anything back (the Rails docs [warn about exactly this](https://api.rubyonrails.
 Savepoints stack. Rolling back to an outer savepoint destroys the inner ones — and `RELEASE`
 keeps the work but removes the bookmark:
 
-<<< ../../../scenarios/postgres/01-basics/savepoint-nesting.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/01-basics/savepoint-nesting.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/01-basics/savepoint-nesting.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/savepoint-nesting.md-->
 

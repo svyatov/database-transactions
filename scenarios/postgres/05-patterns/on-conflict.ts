@@ -33,6 +33,6 @@ export default scenario({
       ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
       RETURNING id, email`;
     eq(row!, { id: 1, email: "bob@example.com" });
-    // #endregion
+    // #endregion demo
   },
 });

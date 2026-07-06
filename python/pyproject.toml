@@ -1,0 +1,17 @@
+[project]
+name = "database-transactions-python"
+version = "0.1.0"
+description = "Python ports of the database-transactions scenarios — same claims, asserted from Python"
+requires-python = ">=3.12"
+dependencies = [
+    "psycopg[binary]>=3.2",
+    "pymysql>=1.1",
+    "cryptography>=42",   # MySQL 8.4's caching_sha2_password auth needs it
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-timeout>=2"]
+
+[tool.pytest.ini_options]
+addopts = "-q --timeout=90"
+testpaths = ["tests"]

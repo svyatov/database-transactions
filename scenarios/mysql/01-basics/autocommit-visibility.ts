@@ -30,6 +30,6 @@ export default scenario({
 
     const [visible] = await B`SELECT balance FROM accounts WHERE id = 1`;
     eq(visible!.balance, 999);
-    // #endregion
+    // #endregion demo
   },
 });

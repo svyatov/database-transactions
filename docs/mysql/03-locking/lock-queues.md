@@ -5,7 +5,10 @@ up behind one holder, and the pile-up itself is visible live in `sys.innodb_lock
 
 ## Watch the pile-up
 
-<<< ../../../scenarios/mysql/03-locking/lock-queue.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/03-locking/lock-queue.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/03-locking/lock-queue.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/lock-queue.md-->
 

@@ -38,6 +38,6 @@ export default scenario({
         { owner: "bob", balance: 50 },
       ],
     );
-    // #endregion
+    // #endregion demo
   },
 });

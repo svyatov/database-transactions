@@ -40,6 +40,6 @@ export default scenario({
       FROM pg_stat_database d, stats_before s
       WHERE d.datname = current_database()`;
     eq(delta!.new_deadlocks, 1);
-    // #endregion
+    // #endregion demo
   },
 });

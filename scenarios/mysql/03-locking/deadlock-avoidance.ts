@@ -34,6 +34,6 @@ export default scenario({
       { owner: "alice", balance: 115 },
       { owner: "bob", balance: 85 },
     ]); // both transfers landed — same workload, zero deadlocks
-    // #endregion
+    // #endregion demo
   },
 });

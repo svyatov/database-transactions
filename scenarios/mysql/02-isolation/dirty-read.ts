@@ -31,6 +31,6 @@ export default scenario({
     const [after] = await B`SELECT balance FROM accounts WHERE id = 1`;
     eq(after!.balance, 100);
     await B`COMMIT`;
-    // #endregion
+    // #endregion demo
   },
 });

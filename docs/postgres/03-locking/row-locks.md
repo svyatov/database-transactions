@@ -7,7 +7,10 @@ which ones coexist, and the row locks you're taking without knowing it.
 
 ## FOR UPDATE blocks writers — and only writers
 
-<<< ../../../scenarios/postgres/03-locking/for-update-blocks.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/for-update-blocks.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/for-update-blocks.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/for-update-blocks.md-->
 
@@ -34,7 +37,10 @@ You rarely type the middle two — but PostgreSQL uses them constantly
   says so — but the scenario below proves it: the conflict signature you'll see (non-key
   UPDATE passes, DELETE blocks) matches `FOR KEY SHARE` and nothing else in the matrix.
 
-<<< ../../../scenarios/postgres/03-locking/lock-mode-matrix.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/lock-mode-matrix.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/lock-mode-matrix.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/lock-mode-matrix.md-->
 
@@ -44,7 +50,10 @@ Insert a child row, and PostgreSQL locks the parent row for you — with `FOR KE
 weakest mode, so the parent can still be updated, just not deleted or re-keyed. That's not a
 courtesy: without the lock, the parent could vanish between the FK check and the commit.
 
-<<< ../../../scenarios/postgres/03-locking/fk-key-share.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/fk-key-share.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/fk-key-share.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/fk-key-share.md-->
 

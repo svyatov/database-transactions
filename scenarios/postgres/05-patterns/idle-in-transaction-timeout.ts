@@ -33,6 +33,6 @@ export default scenario({
 
     const [order] = await M`SELECT status FROM orders WHERE id = 1`;
     eq(order!.status, "pending"); // the UPDATE was rolled back with the killed session
-    // #endregion
+    // #endregion demo
   },
 });

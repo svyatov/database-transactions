@@ -17,7 +17,10 @@ On its own that's fine: the ALTER waits for running queries to finish, then does
 
 ## The outage, reproduced
 
-<<< ../../../scenarios/postgres/03-locking/alter-table-outage.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/alter-table-outage.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/alter-table-outage.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/alter-table-outage.md-->
 
@@ -27,7 +30,10 @@ forgotten `BEGIN` in a console session plus one routine migration equals a full 
 
 ## The fix: lock_timeout + retry
 
-<<< ../../../scenarios/postgres/03-locking/ddl-lock-timeout.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/ddl-lock-timeout.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/ddl-lock-timeout.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/ddl-lock-timeout.md-->
 

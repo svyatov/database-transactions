@@ -33,6 +33,6 @@ export default scenario({
     const forUpdate = await B.blocked`SELECT id FROM accounts WHERE id = 1 FOR UPDATE`;
     await A`COMMIT`;
     await forUpdate.success();
-    // #endregion
+    // #endregion demo
   },
 });

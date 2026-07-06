@@ -20,7 +20,7 @@ export default scenario({
     t.note("Only the statement died — the session and its transaction state are fine.");
     const [alive] = await A`SELECT 'still here' AS session`;
     eq(alive!.session, "still here");
-    // #endregion
+    // #endregion statement
 
     // #region transaction
     t.note("transaction_timeout (PostgreSQL 17+): a hard ceiling on the whole transaction — idle or busy.");
@@ -28,7 +28,7 @@ export default scenario({
     await A`SET transaction_timeout = '500ms'`;
     await A`BEGIN`;
     await A`UPDATE accounts SET balance = 999 WHERE id = 1`;
-    // #endregion
+    // #endregion transaction
 
     await Bun.sleep(1200); // let the timeout fire (invisible: the point is what M sees next)
 
@@ -44,6 +44,6 @@ export default scenario({
     t.note("The killed transaction's work rolled back, as always:");
     const [balance] = await M`SELECT balance FROM accounts WHERE id = 1`;
     eq(balance!.balance, 100);
-    // #endregion
+    // #endregion aftermath
   },
 });

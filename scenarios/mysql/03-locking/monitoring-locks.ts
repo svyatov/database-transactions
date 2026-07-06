@@ -24,7 +24,7 @@ export default scenario({
       { object_name: "accounts", index_name: null, lock_type: "TABLE", lock_mode: "IX", lock_status: "GRANTED", lock_data: null },
       { object_name: "accounts", index_name: "PRIMARY", lock_type: "RECORD", lock_mode: "X,REC_NOT_GAP", lock_status: "GRANTED", lock_data: "1" },
     ]);
-    // #endregion
+    // #endregion demo
 
     // #region waiter
     const pending = await B.blocked`UPDATE accounts SET balance = 300 WHERE id = 1`;
@@ -44,6 +44,6 @@ export default scenario({
 
     await A`COMMIT`;
     await pending.success();
-    // #endregion
+    // #endregion waiter
   },
 });

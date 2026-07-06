@@ -56,6 +56,6 @@ export default scenario({
       { lp: 3, lp_flags: 0, t_xmin: null, t_xmax: null, t_ctid: null },
       { lp: 4, lp_flags: 1, t_xmin: j3!.xmin, t_xmax: 0, t_ctid: "(0,4)" },
     ]);
-    // #endregion
+    // #endregion demo
   },
 });

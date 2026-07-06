@@ -29,7 +29,10 @@ Two things to notice before the demos:
 PostgreSQL accepts the READ UNCOMMITTED syntax but silently upgrades it to READ COMMITTED.
 MySQL takes you at your word — and hands you data that was never committed:
 
-<<< ../../../scenarios/mysql/02-isolation/dirty-read.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/02-isolation/dirty-read.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/02-isolation/dirty-read.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/dirty-read.md-->
 

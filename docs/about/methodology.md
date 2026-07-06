@@ -51,6 +51,15 @@ against the pinned database version* (see the footer under each transcript). Onl
 are normalized for reproducibility — transaction ids (rendered as `1001, 1002, …`) and
 backend/connection ids (rendered as `pid(A)`).
 
+## One transcript, many languages
+
+Transcripts show SQL and its results — they don't depend on the client language, so the
+TypeScript harness is the **sole transcript generator**. Every other language (Python today,
+more planned) ships a full port of the scenarios plus a thin harness of its own
+([`python/`](https://github.com/svyatov/database-transactions/tree/main/python)), and CI runs
+those ports against the same databases, asserting the same claims. The language tabs above
+each transcript show real, tested code — never illustrative pseudocode.
+
 ## The harness is part of the reading material
 
 The whole machinery is ~500 lines of documented TypeScript in

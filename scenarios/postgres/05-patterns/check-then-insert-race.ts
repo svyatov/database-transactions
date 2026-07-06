@@ -29,6 +29,6 @@ export default scenario({
 
     const [final] = await A`SELECT count(*)::int AS bobs FROM signups WHERE email = 'bob@example.com'`;
     eq(final!.bobs, 2); // the "impossible" duplicate
-    // #endregion
+    // #endregion demo
   },
 });

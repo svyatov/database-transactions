@@ -25,6 +25,6 @@ export default scenario({
     await B`UPDATE accounts SET balance = 300 WHERE id = 1`;
     const [row] = await B`SELECT balance FROM accounts WHERE id = 1`;
     eq(row!.balance, 300);
-    // #endregion
+    // #endregion demo
   },
 });

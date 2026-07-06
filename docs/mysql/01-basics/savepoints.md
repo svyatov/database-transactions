@@ -12,13 +12,19 @@ need them for that — their job here is to **discard a multi-statement branch i
 The risky part of the transaction made real progress before failing. A single
 `ROLLBACK TO SAVEPOINT` undoes all of it — including the statements that succeeded:
 
-<<< ../../../scenarios/mysql/01-basics/savepoint-recovery.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/01-basics/savepoint-recovery.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/01-basics/savepoint-recovery.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/savepoint-recovery.md-->
 
 ## Nesting and RELEASE
 
-<<< ../../../scenarios/mysql/01-basics/savepoint-nesting.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/01-basics/savepoint-nesting.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/01-basics/savepoint-nesting.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/savepoint-nesting.md-->
 

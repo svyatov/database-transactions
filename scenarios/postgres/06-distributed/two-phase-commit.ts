@@ -33,7 +33,7 @@ export default scenario({
       SELECT pg_terminate_backend(pid) AS terminated
       FROM pg_stat_activity WHERE application_name = 'A'`;
     eq(kill!.terminated, true);
-    // #endregion
+    // #endregion demo
 
     await Bun.sleep(300); // let the client side notice the dead socket
 
@@ -51,6 +51,6 @@ export default scenario({
     await B`COMMIT PREPARED 'transfer-42'`;
     const [final] = await B`SELECT balance FROM accounts WHERE id = 1`;
     eq(final!.balance, 200);
-    // #endregion
+    // #endregion survives
   },
 });

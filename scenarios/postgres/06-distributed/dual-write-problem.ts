@@ -35,6 +35,6 @@ export default scenario({
       SELECT (SELECT count(*)::int FROM orders WHERE id = 2) AS orders,
              (SELECT count(*)::int FROM broker WHERE event LIKE '%order 2%') AS events`;
     eq(ghost!, { orders: 0, events: 1 });
-    // #endregion
+    // #endregion demo
   },
 });

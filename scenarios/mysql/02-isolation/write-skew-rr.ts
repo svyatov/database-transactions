@@ -35,6 +35,6 @@ export default scenario({
     t.note(
       "Each transaction was internally consistent; together they broke the rule. Only SERIALIZABLE catches this.",
     );
-    // #endregion
+    // #endregion demo
   },
 });

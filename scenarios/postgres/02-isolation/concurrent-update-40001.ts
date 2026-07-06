@@ -25,7 +25,7 @@ export default scenario({
     const err = await A.fails`UPDATE accounts SET balance = 200 WHERE id = 1`;
     eq(err.code, "40001"); // serialization_failure — retry the whole transaction
     await A`ROLLBACK`;
-    // #endregion
+    // #endregion committed
 
     // #region uncommitted
     t.note(
@@ -45,6 +45,6 @@ export default scenario({
     const err2 = await pending.failure();
     eq(err2.code, "40001");
     await A`ROLLBACK`;
-    // #endregion
+    // #endregion uncommitted
   },
 });

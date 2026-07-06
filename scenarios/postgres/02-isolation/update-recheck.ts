@@ -36,6 +36,6 @@ export default scenario({
         { id: 2, value: 30 },
       ],
     );
-    // #endregion
+    // #endregion demo
   },
 });

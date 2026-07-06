@@ -28,6 +28,6 @@ export default scenario({
     await pending.success();
     const [after] = await B`SELECT balance FROM accounts WHERE id = 1`;
     eq(after!.balance, 140); // B's -10 applied on top of A's committed 150
-    // #endregion
+    // #endregion demo
   },
 });

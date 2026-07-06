@@ -38,6 +38,6 @@ export default scenario({
     t.note(
       "Note: unlike a lock timeout, a deadlock rolls back B's ENTIRE transaction — there is nothing left to ROLLBACK.",
     );
-    // #endregion
+    // #endregion demo
   },
 });

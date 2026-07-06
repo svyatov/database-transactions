@@ -32,6 +32,6 @@ export default scenario({
     await share.success();
 
     t.note("PostgreSQL's FOR KEY SHARE would coexist with that UPDATE — InnoDB has no lock that weak.");
-    // #endregion
+    // #endregion demo
   },
 });

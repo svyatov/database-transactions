@@ -1,5 +1,6 @@
-# A green run means: every scenario passed and every transcript on the site was just
-# reproduced against the PostgreSQL version pinned in docker-compose.yml.
+# A green run means: every scenario passed (TypeScript and Python, both databases) and
+# every transcript on the site was just reproduced against the database versions pinned
+# in docker-compose.yml.
 name: ci
 
 on:
@@ -31,6 +32,11 @@ jobs:
         run: |
           bun run gen
           git diff --exit-code docs
+      - uses: astral-sh/setup-uv@v5
+      - name: Run every scenario from Python — same claims, second driver
+        run: |
+          uv sync --directory python
+          uv run --directory python pytest
       - run: bun run docs:build
       - uses: actions/upload-pages-artifact@v3
         with:

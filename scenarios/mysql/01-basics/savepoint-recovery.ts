@@ -35,6 +35,6 @@ export default scenario({
         { id: 3, name: "doohickey" }, // 'gizmo' is gone with the branch
       ],
     );
-    // #endregion
+    // #endregion demo
   },
 });

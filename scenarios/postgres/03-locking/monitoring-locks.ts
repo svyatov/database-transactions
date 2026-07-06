@@ -27,7 +27,7 @@ export default scenario({
       { locktype: "transactionid", relation: null, mode: "ExclusiveLock", granted: true },
       { locktype: "virtualxid", relation: null, mode: "ExclusiveLock", granted: true },
     ]);
-    // #endregion
+    // #endregion demo
 
     // #region waiter
     const pending = await B.blocked`UPDATE accounts SET balance = 300 WHERE id = 1`;
@@ -50,6 +50,6 @@ export default scenario({
 
     await A`COMMIT`;
     await pending.success();
-    // #endregion
+    // #endregion waiter
   },
 });

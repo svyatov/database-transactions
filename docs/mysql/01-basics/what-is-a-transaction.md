@@ -29,7 +29,10 @@ Session A transfers 150 from alice (who has only 100) to bob. The credit to bob 
 the debit from alice violates a `CHECK` constraint. Watch what happens to bob's
 already-successful credit:
 
-<<< ../../../scenarios/mysql/01-basics/atomicity.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/01-basics/atomicity.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/01-basics/atomicity.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/atomicity.md-->
 

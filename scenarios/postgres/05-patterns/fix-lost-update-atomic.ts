@@ -28,6 +28,6 @@ export default scenario({
 
     const [final] = await A`SELECT balance FROM accounts WHERE id = 1`;
     eq(final!.balance, 120); // both deposits survived
-    // #endregion
+    // #endregion demo
   },
 });

@@ -67,7 +67,7 @@ class Listener {
     this.proc.kill();
   }
 }
-// #endregion
+// #endregion listener
 
 export default scenario({
   title: "NOTIFY is transactional",
@@ -116,6 +116,6 @@ export default scenario({
     t.note("Two NOTIFYs went in, one notification came out.");
 
     listener.stop();
-    // #endregion
+    // #endregion demo
   },
 });

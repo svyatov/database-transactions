@@ -32,6 +32,6 @@ export default scenario({
     eq(final!.balance, 110); // A's deposit is safe; B retries and lands on 120
 
     t.note("Retrying B from scratch reads the fresh 110 and correctly produces 120.");
-    // #endregion
+    // #endregion demo
   },
 });

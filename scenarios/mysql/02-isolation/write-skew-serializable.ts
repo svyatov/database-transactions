@@ -40,6 +40,6 @@ export default scenario({
     t.note(
       "PostgreSQL detects the same skew without blocking (SSI, at COMMIT). MySQL prevents it the classic way: locks and a deadlock victim.",
     );
-    // #endregion
+    // #endregion demo
   },
 });

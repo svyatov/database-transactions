@@ -35,7 +35,7 @@ export default scenario({
     t.note("The freed space is immediately reusable: the next INSERT lands in slot 2.");
     const [reused] = await A`INSERT INTO counters VALUES (2, 0) RETURNING ctid, id`;
     eq(reused!.ctid, "(0,2)");
-    // #endregion
+    // #endregion demo
 
     // #region size
     t.note("Same story at file level: 1000 rows in 5 pages, doubled to 9 by an UPDATE of every row.");
@@ -54,6 +54,6 @@ export default scenario({
     t.note("VACUUM FULL rewrites the table from scratch — back to 5 pages. The price: it holds ACCESS EXCLUSIVE for the whole rewrite.");
     const [s4] = await A`SELECT (pg_relation_size('bloat') / 8192)::int AS pages`;
     eq(s4!.pages, 5);
-    // #endregion
+    // #endregion size
   },
 });

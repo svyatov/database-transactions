@@ -30,6 +30,6 @@ export default scenario({
 
     const [row] = await B`SELECT balance FROM customers WHERE id = 1`;
     eq(row!.balance, 50); // the parent survived, with B's earlier non-key update intact
-    // #endregion
+    // #endregion demo
   },
 });

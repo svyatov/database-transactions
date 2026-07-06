@@ -6,7 +6,10 @@ is the guided tour; the production runbook chapter will build alerting on top of
 
 ## What one UPDATE really holds
 
-<<< ../../../scenarios/postgres/03-locking/monitoring-locks.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/monitoring-locks.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/monitoring-locks.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/monitoring-locks.md-->
 
@@ -27,7 +30,10 @@ how many rows you could lock.
 
 ## Finding the blocker
 
-<<< ../../../scenarios/postgres/03-locking/monitoring-locks.ts#waiter{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/monitoring-locks.ts#waiter{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/monitoring-locks.py#waiter{py} [Python]
+:::
 
 The one query worth memorizing — or bookmarking — is the **wait chain**:
 

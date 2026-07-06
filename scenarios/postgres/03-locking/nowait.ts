@@ -22,6 +22,6 @@ export default scenario({
     await A`COMMIT`;
     const [row] = await B`SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT`;
     eq(row!.id, 1);
-    // #endregion
+    // #endregion demo
   },
 });

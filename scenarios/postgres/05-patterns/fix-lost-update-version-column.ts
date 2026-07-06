@@ -44,6 +44,6 @@ export default scenario({
 
     const [final] = await A`SELECT balance, version FROM accounts WHERE id = 1`;
     eq(final!, { balance: 120, version: 3 }); // both deposits survived
-    // #endregion
+    // #endregion demo
   },
 });

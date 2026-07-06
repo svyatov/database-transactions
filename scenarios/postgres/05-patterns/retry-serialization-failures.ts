@@ -11,7 +11,7 @@ export async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<
     }
   }
 }
-// #endregion
+// #endregion helper
 
 export default scenario({
   title: "Retrying serialization failures",
@@ -49,6 +49,6 @@ export default scenario({
 
     const [final] = await A`SELECT balance FROM accounts WHERE id = 1`;
     eq(final!.balance, 115); // A's +10 and B's +5 both applied
-    // #endregion
+    // #endregion demo
   },
 });

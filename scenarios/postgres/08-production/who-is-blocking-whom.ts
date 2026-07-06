@@ -49,6 +49,6 @@ export default scenario({
     eq(rows.count, 1);
     const [after] = await B`SELECT balance FROM accounts WHERE id = 1`;
     eq(after!.balance, 300); // A's 200 rolled back with its termination; B's 300 committed
-    // #endregion
+    // #endregion demo
   },
 });

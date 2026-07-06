@@ -32,6 +32,6 @@ export default scenario({
     eq(final!.balance, 110); // two +10 deposits, but only one survived
 
     t.note("A's deposit vanished without any error. Fixes: atomic UPDATE, SELECT FOR UPDATE, or REPEATABLE READ — see the lesson.");
-    // #endregion
+    // #endregion demo
   },
 });

@@ -21,7 +21,7 @@ export default scenario({
     const pending = await B.blocked`SELECT pg_advisory_lock(42)`;
     await A`SELECT pg_advisory_unlock(42) AS released`;
     await pending.success();
-    // #endregion
+    // #endregion demo
 
     // #region session-vs-xact
     t.note("Session-level locks ignore transaction boundaries entirely — COMMIT releases nothing.");
@@ -43,6 +43,6 @@ export default scenario({
 
     await B`SELECT pg_advisory_unlock(7)`;
     await B`SELECT pg_advisory_unlock(42)`;
-    // #endregion
+    // #endregion session-vs-xact
   },
 });

@@ -6,7 +6,10 @@ back one transaction — the *victim* — with errno `1213`.
 
 ## The classic: opposite lock order
 
-<<< ../../../scenarios/mysql/03-locking/deadlock.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/03-locking/deadlock.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/03-locking/deadlock.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/deadlock.md-->
 
@@ -17,7 +20,10 @@ changed fewer rows; you can't choose it.)
 
 ## The cure: consistent lock order
 
-<<< ../../../scenarios/mysql/03-locking/deadlock-avoidance.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/03-locking/deadlock-avoidance.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/03-locking/deadlock-avoidance.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/deadlock-avoidance.md-->
 

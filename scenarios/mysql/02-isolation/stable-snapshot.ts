@@ -37,6 +37,6 @@ export default scenario({
     const after = await A`SELECT id, balance FROM accounts ORDER BY id`;
     eq(after.length, 3);
     eq(after[0]!.balance, 999);
-    // #endregion
+    // #endregion demo
   },
 });

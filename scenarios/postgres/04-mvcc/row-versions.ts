@@ -46,7 +46,7 @@ export default scenario({
       { lp: 1, t_xmin: v1!.xmin, t_xmax: v2!.xmin, t_ctid: "(0,2)" },
       { lp: 2, t_xmin: v2!.xmin, t_xmax: 0, t_ctid: "(0,2)" },
     ]);
-    // #endregion
+    // #endregion demo
 
     // #region delete
     t.note("DELETE doesn't erase anything either — it only stamps xmax on the current version.");
@@ -65,6 +65,6 @@ export default scenario({
       { lp: 1, t_xmin: v1!.xmin, t_xmax: v2!.xmin, t_ctid: "(0,2)" },
       { lp: 2, t_xmin: v2!.xmin, t_xmax: d!.xmax, t_ctid: "(0,2)" },
     ]);
-    // #endregion
+    // #endregion delete
   },
 });

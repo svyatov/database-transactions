@@ -58,6 +58,6 @@ export default scenario({
       { id: 1, owner: "alice", balance: 150 },
       { id: 2, owner: "bob", balance: 200 },
     ]);
-    // #endregion
+    // #endregion demo
   },
 });

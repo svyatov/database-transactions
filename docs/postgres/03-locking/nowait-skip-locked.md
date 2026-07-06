@@ -11,19 +11,28 @@ gives you three ways out, and they answer three different questions:
 
 ## NOWAIT: fail fast
 
-<<< ../../../scenarios/postgres/03-locking/nowait.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/nowait.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/nowait.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/nowait.md-->
 
 ## lock_timeout: bounded patience
 
-<<< ../../../scenarios/postgres/03-locking/lock-timeout.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/lock-timeout.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/lock-timeout.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/lock-timeout.md-->
 
 ## SKIP LOCKED: the job-queue primitive
 
-<<< ../../../scenarios/postgres/03-locking/skip-locked.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/postgres/03-locking/skip-locked.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/postgres/03-locking/skip-locked.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/skip-locked.md-->
 

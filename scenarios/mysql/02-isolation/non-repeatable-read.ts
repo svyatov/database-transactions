@@ -23,7 +23,7 @@ export default scenario({
     const [second] = await A`SELECT balance FROM accounts WHERE id = 1`;
     eq(second!.balance, 200); // same query, same transaction — different answer
     await A`COMMIT`;
-    // #endregion
+    // #endregion demo
 
     // #region blocking
     t.note(
@@ -39,6 +39,6 @@ export default scenario({
 
     const [final] = await B`SELECT balance FROM accounts WHERE id = 1`;
     eq(final!.balance, 400); // B's write landed on top of A's committed 300
-    // #endregion
+    // #endregion blocking
   },
 });

@@ -34,6 +34,6 @@ export default scenario({
     await A`COMMIT`;
     await migration.success();
     await read.success();
-    // #endregion
+    // #endregion demo
   },
 });

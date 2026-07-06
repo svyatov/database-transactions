@@ -41,6 +41,6 @@ export default scenario({
       { owner: "alice", balance: 90 },
       { owner: "bob", balance: 110 },
     ]); // A's transfer survived; B's evaporated — retry it
-    // #endregion
+    // #endregion demo
   },
 });

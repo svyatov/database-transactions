@@ -31,6 +31,6 @@ export default scenario({
     eq(final!.balance, 110); // A's deposit is gone — silently, even at REPEATABLE READ
 
     t.note("PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not — don't port that assumption.");
-    // #endregion
+    // #endregion demo
   },
 });

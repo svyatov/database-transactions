@@ -36,7 +36,7 @@ export default scenario({
 
     const [once] = await A`SELECT balance FROM accounts WHERE id = 1`;
     eq(once!.balance, 70); // charged exactly once
-    // #endregion
+    // #endregion demo
 
     // #region race
     t.note("The nasty case: the retry arrives while the original is still in flight, uncommitted.");
@@ -59,6 +59,6 @@ export default scenario({
 
     const [final] = await A`SELECT balance FROM accounts WHERE id = 1`;
     eq(final!.balance, 45); // 100 - 30 - 25: every charge applied exactly once
-    // #endregion
+    // #endregion race
   },
 });

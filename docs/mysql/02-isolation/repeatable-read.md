@@ -10,7 +10,10 @@ where MySQL's RR differs most from PostgreSQL's — and where ported assumptions
 
 ## One snapshot, no phantoms
 
-<<< ../../../scenarios/mysql/02-isolation/stable-snapshot.ts#demo{ts}
+::: code-group
+<<< ../../../scenarios/mysql/02-isolation/stable-snapshot.ts#demo{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/02-isolation/stable-snapshot.py#demo{py} [Python]
+:::
 
 <!--@include: ./parts/stable-snapshot.md-->
 
@@ -19,11 +22,17 @@ where MySQL's RR differs most from PostgreSQL's — and where ported assumptions
 Watch a single transaction read `100`, then compute `+50` *from a value it has never seen*,
 then suddenly see `200`:
 
-<<< ../../../scenarios/mysql/02-isolation/current-reads.ts#committed{ts}
+::: code-group
+<<< ../../../scenarios/mysql/02-isolation/current-reads.ts#committed{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/02-isolation/current-reads.py#committed{py} [Python]
+:::
 
 If the competing write hasn't committed yet, the current read simply waits for it:
 
-<<< ../../../scenarios/mysql/02-isolation/current-reads.ts#uncommitted{ts}
+::: code-group
+<<< ../../../scenarios/mysql/02-isolation/current-reads.ts#uncommitted{ts} [TypeScript]
+<<< ../../../python/scenarios/mysql/02-isolation/current-reads.py#uncommitted{py} [Python]
+:::
 
 <!--@include: ./parts/current-reads.md-->
 

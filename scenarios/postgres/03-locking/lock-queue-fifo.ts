@@ -44,6 +44,6 @@ export default scenario({
 
     const [final] = await C`SELECT balance FROM accounts WHERE id = 1`;
     eq(final!.balance, 211); // 100 + 1 + 10 + 100 — every update landed, in queue order
-    // #endregion
+    // #endregion demo
   },
 });

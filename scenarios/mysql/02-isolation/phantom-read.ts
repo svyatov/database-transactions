@@ -28,6 +28,6 @@ export default scenario({
 
     await A`COMMIT`;
     t.note("A's report now says '2 orders' in one place and '3 orders, total 1500' in another.");
-    // #endregion
+    // #endregion demo
   },
 });

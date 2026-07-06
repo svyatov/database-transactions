@@ -33,6 +33,6 @@ export default scenario({
       SELECT age(datfrozenxid) < current_setting('autovacuum_freeze_max_age')::int AS wraparound_ok
       FROM pg_database WHERE datname = current_database()`;
     eq(wrap, [{ wraparound_ok: true }]);
-    // #endregion
+    // #endregion demo
   },
 });
