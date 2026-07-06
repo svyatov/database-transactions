@@ -1,16 +1,16 @@
 /**
  * Runs every scenario against the real database and writes its transcript to
- * docs/<chapter>/parts/<scenario>.md, where lesson pages include it.
+ * docs/<db>/<chapter>/parts/<scenario>.md, where lesson pages include it.
  *
  * CI regenerates all transcripts and fails on any diff — the docs cannot drift
- * from actual PostgreSQL behavior.
+ * from actual database behavior.
  */
 import type { Scenario } from "../harness/scenario";
 import { connect } from "../harness/db";
 import { runScenario } from "../harness/run";
 import { renderMarkdown } from "../harness/transcript";
 
-const REPO = "https://github.com/svyatov/postgres-transactions";
+const REPO = "https://github.com/svyatov/database-transactions";
 const root = new URL("..", import.meta.url).pathname;
 
 const sql = connect(1);

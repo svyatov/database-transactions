@@ -1,10 +1,10 @@
 {
-  "name": "postgres-transactions",
+  "name": "database-transactions",
   "version": "0.1.0",
-  "description": "Learn PostgreSQL transactions from verified, runnable examples \u2014 every claim proven against a real database",
+  "description": "Learn database transactions from verified, runnable examples \u2014 every claim proven against a real database",
   "license": "MIT",
   "type": "module",
-  "repository": "github:svyatov/postgres-transactions",
+  "repository": "github:svyatov/database-transactions",
   "scripts": {
     "test": "bun test",
     "gen": "bun scripts/gen-transcripts.ts",

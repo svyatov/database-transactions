@@ -5,8 +5,8 @@ Everything on this site runs on your machine with two tools: [Bun](https://bun.c
 else to install.
 
 ```sh
-git clone https://github.com/svyatov/postgres-transactions.git
-cd postgres-transactions
+git clone https://github.com/svyatov/database-transactions.git
+cd database-transactions
 bun install
 docker compose up -d --wait   # PostgreSQL on localhost:54321 (not 5432 — no clash with a local install)
 ```
@@ -36,7 +36,7 @@ session's next statement runs, and watch who blocks whom in real time.
 The best way to learn is to break things. Open any scenario, change something, and watch:
 
 ```sh
-# e.g. edit scenarios/02-isolation/non-repeatable-read.ts:
+# e.g. edit scenarios/postgres/02-isolation/non-repeatable-read.ts:
 #   change  BEGIN ISOLATION LEVEL READ COMMITTED
 #   to      BEGIN ISOLATION LEVEL REPEATABLE READ
 bun test

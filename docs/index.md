@@ -2,13 +2,13 @@
 layout: home
 
 hero:
-  name: PostgreSQL Transactions
+  name: Database Transactions
   text: Learn from verified, runnable examples
-  tagline: Isolation levels, anomalies, locking, MVCC, and real-world concurrency patterns — every claim on this site is proven by code that just ran against a real PostgreSQL instance.
+  tagline: Isolation levels, anomalies, locking, MVCC, and real-world concurrency patterns — every claim on this site is proven by code that just ran against a real database.
   actions:
     - theme: brand
-      text: Start learning
-      link: /01-basics/what-is-a-transaction
+      text: Learn PostgreSQL transactions
+      link: /postgres/01-basics/what-is-a-transaction
     - theme: alt
       text: Why trust this site?
       link: /about/methodology
@@ -16,7 +16,7 @@ hero:
 features:
   - icon: ✅
     title: Verified, not vibed
-    details: Every session transcript is generated from a real run. CI re-verifies all of them on every change — the site cannot drift from actual PostgreSQL behavior.
+    details: Every session transcript is generated from a real run. CI re-verifies all of them on every change — the site cannot drift from actual database behavior.
   - icon: 🧪
     title: Runnable at home
     details: Clone the repo, `docker compose up`, `bun test`. Every lesson is an executable scenario you can tweak, break, and learn from.

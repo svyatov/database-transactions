@@ -1,12 +1,12 @@
-# postgres-transactions
+# database-transactions
 
-**Learn PostgreSQL transactions from verified, runnable examples.**
+**Learn database transactions from verified, runnable examples.**
 
 An interactive tutorial covering isolation levels, anomalies, locking, MVCC, and real-world
 concurrency patterns — where **every single claim is proven by executable code** running against
-a real PostgreSQL 18.4 instance.
+a real database.
 
-📖 **Read online:** https://svyatov.github.io/postgres-transactions/
+📖 **Read online:** https://svyatov.github.io/database-transactions/
 
 ## Why trust this tutorial?
 
@@ -14,7 +14,7 @@ Most database articles contain statements that are subtly wrong, outdated, or tr
 some other database. This project takes a different approach:
 
 - Every session transcript you see in the docs is **generated from a real run** against
-  PostgreSQL — never hand-written, so it can never drift from actual behavior.
+  the database — never hand-written, so it can never drift from actual behavior.
 - Every lesson ships with a **scenario**: an executable script that orchestrates concurrent
   sessions and **asserts** the outcome (`bun test` runs them all).
 - CI regenerates every transcript on every push and fails if anything changed.
@@ -23,8 +23,8 @@ some other database. This project takes a different approach:
 ## Run it locally
 
 ```sh
-git clone https://github.com/svyatov/postgres-transactions.git
-cd postgres-transactions
+git clone https://github.com/svyatov/database-transactions.git
+cd database-transactions
 bun install
 docker compose up -d --wait   # PostgreSQL 18.4 on localhost:54321
 bun test                      # run every scenario, assert every claim
@@ -35,11 +35,11 @@ bun run docs:dev              # browse the site locally
 ```
 
 Requirements: [Bun](https://bun.com) and [Docker](https://www.docker.com/). That's it —
-the Postgres client is built into Bun.
+the database client is built into Bun.
 
 ## Curriculum
 
-| Chapter | Status |
+| Chapter | PostgreSQL |
 |---|---|
 | 1. Transactions 101 — ACID, BEGIN/COMMIT/ROLLBACK, savepoints | ✅ |
 | 2. Isolation levels & anomalies — dirty reads, non-repeatable reads, phantoms, lost updates, write skew | ✅ |
@@ -50,15 +50,19 @@ the Postgres client is built into Bun.
 | 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ |
 | 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ |
 
+More databases (MySQL first) and more languages (Python first) are on the roadmap — the
+structure below is built for it.
+
 ## How it works
 
-- `scenarios/` — one TypeScript file per demo. Each opens named sessions (dedicated
-  PostgreSQL connections), interleaves their statements with plain `await` order, and asserts
-  outcomes — including "this query MUST block now" via `pg_stat_activity` monitoring.
+- `scenarios/<db>/` — one TypeScript file per demo. Each opens named sessions (dedicated
+  database connections), interleaves their statements with plain `await` order, and asserts
+  outcomes — including "this query MUST block now" via live lock-wait monitoring.
 - `harness/` — ~400 lines that make the above work. Deliberately small and readable;
   it's part of the learning material.
-- `docs/` — the VitePress site. Lesson pages include the *actual scenario source* (VitePress
-  snippet imports) and the *generated transcripts* — nothing is duplicated by hand.
+- `docs/<db>/` — the VitePress site, one track per database. Lesson pages include the
+  *actual scenario source* (VitePress snippet imports) and the *generated transcripts* —
+  nothing is duplicated by hand.
 
 ## Contributing
 

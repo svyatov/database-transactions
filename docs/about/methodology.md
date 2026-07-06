@@ -7,7 +7,7 @@ claimed — everything is demonstrated.**
 ## Every lesson is an executable scenario
 
 Each demo you see is a TypeScript file in
-[`scenarios/`](https://github.com/svyatov/postgres-transactions/tree/main/scenarios) that opens
+[`scenarios/`](https://github.com/svyatov/database-transactions/tree/main/scenarios) that opens
 real, separate PostgreSQL connections (the "sessions" `A`, `B`, `C` in the transcripts),
 interleaves their statements in a precise order, and **asserts** every outcome:
 
@@ -52,12 +52,12 @@ pids (rendered as `pid(A)`).
 ## The harness is part of the reading material
 
 The whole machinery is ~400 lines of documented TypeScript in
-[`harness/`](https://github.com/svyatov/postgres-transactions/tree/main/harness) — the
+[`harness/`](https://github.com/svyatov/database-transactions/tree/main/harness) — the
 blocked-statement detector is itself a small lesson in `pg_stat_activity` monitoring.
 
 ## Found something wrong?
 
 Then a scenario is missing or an assertion is too weak — that's a bug in this site, and it's
 fixable in a uniquely satisfying way:
-[open an issue](https://github.com/svyatov/postgres-transactions/issues) or send a PR with a
+[open an issue](https://github.com/svyatov/database-transactions/issues) or send a PR with a
 failing scenario.

@@ -14,7 +14,7 @@ bun test                      # all scenarios must pass before you start
 
 ## Adding or changing a lesson
 
-1. **Write the scenario** in `scenarios/<NN-chapter>/<slug>.ts` — default-export
+1. **Write the scenario** in `scenarios/postgres/<NN-chapter>/<slug>.ts` — default-export
    `scenario({...})` (see `harness/scenario.ts`, it's ~70 lines). Assert every outcome
    with `eq()`; a statement that must block goes through `.blocked`, one that must fail
    through `.fails`. Mark the parts the lesson shows with `// #region name` /
@@ -25,8 +25,8 @@ bun test                      # all scenarios must pass before you start
      text is not — filter `pg_stat_activity` by `application_name` instead, session
      names are set for you).
    - Nondeterministic waits go in plain code (`Bun.sleep`) — invisible to transcripts.
-3. **Write the lesson page** in `docs/<NN-chapter>/<slug>.md`: include scenario regions
-   with `<<< ../../scenarios/…#region{ts}` and the transcript with
+3. **Write the lesson page** in `docs/postgres/<NN-chapter>/<slug>.md`: include scenario regions
+   with `<<< ../../../scenarios/postgres/…#region{ts}` and the transcript with
    `<!--@include: ./parts/<slug>.md-->`. Quotes from the PostgreSQL manual must be
    verbatim and linked to the exact page (and anchor where one exists).
 4. **Generate and commit the transcript**: `bun run gen` — commit the changed files

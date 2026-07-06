@@ -23,7 +23,7 @@ const query = args.find((a) => a !== "--step");
 if (!query) {
   let chapter = "";
   for (const file of files) {
-    const dir = file.split("/")[0]!;
+    const dir = file.split("/").slice(0, 2).join("/");
     if (dir !== chapter) console.log(`\n${(chapter = dir)}`);
     console.log(`  ${file.replace(/\.ts$/, "").padEnd(44)} ${(await load(file)).title}`);
   }
