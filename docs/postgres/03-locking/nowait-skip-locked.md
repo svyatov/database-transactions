@@ -40,3 +40,4 @@ gives you three ways out, and they answer three different questions:
 - [PostgreSQL docs: SELECT — The Locking Clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE) —
   NOWAIT and SKIP LOCKED semantics
 - [PostgreSQL docs: `lock_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT)
+- [The same lesson on MySQL](/mysql/03-locking/nowait-skip-locked)

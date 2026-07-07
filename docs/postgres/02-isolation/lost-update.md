@@ -37,3 +37,4 @@ overwrite a row modified after B's snapshot — and refuses:
 ## Further reading
 
 - [PostgreSQL docs: Repeatable Read Isolation Level](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-REPEATABLE-READ)
+- [The same lesson on MySQL](/mysql/02-isolation/lost-update)

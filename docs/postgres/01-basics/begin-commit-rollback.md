@@ -41,3 +41,4 @@ PostgreSQL refuses **all** further statements — even perfectly valid ones — 
   [ROLLBACK](https://www.postgresql.org/docs/current/sql-rollback.html)
 - [PostgreSQL docs: SQLSTATE codes (Appendix A)](https://www.postgresql.org/docs/current/errcodes-appendix.html) —
   `25P02` is `in_failed_sql_transaction`
+- [The same lesson on MySQL](/mysql/01-basics/begin-commit-rollback)

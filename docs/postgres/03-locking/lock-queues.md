@@ -35,3 +35,4 @@ Two details in `M`'s output are worth a second look:
 
 - [PostgreSQL docs: Explicit Locking](https://www.postgresql.org/docs/current/explicit-locking.html)
 - [PostgreSQL docs: `pg_blocking_pids()`](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-INFO-SESSION)
+- [The same lesson on MySQL](/mysql/03-locking/lock-queues)

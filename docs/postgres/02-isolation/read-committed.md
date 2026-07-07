@@ -8,7 +8,7 @@ mid-statement.
 That per-statement snapshot is both its strength (no waiting for readers, always-fresh data)
 and the source of every anomaly on this page.
 
-## No dirty reads — even if you ask for them
+## No dirty reads, even if you ask for them
 
 <!--@include: ./parts/no-dirty-reads.md-->
 
@@ -52,3 +52,4 @@ was updated", this is where that assumption dies. Always check the affected-row 
 ## Further reading
 
 - [PostgreSQL docs: Read Committed Isolation Level](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED)
+- [The same lesson on MySQL](/mysql/02-isolation/read-committed)

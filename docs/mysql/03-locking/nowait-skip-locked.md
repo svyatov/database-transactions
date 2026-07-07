@@ -17,10 +17,10 @@ every lock it already holds:
 <!--@include: ./parts/lock-timeout.md-->
 
 ::: warning 1205 ≠ 1213
-A [deadlock (1213)](/mysql/03-locking/deadlocks) rolls back your whole transaction; a lock
-timeout (1205) rolls back one statement. After 1205 your transaction is alive and still
+A [deadlock (`1213`)](/mysql/03-locking/deadlocks) rolls back your whole transaction; a lock
+timeout (`1205`) rolls back one statement. After `1205` your transaction is alive and still
 holding locks — either retry the statement or `ROLLBACK`, but don't assume you're back at a
-clean slate. (Set `innodb_rollback_on_timeout=ON` server-wide if you want 1205 to roll back
+clean slate. (Set `innodb_rollback_on_timeout=ON` server-wide if you want `1205` to roll back
 the whole transaction.)
 :::
 

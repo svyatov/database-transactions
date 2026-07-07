@@ -29,7 +29,7 @@ bun install
 docker compose up -d --wait   # PostgreSQL 18.4 on :54321, MySQL 8.4 on :33061
 bun test                      # run every scenario, assert every claim
 bun lesson                    # list every lesson scenario…
-bun lesson mysql/deadlock --step   # …and replay one live, statement by statement
+bun lesson mysql/03-locking/deadlock --step   # …and replay one live, statement by statement
 bun run gen                   # regenerate all transcripts from real runs
 bun run docs:dev              # browse the site locally
 ```
@@ -66,7 +66,7 @@ uv sync --directory python && uv run --directory python pytest   # the same clai
   of each step — including "this query MUST block now", verified via live lock-wait
   monitoring. A handful of scenarios whose *client code* is the lesson (retry loops,
   LISTEN/NOTIFY) stay as TypeScript.
-- `harness/` — ~600 lines that make the above work: `loader.ts` interprets the YAML,
+- `harness/` — ~800 lines that make the above work: `loader.ts` interprets the YAML,
   everything database-specific sits side by side in `harness/dialect.ts`. Deliberately
   small and readable; it's part of the learning material.
 - `python/` — the cross-driver check: a second thin harness (psycopg + PyMySQL) that

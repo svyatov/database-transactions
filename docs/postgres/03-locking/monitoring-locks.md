@@ -58,3 +58,4 @@ and went off to do something else. That second kind never resolves on its own.
 
 - [PostgreSQL docs: The `pg_locks` view](https://www.postgresql.org/docs/current/view-pg-locks.html)
 - [PostgreSQL docs: `pg_stat_activity`](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW)
+- [The same lesson on MySQL](/mysql/03-locking/monitoring-locks)

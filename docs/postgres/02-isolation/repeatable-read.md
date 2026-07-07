@@ -18,10 +18,9 @@ you can't see.
 
 Reading a stale snapshot is safe. *Writing through it* is not — if a row you're updating was
 changed by a transaction that committed after your snapshot, PostgreSQL aborts you with
-`could not serialize access due to concurrent update`:
-
-And if the competing writer hasn't committed yet, you first wait on its lock — the verdict
-comes when it commits (fail) or rolls back (proceed):
+`could not serialize access due to concurrent update`. And if the competing writer hasn't
+committed yet, you first wait on its lock — the verdict comes when it commits (fail) or
+rolls back (proceed):
 
 <!--@include: ./parts/concurrent-update-40001.md-->
 
@@ -45,3 +44,4 @@ comes when it commits (fail) or rolls back (proceed):
 ## Further reading
 
 - [PostgreSQL docs: Repeatable Read Isolation Level](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-REPEATABLE-READ)
+- [The same lesson on MySQL](/mysql/02-isolation/repeatable-read)

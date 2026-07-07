@@ -72,7 +72,7 @@ closed socket — the scenario must list both accepted outcomes explicitly.
 
 ## The harness is part of the reading material
 
-The whole machinery is ~500 lines of documented TypeScript in
+The whole machinery is ~800 lines of documented TypeScript in
 [`harness/`](https://github.com/svyatov/database-transactions/tree/main/harness) — everything
 database-specific lives side by side in
 [`harness/dialect.ts`](https://github.com/svyatov/database-transactions/blob/main/harness/dialect.ts),

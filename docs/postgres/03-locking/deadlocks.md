@@ -45,3 +45,4 @@ and the deadlock is not "less likely" — it's **impossible**:
 
 - [PostgreSQL docs: Deadlocks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-DEADLOCKS)
 - [PostgreSQL docs: `deadlock_timeout`](https://www.postgresql.org/docs/current/runtime-config-locks.html#GUC-DEADLOCK-TIMEOUT)
+- [The same lesson on MySQL](/mysql/03-locking/deadlocks)

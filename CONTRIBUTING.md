@@ -17,7 +17,7 @@ uv sync --directory python    # optional: the cross-driver check
 
 1. **Write the scenario** in `scenarios/<db>/<NN-chapter>/<slug>.yaml` (`<db>` is
    `postgres` or `mysql`): `title`, `claim`, `setup` SQL, `sessions`, and an ordered list
-   of `steps`. The format is defined by `harness/loader.ts` (~130 lines — read it) and
+   of `steps`. The format is defined by `harness/loader.ts` (~150 lines — read it) and
    any existing scenario shows the idiom. Every claim is asserted: `expect:` (subset row
    match), `affected:`, `error:` on `<session>.fails:` steps; a statement that must block
    gets `blocks: p1`, resolved later by `- success: p1` or `- failure: p1`. Teaching

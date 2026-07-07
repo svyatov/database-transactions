@@ -49,3 +49,4 @@ forgotten `BEGIN` in a console session plus one routine migration equals a full 
 - [PostgreSQL docs: Table-Level Locks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-TABLES) —
   all eight modes and their conflict table
 - [PostgreSQL docs: ALTER TABLE](https://www.postgresql.org/docs/current/sql-altertable.html)
+- [The same lesson on MySQL](/mysql/03-locking/table-locks-and-ddl)

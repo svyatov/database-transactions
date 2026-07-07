@@ -60,3 +60,4 @@ courtesy: without the lock, the parent could vanish between the FK check and the
 
 - [PostgreSQL docs: Row-Level Locks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)
 - [PostgreSQL docs: SELECT — The Locking Clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE)
+- [The same lesson on MySQL](/mysql/03-locking/row-locks)

@@ -1,4 +1,4 @@
-# Snapshots & the four isolation levels
+# Snapshots & the four levels
 
 Isolation — the I in ACID — answers one question: **what do concurrent transactions see of
 each other's work?** Perfect isolation (every transaction behaves as if it ran alone) costs
@@ -76,3 +76,4 @@ itself) is what takes the snapshot.
   that page with executable proofs.
 - [PostgreSQL docs: Introduction to MVCC](https://www.postgresql.org/docs/current/mvcc-intro.html) ·
   [SET TRANSACTION](https://www.postgresql.org/docs/current/sql-set-transaction.html)
+- [The same lesson on MySQL](/mysql/02-isolation/snapshots-and-the-four-levels)

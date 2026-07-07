@@ -47,3 +47,4 @@ keeps the work but removes the bookmark:
   [RELEASE SAVEPOINT](https://www.postgresql.org/docs/current/sql-release-savepoint.html)
 - [PostgreSQL docs: Subtransactions](https://www.postgresql.org/docs/current/subxacts.html) —
   what a savepoint actually costs
+- [The same lesson on MySQL](/mysql/01-basics/savepoints)

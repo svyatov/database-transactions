@@ -33,8 +33,8 @@ uv run --directory python pytest
 
 ```sh
 bun lesson                          # list every scenario, grouped by database and chapter
-bun lesson postgres/deadlock        # replay one, streaming the transcript live
-bun lesson mysql/deadlock --step    # you press Enter before each statement fires
+bun lesson postgres/03-locking/deadlock # replay one, streaming the transcript live
+bun lesson mysql/03-locking/deadlock --step # you press Enter before each statement fires
 ```
 
 `--step` is the closest thing to driving the two psql windows yourself: you decide when each

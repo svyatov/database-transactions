@@ -68,3 +68,4 @@ would invalidate the already-committed report:
   deposit-report example above
 - Ports & Grittner, [*Serializable Snapshot Isolation in PostgreSQL*](https://arxiv.org/abs/1208.4179)
   (VLDB 2012) — the paper behind PostgreSQL's SSI implementation
+- [The same lesson on MySQL](/mysql/02-isolation/serializable)

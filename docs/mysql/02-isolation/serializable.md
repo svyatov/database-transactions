@@ -20,7 +20,7 @@ holding a shared lock on. That's a cycle — InnoDB's deadlock detector fires in
 ::: info Two databases, two philosophies
 PostgreSQL's SERIALIZABLE ([SSI](/postgres/02-isolation/serializable)) lets both transactions
 run without blocking and aborts one at COMMIT with `40001`. MySQL's is the classic
-lock-based approach: readers block writers, conflicts surface as **deadlocks (errno 1213)**
+lock-based approach: readers block writers, conflicts surface as **deadlocks (errno `1213`)**
 mid-transaction. Same guarantee, very different failure mode — your retry logic must catch
 `1213`, and it will fire *before* commit, not at it.
 :::

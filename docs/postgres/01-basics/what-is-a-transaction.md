@@ -41,3 +41,4 @@ already-successful credit:
 ## Further reading
 
 - [PostgreSQL docs: Transactions (tutorial)](https://www.postgresql.org/docs/current/tutorial-transactions.html)
+- [The same lesson on MySQL](/mysql/01-basics/what-is-a-transaction)
