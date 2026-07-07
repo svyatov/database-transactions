@@ -1,0 +1,35 @@
+name: Bug report
+description: A transcript, claim, or scenario that is wrong or does not reproduce
+labels: ["bug"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page URL or repo path
+      description: Which lesson or scenario? Paste the site URL or the file path.
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      options:
+        - PostgreSQL
+        - MySQL
+        - Both / N/A
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Database version
+      description: The exact version you observed it on, e.g. PostgreSQL 18.4 or MySQL 8.4.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs. actual
+      description: What the transcript/claim says should happen, and what you actually saw. Paste the transcript output if you can.
+    validations:
+      required: true

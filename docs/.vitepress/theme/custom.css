@@ -45,21 +45,47 @@
   border-left: 3px solid transparent;
 }
 
-.tx-s1 { border-left-color: var(--tx-s1); background-color: color-mix(in srgb, var(--tx-s1) 7%, transparent); }
-.tx-s2 { border-left-color: var(--tx-s2); background-color: color-mix(in srgb, var(--tx-s2) 7%, transparent); }
-.tx-s3 { border-left-color: var(--tx-s3); background-color: color-mix(in srgb, var(--tx-s3) 7%, transparent); }
-.tx-s4 { border-left-color: var(--tx-s4); background-color: color-mix(in srgb, var(--tx-s4) 7%, transparent); }
+.tx-s1 {
+  border-left-color: var(--tx-s1);
+  background-color: color-mix(in srgb, var(--tx-s1) 7%, transparent);
+}
+.tx-s2 {
+  border-left-color: var(--tx-s2);
+  background-color: color-mix(in srgb, var(--tx-s2) 7%, transparent);
+}
+.tx-s3 {
+  border-left-color: var(--tx-s3);
+  background-color: color-mix(in srgb, var(--tx-s3) 7%, transparent);
+}
+.tx-s4 {
+  border-left-color: var(--tx-s4);
+  background-color: color-mix(in srgb, var(--tx-s4) 7%, transparent);
+}
 
 /* The `A>` prompt in its session's color. */
-.transcript .tx-prompt { font-weight: 600; }
-.transcript .tx-s1 .tx-prompt { color: var(--tx-s1); }
-.transcript .tx-s2 .tx-prompt { color: var(--tx-s2); }
-.transcript .tx-s3 .tx-prompt { color: var(--tx-s3); }
-.transcript .tx-s4 .tx-prompt { color: var(--tx-s4); }
+.transcript .tx-prompt {
+  font-weight: 600;
+}
+.transcript .tx-s1 .tx-prompt {
+  color: var(--tx-s1);
+}
+.transcript .tx-s2 .tx-prompt {
+  color: var(--tx-s2);
+}
+.transcript .tx-s3 .tx-prompt {
+  color: var(--tx-s3);
+}
+.transcript .tx-s4 .tx-prompt {
+  color: var(--tx-s4);
+}
 
 /* Shiki dual-theme tokens inside statements (independent of VitePress's .vp-code hook). */
-.transcript span[style*="--shiki-light"] { color: var(--shiki-light); }
-.dark .transcript span[style*="--shiki-dark"] { color: var(--shiki-dark); }
+.transcript span[style*="--shiki-light"] {
+  color: var(--shiki-light);
+}
+.dark .transcript span[style*="--shiki-dark"] {
+  color: var(--shiki-dark);
+}
 
 /* Timeline diagrams (```timeline fences): one column per session, one row per
    step, time flowing downward. Same session palette as the transcripts.
@@ -85,10 +111,22 @@
   color: var(--vp-code-block-color);
 }
 
-.timeline .tl-s1 { border-color: var(--tx-s1); background-color: color-mix(in srgb, var(--tx-s1) 7%, transparent); }
-.timeline .tl-s2 { border-color: var(--tx-s2); background-color: color-mix(in srgb, var(--tx-s2) 7%, transparent); }
-.timeline .tl-s3 { border-color: var(--tx-s3); background-color: color-mix(in srgb, var(--tx-s3) 7%, transparent); }
-.timeline .tl-s4 { border-color: var(--tx-s4); background-color: color-mix(in srgb, var(--tx-s4) 7%, transparent); }
+.timeline .tl-s1 {
+  border-color: var(--tx-s1);
+  background-color: color-mix(in srgb, var(--tx-s1) 7%, transparent);
+}
+.timeline .tl-s2 {
+  border-color: var(--tx-s2);
+  background-color: color-mix(in srgb, var(--tx-s2) 7%, transparent);
+}
+.timeline .tl-s3 {
+  border-color: var(--tx-s3);
+  background-color: color-mix(in srgb, var(--tx-s3) 7%, transparent);
+}
+.timeline .tl-s4 {
+  border-color: var(--tx-s4);
+  background-color: color-mix(in srgb, var(--tx-s4) 7%, transparent);
+}
 
 .timeline .tl-head {
   padding: 0 12px 6px;
@@ -98,10 +136,25 @@
   border-bottom: 2px solid;
 }
 
-.timeline .tl-head.tl-s1 { color: var(--tx-s1); }
-.timeline .tl-head.tl-s2 { color: var(--tx-s2); }
-.timeline .tl-head.tl-s3 { color: var(--tx-s3); }
-.timeline .tl-head.tl-s4 { color: var(--tx-s4); }
+.timeline .tl-head.tl-s1 {
+  color: var(--tx-s1);
+}
+.timeline .tl-head.tl-s2 {
+  color: var(--tx-s2);
+}
+.timeline .tl-head.tl-s3 {
+  color: var(--tx-s3);
+}
+.timeline .tl-head.tl-s4 {
+  color: var(--tx-s4);
+}
 
-.timeline .tl-result { margin-left: 8px; color: var(--vp-c-text-2); }
-.timeline .tl-note { display: block; font-weight: 600; color: var(--vp-c-danger-1); }
+.timeline .tl-result {
+  margin-left: 8px;
+  color: var(--vp-c-text-2);
+}
+.timeline .tl-note {
+  display: block;
+  font-weight: 600;
+  color: var(--vp-c-danger-1);
+}

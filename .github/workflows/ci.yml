@@ -21,24 +21,32 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      # Same compose file as local dev — one source of truth for the PG version and config.
-      - run: docker compose up -d --wait
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # single source of truth with local dev
       - run: bun install --frozen-lockfile
+      # Static gates first — fail fast before spinning up databases.
+      - name: Type-check
+        run: bunx tsc --noEmit
+      - name: Lint and format check
+        run: bunx biome ci .
+      # Same compose file as local dev — one source of truth for the DB versions and config.
+      - run: docker compose up -d --wait
       - name: Run every scenario, assert every claim
         run: bun test
       - name: Regenerate transcripts and fail on drift
         run: |
           bun run gen
           git diff --exit-code docs
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@f98e06938123ccabd21905ea5d0069192241f9f1 # v8.3.1
       - name: Cross-driver check — same claims through psycopg + PyMySQL
         run: |
           uv sync --directory python
+          uv run --directory python ruff check
           uv run --directory python pytest
       - run: bun run docs:build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: docs/.vitepress/dist
 
@@ -51,4 +59,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

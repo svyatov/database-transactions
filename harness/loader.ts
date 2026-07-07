@@ -26,7 +26,19 @@ interface Doc {
   steps: Step[];
 }
 
-const RESERVED = new Set(["note", "sleep", "locked", "success", "failure", "expect", "affected", "error", "comment", "capture", "blocks"]);
+const RESERVED = new Set([
+  "note",
+  "sleep",
+  "locked",
+  "success",
+  "failure",
+  "expect",
+  "affected",
+  "error",
+  "comment",
+  "capture",
+  "blocks",
+]);
 const REQUIRED = ["title", "claim", "setup", "sessions", "steps"] as const;
 
 /** Load any scenario file — `.ts` via its default export, `.yaml` via the interpreter. */
@@ -112,7 +124,9 @@ function checkCode(code: string, want: unknown) {
 /** A plain SQL string as the tagged-template call the Session API expects. */
 function template(sql: string, comment?: string): TemplateStringsArray {
   const text = comment ? `${sql} -- ${comment}` : sql;
-  return Object.assign([text], { raw: [text] }) as unknown as TemplateStringsArray;
+  return Object.assign([text], {
+    raw: [text],
+  }) as unknown as TemplateStringsArray;
 }
 
 /** Resolve `${name.field}` references to captured row fields. */
@@ -133,7 +147,11 @@ function matchRows(actual: Rows, expected: Row[], t: Tools, captures: Record<str
       act[key] = plain(actual[i]![key]);
       const pid = typeof value === "string" && value.match(/^\$pid\((\w+)\)$/);
       const ref = typeof value === "string" && value.match(/^\$\{(\w+)\.(\w+)\}$/);
-      want[key] = pid ? t.pid(pid[1]!) : ref ? plain((captures[ref[1]!] ?? fail(`no capture named "${ref[1]}"`))[ref[2]!]) : value;
+      want[key] = pid
+        ? t.pid(pid[1]!)
+        : ref
+          ? plain((captures[ref[1]!] ?? fail(`no capture named "${ref[1]}"`))[ref[2]!])
+          : value;
     }
     eq(act, want, `row ${i + 1}`);
   });

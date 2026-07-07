@@ -1,4 +1,4 @@
-import { scenario, eq } from "../../../harness/scenario";
+import { eq, scenario } from "../../../harness/scenario";
 
 export default scenario({
   title: "Row versions: xmin, xmax, ctid",

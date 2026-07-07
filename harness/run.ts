@@ -188,12 +188,22 @@ class PendingImpl implements Pending {
     this.unconsumed.delete(this);
     return this.executing.then(
       (rows) => {
-        this.emit({ kind: "resume", session: this.session, sql: this.sql, rows });
+        this.emit({
+          kind: "resume",
+          session: this.session,
+          sql: this.sql,
+          rows,
+        });
         return rows;
       },
       (raw: any) => {
         const e = this.dialect.toError(raw);
-        this.emit({ kind: "resume-error", session: this.session, sql: this.sql, error: e });
+        this.emit({
+          kind: "resume-error",
+          session: this.session,
+          sql: this.sql,
+          error: e,
+        });
         throw new Error(
           `[${this.session}] blocked statement failed unexpectedly (${e.code}): ${this.sql}\n${e.message}`,
         );
@@ -205,13 +215,16 @@ class PendingImpl implements Pending {
     this.unconsumed.delete(this);
     return this.executing.then(
       () => {
-        throw new Error(
-          `[${this.session}] expected blocked statement to fail, but it succeeded: ${this.sql}`,
-        );
+        throw new Error(`[${this.session}] expected blocked statement to fail, but it succeeded: ${this.sql}`);
       },
       (raw: any) => {
         const e = this.dialect.toError(raw);
-        this.emit({ kind: "resume-error", session: this.session, sql: this.sql, error: e });
+        this.emit({
+          kind: "resume-error",
+          session: this.session,
+          sql: this.sql,
+          error: e,
+        });
         return e;
       },
     );
@@ -238,5 +251,8 @@ function dedent(text: string): string {
   const lines = text.replace(/^\n/, "").trimEnd().split("\n");
   const indents = lines.filter((l) => l.trim()).map((l) => l.match(/^ */)![0].length);
   const cut = Math.min(...indents);
-  return lines.map((l) => l.slice(cut)).join("\n").trim();
+  return lines
+    .map((l) => l.slice(cut))
+    .join("\n")
+    .trim();
 }

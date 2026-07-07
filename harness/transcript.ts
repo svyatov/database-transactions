@@ -18,7 +18,7 @@ export function renderMarkdown(run: RunResult, dialect: Dialect): string {
   let fence: string[] = [];
   const flush = () => {
     if (fence.length) {
-      chunks.push("```transcript\n" + fence.join("\n").trimEnd() + "\n```");
+      chunks.push(`\`\`\`transcript\n${fence.join("\n").trimEnd()}\n\`\`\``);
       fence = [];
     }
   };
@@ -32,13 +32,13 @@ export function renderMarkdown(run: RunResult, dialect: Dialect): string {
     }
   }
   flush();
-  return chunks.join("\n\n") + "\n";
+  return `${chunks.join("\n\n")}\n`;
 }
 
 /** Event-by-event renderer for live console replay (`bun lesson`). */
 export function liveRenderer(pids: Record<string, number>, dialect: Dialect): (e: Event) => string {
   const norm = new Normalizer(pids, dialect);
-  return (e) => (e.kind === "note" ? `— ${e.text}` : renderEvent(e, norm, dialect)) + "\n";
+  return (e) => `${e.kind === "note" ? `— ${e.text}` : renderEvent(e, norm, dialect)}\n`;
 }
 
 function renderEvent(e: Exclude<Event, { kind: "note" }>, norm: Normalizer, dialect: Dialect): string {
@@ -64,7 +64,7 @@ function prompt(session: string, sql: string): string {
   const comment = lines.at(-1)!.match(/^(.*\S)(\s+--.*)$/);
   if (comment && !/;$/.test(comment[1]!)) lines[lines.length - 1] = `${comment[1]};${comment[2]}`;
   const text = lines.join("\n");
-  return /;\s*$/.test(text) || /--/.test(lines.at(-1)!) ? text : text + ";";
+  return /;\s*$/.test(text) || /--/.test(lines.at(-1)!) ? text : `${text};`;
 }
 
 function formatResult(rows: Rows, sql: string, norm: Normalizer, dialect: Dialect): string {

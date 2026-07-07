@@ -1,4 +1,4 @@
-import { scenario, eq } from "../../../harness/scenario";
+import { eq, scenario } from "../../../harness/scenario";
 
 // #region listener
 /**
@@ -96,7 +96,9 @@ export default scenario({
     eq(n.channel, "orders");
     eq(n.payload, "order 1 placed");
     eq(n.pid, Number(me!.pid)); // sent by A's backend
-    t.note(`The listener wakes up: Asynchronous notification "orders" with payload "order 1 placed" received from server process with PID pid(A).`);
+    t.note(
+      `The listener wakes up: Asynchronous notification "orders" with payload "order 1 placed" received from server process with PID pid(A).`,
+    );
 
     t.note("A rolled-back NOTIFY simply never happened:");
     await A`BEGIN`;

@@ -3,7 +3,7 @@
  * renderer (transcript.ts) are dialect-agnostic; this file is where PostgreSQL and
  * MySQL actually differ — which is itself part of the learning material.
  */
-import { SQL, type ReservedSQL } from "bun";
+import { type ReservedSQL, SQL } from "bun";
 import type { DbError, Rows } from "./scenario";
 
 export interface Dialect {
@@ -206,14 +206,7 @@ export const mysql: Dialect = {
     "requesting_engine_transaction_id",
     "blocking_engine_transaction_id",
   ]),
-  idColumns: new Set([
-    "id",
-    "processlist_id",
-    "conn_id",
-    "trx_mysql_thread_id",
-    "waiting_pid",
-    "blocking_pid",
-  ]),
+  idColumns: new Set(["id", "processlist_id", "conn_id", "trx_mysql_thread_id", "waiting_pid", "blocking_pid"]),
 };
 
 /** Scenario paths are namespaced by database: scenarios/<db>/<chapter>/<name>. */

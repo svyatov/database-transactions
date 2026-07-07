@@ -11,8 +11,11 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-timeout>=2"]
+dev = ["pytest>=8", "pytest-timeout>=2", "ruff>=0.14"]
 
 [tool.pytest.ini_options]
 addopts = "-q --timeout=90"
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"

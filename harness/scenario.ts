@@ -6,7 +6,11 @@
  */
 
 export type Row = Record<string, any>;
-export type Rows = Row[] & { command?: string; count?: number; affectedRows?: number };
+export type Rows = Row[] & {
+  command?: string;
+  count?: number;
+  affectedRows?: number;
+};
 
 /**
  * A database error. `code` is what that database's users grep for: the SQLSTATE on

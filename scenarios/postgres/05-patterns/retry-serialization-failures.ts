@@ -1,4 +1,4 @@
-import { scenario, eq } from "../../../harness/scenario";
+import { eq, scenario } from "../../../harness/scenario";
 
 // #region helper
 /** Re-run `fn` when it fails with a serialization failure (SQLSTATE 40001). */

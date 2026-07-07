@@ -9,7 +9,7 @@
  */
 import { dialectFor } from "../harness/dialect";
 import { loadScenario } from "../harness/loader";
-import { runScenario, type Event } from "../harness/run";
+import { type Event, runScenario } from "../harness/run";
 import { liveRenderer } from "../harness/transcript";
 
 const root = new URL("..", import.meta.url).pathname;

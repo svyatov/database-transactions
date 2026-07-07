@@ -1,4 +1,4 @@
-import { scenario, eq } from "../../../harness/scenario";
+import { eq, scenario } from "../../../harness/scenario";
 
 export default scenario({
   title: "Snapshots under the hood: xmin, xmax, xip",
@@ -35,7 +35,9 @@ export default scenario({
     eq(Number(snap!.xmin), Number(aXid), "xmin = oldest still-running xid: that's A");
     eq(Number(snap!.xmax), bXid + 1, "xmax = one past the highest COMPLETED xid: that's B + 1");
 
-    t.note("xip = the xids that were in progress at snapshot time. A is on the list — so A is invisible even after it commits.");
+    t.note(
+      "xip = the xids that were in progress at snapshot time. A is on the list — so A is invisible even after it commits.",
+    );
     const xip = await C`SELECT pg_snapshot_xip(pg_current_snapshot()) AS xid`;
     eq(xip, [{ xid: aXid }]);
 

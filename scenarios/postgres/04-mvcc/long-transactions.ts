@@ -1,4 +1,4 @@
-import { scenario, eq } from "../../../harness/scenario";
+import { eq, scenario } from "../../../harness/scenario";
 
 export default scenario({
   title: "Long transactions block VACUUM",
@@ -34,7 +34,9 @@ export default scenario({
     eq(before, chain);
 
     await B`VACUUM jobs`;
-    t.note("VACUUM ran, reported success — and removed nothing. A's snapshot might still need every one of those versions.");
+    t.note(
+      "VACUUM ran, reported success — and removed nothing. A's snapshot might still need every one of those versions.",
+    );
     const after = await B`
       SELECT lp, t_xmin, t_xmax, t_ctid
       FROM heap_page_items(get_raw_page('jobs', 0)) ORDER BY lp`;
