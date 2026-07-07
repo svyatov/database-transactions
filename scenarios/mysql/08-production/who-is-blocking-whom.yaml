@@ -1,0 +1,52 @@
+title: Who is blocking whom
+claim: >-
+  One query on sys.innodb_lock_waits names the waiter and the blocker, and a
+  join to the processlist shows the blocker is sitting idle in transaction —
+  and killing it drains the queue.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 100);
+  CREATE PROCEDURE kill_session(sname VARCHAR(16))
+  BEGIN
+    DECLARE cid BIGINT;
+    SELECT t.processlist_id INTO cid
+      FROM performance_schema.user_variables_by_thread v
+      JOIN performance_schema.threads t ON t.thread_id = v.thread_id
+      WHERE v.variable_name = 'session_name' AND v.variable_value = sname;
+    SET @stmt = CONCAT('KILL ', cid);
+    PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;
+  END;
+sessions: [A, B, M]
+steps:
+  - note: A updates a row and then… goes to lunch. The transaction stays open.
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 200 WHERE id = 1
+
+  - B: UPDATE accounts SET balance = 300 WHERE id = 1
+    blocks: p1
+
+  - note: "Someone pages you: 'updates are hanging'. This is the query you paste:"
+  - M: |
+      SELECT w.waiting_pid, w.waiting_query,
+             w.blocking_pid, bp.command AS blocker_state, bp.info AS blocker_running
+      FROM sys.innodb_lock_waits w
+      JOIN performance_schema.processlist bp ON bp.id = w.blocking_pid
+    expect:
+      - waiting_pid: "$pid(B)"
+        waiting_query: UPDATE accounts SET balance = 300 WHERE id = 1
+        blocking_pid: "$pid(A)"
+        blocker_state: Sleep
+        blocker_running: null
+
+  - note: >-
+      The culprit isn't running anything — command Sleep, no current statement,
+      holding locks. sys.innodb_lock_waits even pre-writes the KILL statement
+      for you (sql_kill_blocking_connection). The fix is blunt:
+  - M: CALL kill_session('A')
+
+  - note: A's transaction dies and rolls back; B gets the lock and finishes at last.
+  - success: p1
+    affected: 1
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 300 }]
+    comment: A's 200 rolled back with its death; B's 300 committed

@@ -37,8 +37,9 @@ The counter in the scenario, `trx_rseg_history_len` in `information_schema.INNOD
 is the same number the manual describes as "presented as the `History list length` value in
 the `TRANSACTIONS` section of `SHOW ENGINE INNODB STATUS`" — the metrics table is just the
 queryable form. Alert on it: a history list that grows and doesn't come back down means
-either a runaway write burst or a transaction someone forgot to close — the production
-chapter turns this into a monitoring query.
+either a runaway write burst or a transaction someone forgot to close —
+[the production chapter](/mysql/08-production/history-list-health) turns this into a
+monitoring query.
 
 ## Key takeaways
 

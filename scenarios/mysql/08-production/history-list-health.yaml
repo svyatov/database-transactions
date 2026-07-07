@@ -1,0 +1,39 @@
+title: History list health at a glance
+claim: >-
+  Two queries make undo bloat diagnosable: INNODB_METRICS' history list length
+  says purge is falling behind, and a join on innodb_trx names the session
+  whose old read view is holding it back.
+setup: |
+  CREATE TABLE counters (id int PRIMARY KEY, v int NOT NULL);
+  INSERT INTO counters VALUES (1, 0);
+  CREATE PROCEDURE bump(n INT) BEGIN DECLARE i INT DEFAULT 0; WHILE i < n DO UPDATE counters SET v = v + 1 WHERE id = 1; SET i = i + 1; END WHILE; END;
+sessions: [R, A, M]
+steps:
+  - note: R opens a read view and goes quiet; the write workload keeps humming.
+  - R: BEGIN
+  - R: SELECT v FROM counters
+    expect: [{ v: 0 }]
+  - A: CALL bump(150)
+    comment: 150 committed single-row transactions
+
+  - sleep: 1200 # age the reader past the detector's threshold
+
+  - note: "Check 1 — is history piling up? (Baseline is 'usually less than a few thousand'.)"
+  - M: |
+      SELECT count >= 150 AS history_backlog
+      FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'
+    expect: [{ history_backlog: 1 }]
+
+  - note: "Check 2 — who is the oldest read view that purge is waiting for?"
+  - M: |
+      SELECT CAST(sn.variable_value AS CHAR) AS session_name,
+             timestampdiff(SECOND, t.trx_started, now()) >= 1 AS older_than_1s
+      FROM information_schema.innodb_trx t
+      JOIN performance_schema.threads th ON th.processlist_id = t.trx_mysql_thread_id
+      JOIN performance_schema.user_variables_by_thread sn ON sn.thread_id = th.thread_id
+      WHERE sn.variable_name = 'session_name'
+      ORDER BY t.trx_started LIMIT 1
+    expect: [{ session_name: "R", older_than_1s: 1 }]
+    comment: end this transaction and purge catches up on its own
+
+  - R: COMMIT

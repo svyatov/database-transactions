@@ -1,0 +1,51 @@
+title: Finding long and idle transactions
+claim: >-
+  Two joins on information_schema.innodb_trx find the forgotten transaction:
+  the oldest open transaction by trx_started, and the session that holds one
+  open while doing nothing — including the read-only kind that never shows up
+  in write metrics but still pins purge.
+setup: |
+  CREATE TABLE orders (id int PRIMARY KEY, total int NOT NULL);
+  INSERT INTO orders VALUES (1, 90), (2, 75);
+sessions: [A, M]
+steps:
+  - note: A starts a 'quick report'… and never gets around to committing.
+  - A: BEGIN
+  - A: SELECT count(*) AS orders FROM orders
+    expect: [{ orders: 2 }]
+
+  - sleep: 1200 # let the forgotten transaction age past the detector's threshold
+
+  - note: "Detector 1 — the oldest open transaction, its owner, and how long it's been open:"
+  - M: |
+      SELECT CAST(sn.variable_value AS CHAR) AS session_name, t.trx_state,
+             timestampdiff(SECOND, t.trx_started, now()) >= 1 AS older_than_1s
+      FROM information_schema.innodb_trx t
+      JOIN performance_schema.threads th ON th.processlist_id = t.trx_mysql_thread_id
+      JOIN performance_schema.user_variables_by_thread sn ON sn.thread_id = th.thread_id
+      WHERE sn.variable_name = 'session_name'
+      ORDER BY t.trx_started LIMIT 1
+    expect: [{ session_name: "A", trx_state: "RUNNING", older_than_1s: 1 }]
+
+  - note: "Detector 2 — transactions whose session is idle (command Sleep) while holding them open:"
+  - M: |
+      SELECT CAST(sn.variable_value AS CHAR) AS session_name, p.command
+      FROM information_schema.innodb_trx t
+      JOIN performance_schema.processlist p ON p.id = t.trx_mysql_thread_id
+      JOIN performance_schema.threads th ON th.processlist_id = p.id
+      JOIN performance_schema.user_variables_by_thread sn ON sn.thread_id = th.thread_id
+      WHERE sn.variable_name = 'session_name' AND p.command = 'Sleep' AND p.time >= 1
+    expect: [{ session_name: "A", command: "Sleep" }]
+
+  - note: >-
+      Detector 3 — why it matters even for a read-only report: A never wrote a
+      row (it doesn't even have a real transaction ID), yet its read view is
+      exactly what purge must wait for.
+  - M: |
+      SELECT t.trx_rows_modified AS rows_modified,
+             CAST(t.trx_id AS UNSIGNED) > 281474976710656 AS never_wrote
+      FROM information_schema.innodb_trx t
+    expect: [{ rows_modified: 0, never_wrote: 1 }]
+    comment: read-only — and still the oldest read view on the server
+
+  - A: COMMIT

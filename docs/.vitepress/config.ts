@@ -151,6 +151,21 @@ const mysql: DefaultTheme.SidebarItem[] = [
       { text: "XA transactions (2PC)", link: "/mysql/06-distributed/xa-transactions" },
     ],
   },
+  {
+    text: "7. Pitfalls compendium",
+    items: [{ text: "Symptom → cause → fix", link: "/mysql/07-pitfalls/compendium" }],
+  },
+  {
+    text: "8. Production",
+    items: [
+      { text: "Symptom triage", link: "/mysql/08-production/symptom-triage" },
+      { text: "Who is blocking whom", link: "/mysql/08-production/who-is-blocking-whom" },
+      { text: "Long & idle transactions", link: "/mysql/08-production/long-and-idle-transactions" },
+      { text: "Logs and counters", link: "/mysql/08-production/logs-and-counters" },
+      { text: "History list health", link: "/mysql/08-production/history-list-health" },
+      { text: "The alerting checklist", link: "/mysql/08-production/alerting-checklist" },
+    ],
+  },
 ];
 
 export default defineConfig({

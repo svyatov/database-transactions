@@ -1,0 +1,38 @@
+title: Deadlocks leave a permanent trace
+claim: >-
+  Every deadlock increments the server-wide lock_deadlocks counter in
+  INNODB_METRICS — deadlocks are countable and alertable even if nobody saw
+  the error, because the counter only ever goes up.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
+  -- Snapshot the counter now; the scenario asserts the delta.
+  CREATE TABLE deadlocks_before AS
+    SELECT count AS n FROM information_schema.INNODB_METRICS WHERE name = 'lock_deadlocks';
+sessions: [A, B, M]
+steps:
+  - note: The same two opposite-order transfers as chapter 3 — one will be the victim.
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = balance - 10 WHERE id = 1
+  - B: BEGIN
+  - B: UPDATE accounts SET balance = balance - 25 WHERE id = 2
+
+  - A: UPDATE accounts SET balance = balance + 10 WHERE id = 2
+    blocks: p1
+  - B.fails: UPDATE accounts SET balance = balance + 25 WHERE id = 1
+    error: "1213"
+  - success: p1
+  - A: COMMIT
+
+  - note: "The error flashed by in one client's logs. The server remembers it forever:"
+  - M: |
+      SELECT im.count - b.n >= 1 AS deadlocks_since_snapshot
+      FROM information_schema.INNODB_METRICS im, deadlocks_before b
+      WHERE im.name = 'lock_deadlocks'
+    expect: [{ deadlocks_since_snapshot: 1 }]
+    comment: a monotonic counter — graph its rate and alert on spikes
+
+  - note: >-
+      For the full story of the LAST deadlock (both statements, both lock
+      chains), read the LATEST DETECTED DEADLOCK section of SHOW ENGINE INNODB
+      STATUS — or set innodb_print_all_deadlocks=ON to log every one.

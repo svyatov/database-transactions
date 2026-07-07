@@ -1,0 +1,37 @@
+title: Timeout guardrails
+claim: >-
+  max_execution_time cuts a runaway SELECT short without touching the session,
+  and wait_timeout kills a connection that goes idle — rolling back whatever
+  transaction it silently held open.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 100);
+sessions: [A, B]
+steps:
+  - note: "Guardrail 1 — max_execution_time: a per-session (or per-query) ceiling for SELECTs."
+  - A: SET SESSION max_execution_time = 100
+  - A: SELECT SLEEP(2) AS interrupted
+    expect: [{ interrupted: 1 }]
+    comment: cut short at 100ms — SLEEP reports 1 when its wait is interrupted
+  - A: SET SESSION max_execution_time = 0
+
+  - note: >-
+      Guardrail 2 — wait_timeout: the server hangs up on a session that goes
+      quiet. A opens a transaction, updates a row… and stops talking.
+  - A: SET SESSION wait_timeout = 1
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 999 WHERE id = 1
+
+  - sleep: 1800 # A is idle; the server's patience (1s) runs out
+
+  - A.fails: SELECT balance FROM accounts WHERE id = 1
+    error: ["2013", "ERR_MYSQL_CONNECTION_CLOSED"] # PyMySQL reports the lost connection; Bun.sql only notices the closed socket
+
+  - note: The app discovers the corpse on its next statement — and the uncommitted UPDATE is gone.
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+    comment: rolled back with the session
+
+  - note: >-
+      The third guardrail, innodb_lock_wait_timeout, was proven in chapter 3 —
+      remember it rolls back the STATEMENT, not the transaction.
