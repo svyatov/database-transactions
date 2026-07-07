@@ -1,0 +1,46 @@
+title: "Gap locks: REPEATABLE READ locks the spaces between rows"
+claim: >-
+  Under REPEATABLE READ a locking read on a range takes next-key locks — the
+  matching rows AND the gaps between them — so INSERTs into the range block
+  until the reader finishes. Under READ COMMITTED only the found rows are
+  locked and the same INSERT sails through.
+setup: |
+  CREATE TABLE bookings (slot int PRIMARY KEY, guest varchar(20) NOT NULL);
+  INSERT INTO bookings VALUES (10, 'alice'), (20, 'bob'), (30, 'carol');
+sessions: [A, B]
+steps:
+  - note: >-
+      A runs the classic "hold the range while I decide" query. Slots 10 and 20
+      exist; 11–19 is a gap — nothing there to lock. Or is there?
+  - A: BEGIN
+  - A: SELECT slot FROM bookings WHERE slot BETWEEN 10 AND 20 FOR UPDATE
+    expect: [{ slot: 10 }, { slot: 20 }]
+
+  - note: B books slot 15. No such row exists — yet the INSERT blocks.
+  - B: BEGIN
+  - B: INSERT INTO bookings VALUES (15, 'mallory')
+    blocks: p1
+
+  - A: SELECT lock_mode FROM performance_schema.data_locks WHERE object_name = 'bookings' AND lock_status = 'WAITING'
+    expect: [{ lock_mode: "X,GAP,INSERT_INTENTION" }]
+    comment: B waits for an insert-intention lock on the gap A's range scan locked
+
+  - A: COMMIT
+    comment: the gap opens
+  - success: p1
+  - B: COMMIT
+
+  - note: >-
+      Same story at READ COMMITTED: the locking read locks only the three rows
+      it found — the gaps stay free.
+  - A: SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED
+  - A: BEGIN
+  - A: SELECT slot FROM bookings WHERE slot BETWEEN 10 AND 20 FOR UPDATE
+    expect: [{ slot: 10 }, { slot: 15 }, { slot: 20 }]
+
+  - B: INSERT INTO bookings VALUES (17, 'trent')
+    comment: straight through — no gap lock to wait on
+  - A: COMMIT
+
+  - A: SELECT slot FROM bookings ORDER BY slot
+    expect: [{ slot: 10 }, { slot: 15 }, { slot: 17 }, { slot: 20 }, { slot: 30 }]

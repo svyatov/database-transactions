@@ -28,6 +28,15 @@ loops written for PostgreSQL have nothing to catch here — and
 undetected.
 :::
 
+## Your DELETE and your SELECT live in different worlds
+
+Current reads get truly disorienting when a *predicate* is involved. A transaction can
+"delete every row matching X", delete nothing — the current data no longer matches — and
+then keep *seeing* snapshot rows that match X (Hermitage calls this the write-predicate
+variant of G-single):
+
+<!--@include: ./parts/write-predicate-skew.md-->
+
 ## Key takeaways
 
 - REPEATABLE READ = one snapshot per **transaction**, taken by the first read (not by

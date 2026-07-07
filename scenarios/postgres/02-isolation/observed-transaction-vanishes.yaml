@@ -1,0 +1,38 @@
+title: A committed transaction never half-vanishes
+claim: >-
+  Once a transaction commits, every reader sees ALL of its writes or none
+  (Adya's OTV, "observed transaction vanishes"): a later overwrite of one row
+  cannot make the rest of the committed transaction disappear.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
+sessions: [A, B, C]
+steps:
+  - note: A rewrites both balances. B will overwrite one of them right after.
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 11 WHERE id = 1
+  - A: UPDATE accounts SET balance = 19 WHERE id = 2
+
+  - B: BEGIN
+  - B: UPDATE accounts SET balance = 12 WHERE id = 1
+    blocks: p1
+  - A: COMMIT
+    comment: A's lock released — B's overwrite of alice proceeds
+  - success: p1
+
+  - note: >-
+      C now watches from the side. B holds an uncommitted overwrite of alice —
+      but A's committed transaction must still be visible in full.
+  - C: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 11 }, { id: 2, balance: 19 }]
+    comment: A's writes appear together — 11 AND 19
+
+  - B: UPDATE accounts SET balance = 18 WHERE id = 2
+  - C: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 11 }, { id: 2, balance: 19 }]
+    comment: B's drafts change nothing for C
+
+  - B: COMMIT
+  - C: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 12 }, { id: 2, balance: 18 }]
+    comment: only now does C move on — to ALL of B, atomically

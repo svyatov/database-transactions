@@ -1,0 +1,55 @@
+title: A committed transaction can half-vanish at READ UNCOMMITTED
+claim: >-
+  At READ UNCOMMITTED a reader can see a later transaction's uncommitted
+  overwrite of one row while relying on the overwritten transaction's other
+  row (Adya's OTV, "observed transaction vanishes") — the committed
+  transaction is visible only in pieces. READ COMMITTED restores atomic
+  visibility.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
+sessions: [A, B, C]
+steps:
+  - note: A rewrites both balances and commits. B overwrites one of them. C watches — dirtily.
+  - C: SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+  - C: BEGIN
+
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 11 WHERE id = 1
+  - A: UPDATE accounts SET balance = 19 WHERE id = 2
+
+  - B: BEGIN
+  - B: UPDATE accounts SET balance = 12 WHERE id = 1
+    blocks: p1
+  - A: COMMIT
+    comment: A is committed — its writes are 11 and 19
+  - success: p1
+
+  - C: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 12 }, { id: 2, balance: 19 }]
+    comment: "12 is B's uncommitted draft, 19 is A's commit — A's 11 already vanished"
+
+  - note: >-
+      C never saw the committed state {11, 19}. Half of A was overwritten
+      before C ever observed it — as far as C can tell, A only ever wrote one
+      row. B now finishes:
+  - B: UPDATE accounts SET balance = 18 WHERE id = 2
+  - B: COMMIT
+  - C: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 12 }, { id: 2, balance: 18 }]
+  - C: COMMIT
+
+  - note: "READ COMMITTED never shows a committed transaction in pieces:"
+  - C: SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED
+  - C: BEGIN
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 51 WHERE id = 1
+  - A: UPDATE accounts SET balance = 59 WHERE id = 2
+  - C: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 12 }, { id: 2, balance: 18 }]
+    comment: all of the last committed state — nothing of A's draft
+  - A: COMMIT
+  - C: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 51 }, { id: 2, balance: 59 }]
+    comment: and now all of A, atomically
+  - C: COMMIT

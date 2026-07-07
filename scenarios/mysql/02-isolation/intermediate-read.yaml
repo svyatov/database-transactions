@@ -1,0 +1,43 @@
+title: READ UNCOMMITTED serves drafts that never become true
+claim: >-
+  At READ UNCOMMITTED a reader can observe an intermediate value the writer
+  later overwrites before committing (Adya's G1b, "intermediate read") — a
+  number that is never part of any committed state. READ COMMITTED stops this.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, B]
+steps:
+  - note: A recalculates alice's balance in two steps. B watches at READ UNCOMMITTED.
+  - B: SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+  - B: BEGIN
+
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 999 WHERE id = 1
+    comment: a working draft — A isn't done yet
+
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 999 }]
+    comment: B just read a draft
+
+  - A: UPDATE accounts SET balance = 110 WHERE id = 1
+    comment: A settles on the final value…
+  - A: COMMIT
+
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 110 }]
+  - B: COMMIT
+
+  - note: >-
+      The committed history is 100 → 110. The 999 B acted on was never true —
+      not even for an instant of committed time. At READ COMMITTED the same
+      watch shows only 100, then 110:
+  - B: SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED
+  - B: BEGIN
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 555 WHERE id = 1
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 110 }]
+    comment: no drafts served here
+  - A: ROLLBACK
+  - B: COMMIT

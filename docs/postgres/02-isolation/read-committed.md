@@ -26,6 +26,14 @@ your statements:
 
 <!--@include: ./parts/phantom-read.md-->
 
+## Read skew: a total that never existed
+
+Non-repeatable reads have a nastier multi-row cousin — *read skew* (formally Adya's
+G-single): read row 1, let someone move money to row 2, read row 2. Every row you saw was
+committed and correct, yet the combination existed at no point in time:
+
+<!--@include: ./parts/read-skew.md-->
+
 ## The subtle one: UPDATE re-checks its WHERE clause
 
 What happens when your UPDATE has to *wait* for a lock, and the row changes while you wait?

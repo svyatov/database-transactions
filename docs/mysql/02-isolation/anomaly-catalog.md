@@ -1,15 +1,23 @@
 # The anomaly catalog
 
-Every anomaly from this chapter, what stops it on MySQL, and the proof.
+Every isolation anomaly with a formal name, what each MySQL level does about it, and the
+proof. The codes (G0, G1a, …) come from Adya's formalism, popularized by
+[Hermitage](https://github.com/ept/hermitage), Martin Kleppmann's cross-database isolation
+test suite; this catalog covers every case Hermitage tests — including the rows where
+MySQL's answer differs from PostgreSQL's.
 
-| Anomaly | What goes wrong | Stopped by | Proof |
-|---|---|---|---|
-| **Dirty read** | You read data that is never committed | READ COMMITTED and above | [dirty-read](/mysql/02-isolation/snapshots-and-the-four-levels#read-uncommitted-means-it) |
-| **Non-repeatable read** | Same row, two reads, two answers | REPEATABLE READ (plain SELECTs) | [non-repeatable-read](/mysql/02-isolation/read-committed#non-repeatable-reads) |
-| **Phantom read** | Same WHERE, new rows appear | REPEATABLE READ (plain SELECTs) | [phantom-read](/mysql/02-isolation/read-committed#phantoms) |
-| **Stale current read** | UPDATE acts on data your SELECTs never showed you | nothing below SERIALIZABLE — by design ([current reads](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot)) | [current-reads](/mysql/02-isolation/repeatable-read) |
-| **Lost update** | Two read-modify-writes, one survives | **no level below SERIALIZABLE** — use [locking reads or atomic UPDATEs](/mysql/02-isolation/lost-update#the-fixes) | [lost-update-repeatable-read](/mysql/02-isolation/lost-update) |
-| **Write skew** | Two transactions each check an invariant, jointly break it | SERIALIZABLE (via shared locks + deadlock) | [write-skew-serializable](/mysql/02-isolation/serializable) |
+| Code | Anomaly | READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ *(default)* | SERIALIZABLE |
+|---|---|---|---|---|---|
+| G0 | **Dirty write** | ✅ impossible — [proof](#dirty-writes-g0) | ✅ | ✅ | ✅ |
+| G1a | **Dirty read** (aborted read) | ⚠️ [happens](/mysql/02-isolation/snapshots-and-the-four-levels#read-uncommitted-means-it) | ✅ impossible | ✅ | ✅ |
+| G1b | **Intermediate read** | ⚠️ [happens](#intermediate-reads-g1b) | ✅ impossible — [proof](#intermediate-reads-g1b) | ✅ | ✅ |
+| G1c | **Circular information flow** | ⚠️ [happens](#circular-information-flow-g1c) | ✅ impossible — [proof](#circular-information-flow-g1c) | ✅ | ✅ |
+| OTV | **Observed transaction vanishes** | ⚠️ [happens](#observed-transaction-vanishes-otv) | ✅ impossible — [proof](#observed-transaction-vanishes-otv) | ✅ | ✅ |
+| P2 | **Non-repeatable read** | ⚠️ | ⚠️ [happens](/mysql/02-isolation/read-committed#non-repeatable-reads) | ✅ prevented (plain SELECTs) — [proof](/mysql/02-isolation/repeatable-read#one-snapshot-no-phantoms) | ✅ |
+| G-single | **Read skew** | ⚠️ | ⚠️ [happens](/mysql/02-isolation/read-committed#read-skew-a-total-that-never-existed) | ⚠️ plain SELECTs safe — [but writes aren't](/mysql/02-isolation/repeatable-read#your-delete-and-your-select-live-in-different-worlds) | ✅ |
+| PMP | **Phantom read** | ⚠️ | ⚠️ [happens](/mysql/02-isolation/read-committed#phantoms) | ⚠️ plain SELECTs safe — [current reads see phantoms](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot) | ✅ |
+| P4 | **Lost update** | ⚠️ | ⚠️ [happens](/mysql/02-isolation/lost-update#at-read-committed) | ⚠️ **still happens** — [proof](/mysql/02-isolation/lost-update#repeatable-read-does-not-save-you) | ✅ prevented (locks + deadlock) |
+| G2-item / G2 | **Write skew** (item & predicate) | ⚠️ | ⚠️ | ⚠️ [happens](/mysql/02-isolation/serializable#write-skew-at-repeatable-read) | ✅ prevented — [proof](/mysql/02-isolation/serializable#serializable-stops-it-with-locks) |
 
 ## The MySQL-specific pattern
 
@@ -19,9 +27,44 @@ world — and your UPDATEs a completely different, current one. Everything in th
 of the table is fixed with explicit locking or SQL-side arithmetic, not with the isolation
 knob.
 
-PostgreSQL's catalog looks different: its RR turns lost updates into retryable errors and its
-SERIALIZABLE detects write skew without locks —
-[compare the two tables](/postgres/02-isolation/anomaly-catalog).
+PostgreSQL's catalog looks different: its RR turns lost updates into retryable errors, its
+SERIALIZABLE detects write skew without locks, and its weakest level is Hermitage-clean —
+[compare the two tables](/postgres/02-isolation/anomaly-catalog). The three ⚠️ cells in
+MySQL's REPEATABLE READ column are exactly where Hermitage's results for the two databases
+diverge, and all three trace back to [current reads](/mysql/02-isolation/repeatable-read).
+
+## What READ UNCOMMITTED really costs
+
+The G1 family and OTV are all ✅ from READ COMMITTED up — but unlike PostgreSQL, MySQL
+really does serve dirty data if you ask for it, so each one is observable:
+
+### Dirty writes (G0)
+
+The one guarantee *every* level keeps: InnoDB always takes exclusive row locks for writes,
+so interleaved writes can't produce a state no serial order could:
+
+<!--@include: ./parts/dirty-write.md-->
+
+### Intermediate reads (G1b)
+
+At READ UNCOMMITTED you don't just read uncommitted data — you read *drafts* the writer
+later overwrites, values that are never part of any committed history:
+
+<!--@include: ./parts/intermediate-read.md-->
+
+### Circular information flow (G1c)
+
+Two transactions reading each other's uncommitted writes — an exchange with no serial
+explanation, and gone at READ COMMITTED:
+
+<!--@include: ./parts/circular-information-flow.md-->
+
+### Observed transaction vanishes (OTV)
+
+At READ UNCOMMITTED a committed transaction can be visible in pieces — one row already
+overwritten by an uncommitted successor, the other still showing through:
+
+<!--@include: ./parts/observed-transaction-vanishes.md-->
 
 ## Error codes to retry on
 
@@ -32,4 +75,7 @@ SERIALIZABLE detects write skew without locks —
 
 ## Further reading
 
+- [Hermitage](https://github.com/ept/hermitage) — runnable isolation tests for MySQL,
+  PostgreSQL, Oracle, and more; this chapter proves every MySQL case it covers
 - [MySQL docs: Transaction Isolation Levels](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html)
+- [The same catalog for PostgreSQL](/postgres/02-isolation/anomaly-catalog)

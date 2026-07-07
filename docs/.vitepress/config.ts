@@ -114,6 +114,7 @@ const mysql: DefaultTheme.SidebarItem[] = [
     text: "3. Locking",
     items: [
       { text: "Row locks", link: "/mysql/03-locking/row-locks" },
+      { text: "Gap locks", link: "/mysql/03-locking/gap-locks" },
       { text: "Lock queues", link: "/mysql/03-locking/lock-queues" },
       { text: "NOWAIT, lock timeouts, SKIP LOCKED", link: "/mysql/03-locking/nowait-skip-locked" },
       { text: "Table locks & DDL", link: "/mysql/03-locking/table-locks-and-ddl" },

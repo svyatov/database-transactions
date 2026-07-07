@@ -1,0 +1,35 @@
+title: Dirty writes are impossible — even at READ UNCOMMITTED
+claim: >-
+  InnoDB always takes exclusive row locks for writes, so two transactions
+  repricing the same rows cannot interleave their writes (Adya's G0, "dirty
+  write") at any isolation level — even the one that allows dirty reads.
+setup: |
+  CREATE TABLE items (id int PRIMARY KEY, name varchar(20) NOT NULL, price int NOT NULL);
+  INSERT INTO items VALUES (1, 'mug', 10), (2, 'cap', 20);
+sessions: [A, B]
+steps:
+  - note: >-
+      Two batch jobs reprice the whole catalog concurrently — at READ
+      UNCOMMITTED, the weakest level MySQL has. A mix of their prices (A's mug
+      with B's cap) would be a dirty write: a state no serial order could produce.
+  - A: SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+  - B: SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+  - A: BEGIN
+  - B: BEGIN
+  - A: UPDATE items SET price = 11 WHERE id = 1
+
+  - note: B may READ A's uncommitted rows at this level — but it may not overwrite them.
+  - B: UPDATE items SET price = 12 WHERE id = 1
+    blocks: p1
+
+  - A: UPDATE items SET price = 21 WHERE id = 2
+  - A: COMMIT
+    comment: releases both row locks
+  - success: p1
+
+  - B: UPDATE items SET price = 22 WHERE id = 2
+  - B: COMMIT
+
+  - A: SELECT id, price FROM items ORDER BY id
+    expect: [{ id: 1, price: 12 }, { id: 2, price: 22 }]
+    comment: all B — as if B simply ran after A. Never 12/21 or 11/22.

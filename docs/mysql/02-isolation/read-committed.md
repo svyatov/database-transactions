@@ -15,6 +15,14 @@ that didn't exist in the first.
 
 <!--@include: ./parts/phantom-read.md-->
 
+## Read skew: a total that never existed
+
+Non-repeatable reads have a nastier multi-row cousin — *read skew* (formally Adya's
+G-single): read row 1, let someone move money to row 2, read row 2. Every row you saw was
+committed and correct, yet the combination existed at no point in time:
+
+<!--@include: ./parts/read-skew.md-->
+
 ## After the wait, the re-check
 
 When an UPDATE waits for a row lock and finally gets it, the row may no longer match its

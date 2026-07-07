@@ -1,0 +1,45 @@
+title: "Read skew: one transaction, two rows, an impossible total"
+claim: >-
+  At READ COMMITTED, a transaction reading two rows around a concurrent
+  transfer observes money that never existed (Adya's G-single, "read skew");
+  REPEATABLE READ's single snapshot makes the same interleaving consistent.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 50), (2, 'bob', 50);
+sessions: [A, B]
+steps:
+  - note: >-
+      The invariant: alice + bob = 100 at every moment. A is an auditor summing
+      the accounts row by row; B transfers 25 between them mid-audit.
+  - A: BEGIN
+  - A: SELECT balance FROM accounts WHERE owner = 'alice'
+    expect: [{ balance: 50 }]
+
+  - B: BEGIN
+  - B: UPDATE accounts SET balance = balance - 25 WHERE owner = 'alice'
+  - B: UPDATE accounts SET balance = balance + 25 WHERE owner = 'bob'
+  - B: COMMIT
+    comment: a perfectly correct transfer — atomic, invariant preserved
+
+  - A: SELECT balance FROM accounts WHERE owner = 'bob'
+    expect: [{ balance: 75 }]
+    comment: "50 + 75 = 125. The auditor found 25 that never existed."
+  - A: COMMIT
+
+  - note: >-
+      Neither row was ever wrong — A read alice BEFORE the transfer and bob
+      AFTER it. Fresh-snapshot-per-statement cannot hold two rows still.
+      REPEATABLE READ can:
+  - A: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - A: SELECT balance FROM accounts WHERE owner = 'alice'
+    expect: [{ balance: 25 }]
+
+  - B: BEGIN
+  - B: UPDATE accounts SET balance = balance - 10 WHERE owner = 'alice'
+  - B: UPDATE accounts SET balance = balance + 10 WHERE owner = 'bob'
+  - B: COMMIT
+
+  - A: SELECT balance FROM accounts WHERE owner = 'bob'
+    expect: [{ balance: 75 }]
+    comment: "25 + 75 = 100 — one snapshot, one moment in time"
+  - A: COMMIT

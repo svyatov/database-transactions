@@ -8,7 +8,7 @@ the rule both of them checked.
 
 <!--@include: ./parts/write-skew-rr.md-->
 
-## SERIALIZABLE stops it — with locks
+## SERIALIZABLE stops it (with locks)
 
 MySQL's SERIALIZABLE is REPEATABLE READ plus one rule: **plain SELECTs act as
 `SELECT … FOR SHARE`** — every row you read gets a shared lock. Now the two night-off
