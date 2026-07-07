@@ -10,8 +10,9 @@ a real database.
 
 ## How it works
 
-Most database articles contain statements that are subtly wrong, outdated, or true only for
-some other database. This project's rule is that nothing is claimed, everything is demonstrated:
+Learning transactions usually means piecing things together from scattered articles with the
+official manual open in another tab. This project puts the whole picture in one place and
+holds it to one rule — nothing is claimed, everything is demonstrated:
 
 - Every session transcript you see in the docs is **generated from a real run** against
   the database — never hand-written, so it can never drift from actual behavior.
