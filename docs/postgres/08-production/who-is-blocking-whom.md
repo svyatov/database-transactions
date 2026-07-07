@@ -5,8 +5,6 @@ Chapter 3 explained [lock queues](/postgres/03-locking/lock-queues) and
 query, paste it as-is, and it answers the three questions that matter: *who is stuck,
 who is the blocker, and what is the blocker doing?*
 
-<<< ../../../scenarios/postgres/08-production/who-is-blocking-whom.ts#demo{ts}
-
 <!--@include: ./parts/who-is-blocking-whom.md-->
 
 ## Reading the answer

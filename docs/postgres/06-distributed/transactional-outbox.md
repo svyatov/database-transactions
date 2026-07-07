@@ -11,8 +11,6 @@ Write to the database and publish to the broker — two writes, two systems, and
 that can die between them. It doesn't matter which write goes first; each order just
 picks which lie you end up with:
 
-<<< ../../../scenarios/postgres/06-distributed/dual-write-problem.ts#demo{ts}
-
 <!--@include: ./parts/dual-write-problem.md-->
 
 Write-first loses events (downstream never learns about order 1); publish-first invents
@@ -26,15 +24,11 @@ The event is written **to the same database, in the same transaction** as the or
 and [atomicity](/postgres/01-basics/what-is-a-transaction), which the database has guaranteed
 since chapter 1, does the rest:
 
-<<< ../../../scenarios/postgres/06-distributed/transactional-outbox.ts#demo{ts}
-
 <!--@include: ./parts/transactional-outbox.md-->
 
 A separate **relay** process moves events from the outbox to the broker. It is exactly
 the [SKIP LOCKED job-queue worker](/postgres/05-patterns/job-queue) from chapter 5, pointed at
-the `outbox` table:
-
-<<< ../../../scenarios/postgres/06-distributed/transactional-outbox.ts#relay{ts}
+the `outbox` table.
 
 ## At-least-once, by construction
 

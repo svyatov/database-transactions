@@ -17,8 +17,6 @@ tell each version's story:
 
 ## Watching an UPDATE make a copy
 
-<<< ../../../scenarios/postgres/04-mvcc/row-versions.ts#demo{ts}
-
 <!--@include: ./parts/row-versions.md-->
 
 The subtle beat in the middle: after A's update, **B's row suddenly shows a non-zero
@@ -34,8 +32,6 @@ pretense: both versions sit on page 0, and the old tuple's `t_ctid` points at it
 `(0,2)` — the version chain PostgreSQL walks to find the current row.
 
 ## DELETE is a stamp, not an eraser
-
-<<< ../../../scenarios/postgres/04-mvcc/row-versions.ts#delete{ts}
 
 `SELECT` finds nothing; the disk still holds every byte. In PostgreSQL,
 ["an UPDATE or DELETE of a row does not immediately remove the old version of the row"](https://www.postgresql.org/docs/current/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY) —

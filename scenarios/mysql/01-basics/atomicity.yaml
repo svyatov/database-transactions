@@ -1,0 +1,33 @@
+title: "Atomicity: all or nothing"
+claim: >-
+  A transaction that fails halfway leaves zero partial writes — even
+  statements that already succeeded inside it are undone.
+setup: |
+  CREATE TABLE accounts (
+    id      int PRIMARY KEY,
+    owner   varchar(20) NOT NULL,
+    balance int NOT NULL CHECK (balance >= 0)
+  );
+  INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 50);
+sessions: [A, B]
+steps:
+  - note: A transfers 150 from alice to bob. Crediting bob works fine…
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = balance + 150 WHERE owner = 'bob'
+
+  - B: SELECT balance FROM accounts WHERE owner = 'bob'
+    expect: [{ balance: 50 }]
+    comment: B can't see A's uncommitted credit
+
+  - note: …but debiting alice violates the CHECK constraint — she only has 100.
+  - A.fails: UPDATE accounts SET balance = balance - 150 WHERE owner = 'alice'
+    error: "3819"
+    comment: ER_CHECK_CONSTRAINT_VIOLATED
+
+  - note: Roll the transaction back. Bob's credit — which had succeeded — evaporates with it.
+  - A: ROLLBACK
+
+  - B: SELECT owner, balance FROM accounts ORDER BY id
+    expect:
+      - { owner: alice, balance: 100 }
+      - { owner: bob, balance: 50 }

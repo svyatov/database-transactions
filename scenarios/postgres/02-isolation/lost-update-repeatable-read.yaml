@@ -1,0 +1,36 @@
+title: REPEATABLE READ turns lost updates into errors
+claim: >-
+  The interleaving that silently loses an update at READ COMMITTED fails
+  loudly with SQLSTATE 40001 at REPEATABLE READ — no data is lost, the loser
+  just retries.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, B]
+steps:
+  - note: The same two +10 deposits — but this time at REPEATABLE READ.
+  - A: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - A: SELECT balance FROM accounts WHERE id = 1
+    capture: readA
+
+  - B: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+    capture: readB
+
+  - A: UPDATE accounts SET balance = ${readA.balance} + 10 WHERE id = 1
+  - A: COMMIT
+
+  - note: >-
+      B's snapshot predates A's commit, so B's write is refused instead of
+      silently clobbering it.
+  - B.fails: UPDATE accounts SET balance = ${readB.balance} + 10 WHERE id = 1
+    error: "40001"
+    comment: serialization_failure
+  - B: ROLLBACK
+
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 110 }]
+    comment: A's deposit is safe; B retries and lands on 120
+
+  - note: Retrying B from scratch reads the fresh 110 and correctly produces 120.

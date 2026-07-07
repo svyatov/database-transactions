@@ -1,0 +1,29 @@
+title: The check-then-insert race
+claim: >-
+  "SELECT first, INSERT if absent" cannot enforce uniqueness: two concurrent
+  requests both see 0 rows, both insert, and the duplicate lands without any
+  error.
+setup: |
+  -- The app promised emails are unique — but only in code. No UNIQUE constraint.
+  CREATE TABLE signups (id serial PRIMARY KEY, email text NOT NULL);
+sessions: [A, B]
+steps:
+  - note: "The same person double-clicks 'Sign up'. Two app servers each run: check, then insert."
+  - A: BEGIN
+  - A: SELECT count(*)::int AS existing FROM signups WHERE email = 'bob@example.com'
+    expect: [{ existing: 0 }]
+
+  - B: BEGIN
+  - B: SELECT count(*)::int AS existing FROM signups WHERE email = 'bob@example.com'
+    expect: [{ existing: 0 }]
+    comment: B's check also passes — A hasn't committed anything
+
+  - note: Both checks passed, so both insert. Nothing blocks, nothing errors.
+  - A: INSERT INTO signups (email) VALUES ('bob@example.com')
+  - A: COMMIT
+  - B: INSERT INTO signups (email) VALUES ('bob@example.com')
+  - B: COMMIT
+
+  - A: SELECT count(*)::int AS bobs FROM signups WHERE email = 'bob@example.com'
+    expect: [{ bobs: 2 }]
+    comment: the "impossible" duplicate

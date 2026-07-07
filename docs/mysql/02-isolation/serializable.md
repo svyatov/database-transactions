@@ -6,11 +6,6 @@ the rule both of them checked.
 
 ## Write skew at REPEATABLE READ
 
-::: code-group
-<<< ../../../scenarios/mysql/02-isolation/write-skew-rr.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/02-isolation/write-skew-rr.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/write-skew-rr.md-->
 
 ## SERIALIZABLE stops it — with locks
@@ -19,11 +14,6 @@ MySQL's SERIALIZABLE is REPEATABLE READ plus one rule: **plain SELECTs act as
 `SELECT … FOR SHARE`** — every row you read gets a shared lock. Now the two night-off
 requests collide: each doctor's UPDATE needs an exclusive lock on a row the *other* is
 holding a shared lock on. That's a cycle — InnoDB's deadlock detector fires instantly:
-
-::: code-group
-<<< ../../../scenarios/mysql/02-isolation/write-skew-serializable.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/02-isolation/write-skew-serializable.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/write-skew-serializable.md-->
 

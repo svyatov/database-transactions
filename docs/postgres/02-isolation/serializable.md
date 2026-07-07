@@ -16,19 +16,9 @@ Two transactions each check an invariant ("at least one doctor on call"), each u
 *different* row, and both commit. No write-write conflict ever happens — and the invariant
 still breaks:
 
-::: code-group
-<<< ../../../scenarios/postgres/02-isolation/write-skew-rr.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/02-isolation/write-skew-rr.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/write-skew-rr.md-->
 
 ## The same interleaving, SERIALIZABLE
-
-::: code-group
-<<< ../../../scenarios/postgres/02-isolation/write-skew-serializable.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/02-isolation/write-skew-serializable.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/write-skew-serializable.md-->
 
@@ -38,16 +28,6 @@ The strangest anomaly in this chapter: at REPEATABLE READ, a **read-only report*
 a state that no serial ordering of the transactions could ever produce — the numbers it
 printed become retroactively wrong. Under SERIALIZABLE, PostgreSQL aborts the writer that
 would invalidate the already-committed report:
-
-::: code-group
-<<< ../../../scenarios/postgres/02-isolation/read-only-anomaly.ts#rr{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/02-isolation/read-only-anomaly.py#rr{py} [Python]
-:::
-
-::: code-group
-<<< ../../../scenarios/postgres/02-isolation/read-only-anomaly.ts#serializable{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/02-isolation/read-only-anomaly.py#serializable{py} [Python]
-:::
 
 <!--@include: ./parts/read-only-anomaly.md-->
 

@@ -5,11 +5,6 @@ instantly, give up after a deadline, or pretend locked rows don't exist.
 
 ## NOWAIT: fail fast
 
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/nowait.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/nowait.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/nowait.md-->
 
 ## innodb_lock_wait_timeout: wait, but not forever
@@ -18,11 +13,6 @@ Every InnoDB lock wait is already bounded by `innodb_lock_wait_timeout` — 50 s
 default, settable per session (whole seconds only). When it fires you get errno `1205`, and —
 easy to miss — **only the statement is rolled back; the transaction stays open**, keeping
 every lock it already holds:
-
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/lock-timeout.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/lock-timeout.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/lock-timeout.md-->
 
@@ -35,11 +25,6 @@ the whole transaction.)
 :::
 
 ## SKIP LOCKED: the job-queue primitive
-
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/skip-locked.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/skip-locked.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/skip-locked.md-->
 

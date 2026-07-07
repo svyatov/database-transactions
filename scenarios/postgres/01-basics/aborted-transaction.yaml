@@ -1,0 +1,24 @@
+title: One error aborts the whole transaction
+claim: >-
+  After any error inside a transaction, PostgreSQL rejects every further
+  statement with 25P02 until you ROLLBACK.
+setup: |
+  SELECT 1;
+sessions: [A]
+steps:
+  - A: BEGIN
+
+  - A.fails: SELECT 1 / 0
+    error: "22012"
+    comment: division_by_zero
+
+  - note: The transaction is now aborted. Even a perfectly innocent statement is refused.
+  - A.fails: SELECT 1 AS innocent
+    error: "25P02"
+    comment: in_failed_sql_transaction
+
+  - note: ROLLBACK is the only way out. Afterwards, the session works normally again.
+  - A: ROLLBACK
+
+  - A: SELECT 1 AS innocent
+    expect: [{ innocent: 1 }]

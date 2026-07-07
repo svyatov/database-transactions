@@ -2,7 +2,7 @@
 
 *A opens a long report transaction — one query, then it just sits there.*
 
-```
+```transcript
 A> BEGIN ISOLATION LEVEL REPEATABLE READ;
 BEGIN
 
@@ -15,7 +15,7 @@ A> SELECT xmin, id, status FROM jobs;
 
 *Meanwhile B churns through the row, leaving dead versions behind.*
 
-```
+```transcript
 B> UPDATE jobs SET status = 'running' WHERE id = 1 RETURNING xmin, status;
  xmin | status  
 ------+---------
@@ -50,7 +50,7 @@ VACUUM
 
 *VACUUM ran, reported success — and removed nothing. A's snapshot might still need every one of those versions.*
 
-```
+```transcript
 B> SELECT lp, t_xmin, t_xmax, t_ctid
    FROM heap_page_items(get_raw_page('jobs', 0)) ORDER BY lp;
  lp | t_xmin | t_xmax | t_ctid 
@@ -64,7 +64,7 @@ B> SELECT lp, t_xmin, t_xmax, t_ctid
 
 *And indeed: A still reads the version from before all three updates.*
 
-```
+```transcript
 A> SELECT id, status FROM jobs;
  id | status 
 ----+--------
@@ -80,7 +80,7 @@ VACUUM
 
 *Same command, a moment after A commits — now the three dead versions are gone.*
 
-```
+```transcript
 B> SELECT lp, lp_flags, t_xmin, t_xmax, t_ctid
    FROM heap_page_items(get_raw_page('jobs', 0)) ORDER BY lp;
  lp | lp_flags | t_xmin | t_xmax | t_ctid 

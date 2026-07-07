@@ -8,8 +8,6 @@ back", not which rows it will touch.
 
 ## VACUUM ran, cleaned nothing
 
-<<< ../../../scenarios/postgres/04-mvcc/long-transactions.ts#demo{ts}
-
 <!--@include: ./parts/long-transactions.md-->
 
 The first VACUUM is the quiet failure mode: **it succeeds**. No error, no warning in your

@@ -13,22 +13,12 @@ anomaly; production incident reports list it constantly.
 
 ## Watch a deposit disappear
 
-::: code-group
-<<< ../../../scenarios/postgres/02-isolation/lost-update-read-committed.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/02-isolation/lost-update-read-committed.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/lost-update-read-committed.md-->
 
 ## REPEATABLE READ turns it into an error
 
 The same interleaving, one isolation level up. PostgreSQL detects that B's write would
 overwrite a row modified after B's snapshot — and refuses:
-
-::: code-group
-<<< ../../../scenarios/postgres/02-isolation/lost-update-repeatable-read.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/02-isolation/lost-update-repeatable-read.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/lost-update-repeatable-read.md-->
 

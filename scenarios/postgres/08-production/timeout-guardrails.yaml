@@ -1,0 +1,41 @@
+title: Timeout guardrails
+claim: >-
+  statement_timeout cancels a runaway statement (SQLSTATE 57014) but keeps the
+  session; transaction_timeout kills the whole transaction — connection and
+  all — and its work rolls back.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 100);
+sessions: [A, M]
+steps:
+  - note: "statement_timeout: the per-statement seatbelt."
+  - A: SET statement_timeout = '100ms'
+  - A.fails: SELECT pg_sleep(2)
+    error: "57014"
+    comment: query_canceled
+
+  - note: Only the statement died — the session and its transaction state are fine.
+  - A: SELECT 'still here' AS session
+    expect: [{ session: still here }]
+
+  - note: >-
+      transaction_timeout (PostgreSQL 17+): a hard ceiling on the whole
+      transaction — idle or busy.
+  - A: RESET statement_timeout
+  - A: SET transaction_timeout = '500ms'
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 999 WHERE id = 1
+
+  - sleep: 1200 # let the timeout fire (invisible: the point is what M sees next)
+
+  - note: "This timeout doesn't cancel a statement — it terminates the backend:"
+  - M: SELECT count(*)::int AS backends FROM pg_stat_activity WHERE application_name = 'A'
+    expect: [{ backends: 0 }]
+
+  - A.fails: COMMIT
+    error: ["25P04", "ERR_POSTGRES_CONNECTION_CLOSED"] # psycopg sees the FATAL's SQLSTATE; Bun.sql only notices the closed socket
+    comment: the server logged FATAL; Bun sees a dead socket
+
+  - note: "The killed transaction's work rolled back, as always:"
+  - M: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]

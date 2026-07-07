@@ -1,0 +1,62 @@
+/* Transcript blocks: CLI-flavored scenario runs, one color per session. */
+
+:root {
+  --tx-s1: #2f7fe0; /* session 1 — blue */
+  --tx-s2: #d97706; /* session 2 — amber */
+  --tx-s3: #059669; /* session 3 — green */
+  --tx-s4: #db2777; /* session 4 — pink */
+}
+
+.dark {
+  --tx-s1: #6cb0ff;
+  --tx-s2: #fbbf24;
+  --tx-s3: #34d399;
+  --tx-s4: #f472b6;
+}
+
+.transcript {
+  margin: 16px 0;
+  border-radius: 8px;
+  background-color: var(--vp-code-block-bg);
+  overflow-x: auto;
+}
+
+.transcript pre {
+  margin: 0;
+  padding: 20px 0;
+}
+
+.transcript code {
+  display: block;
+  width: fit-content;
+  min-width: 100%;
+  font-family: var(--vp-font-family-mono);
+  font-size: var(--vp-code-font-size);
+  line-height: var(--vp-code-line-height);
+  color: var(--vp-code-block-color);
+}
+
+.tx-line {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 1em;
+  padding: 0 24px 0 21px;
+  border-left: 3px solid transparent;
+}
+
+.tx-s1 { border-left-color: var(--tx-s1); background-color: color-mix(in srgb, var(--tx-s1) 7%, transparent); }
+.tx-s2 { border-left-color: var(--tx-s2); background-color: color-mix(in srgb, var(--tx-s2) 7%, transparent); }
+.tx-s3 { border-left-color: var(--tx-s3); background-color: color-mix(in srgb, var(--tx-s3) 7%, transparent); }
+.tx-s4 { border-left-color: var(--tx-s4); background-color: color-mix(in srgb, var(--tx-s4) 7%, transparent); }
+
+/* The `A>` prompt in its session's color. */
+.transcript .tx-prompt { font-weight: 600; }
+.transcript .tx-s1 .tx-prompt { color: var(--tx-s1); }
+.transcript .tx-s2 .tx-prompt { color: var(--tx-s2); }
+.transcript .tx-s3 .tx-prompt { color: var(--tx-s3); }
+.transcript .tx-s4 .tx-prompt { color: var(--tx-s4); }
+
+/* Shiki dual-theme tokens inside statements (independent of VitePress's .vp-code hook). */
+.transcript span[style*="--shiki-light"] { color: var(--shiki-light); }
+.dark .transcript span[style*="--shiki-dark"] { color: var(--shiki-dark); }

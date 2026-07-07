@@ -1,0 +1,33 @@
+title: "Fixing lost updates #2: SELECT ... FOR UPDATE"
+claim: >-
+  When the new value must be computed in application code, SELECT ... FOR
+  UPDATE serializes the read-modify-write: the second reader waits and then
+  reads the committed 110, so both deposits land.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, B]
+steps:
+  - note: The app must apply business rules to the balance in code — so it locks the row while it reads.
+  - A: BEGIN
+  - A: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE
+    expect: [{ balance: 100 }]
+    capture: a
+
+  - B: BEGIN
+  - B: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE
+    blocks: p1
+
+  - A: UPDATE accounts SET balance = ${a.balance} + 10 WHERE id = 1
+  - A: COMMIT
+
+  - note: B's locked read waited out A's transaction — and returns the fresh 110, not the 100 it would have seen.
+  - success: p1
+    expect: [{ balance: 110 }]
+    capture: b
+  - B: UPDATE accounts SET balance = ${b.balance} + 10 WHERE id = 1
+  - B: COMMIT
+
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 120 }]
+    comment: both deposits survived

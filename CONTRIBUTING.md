@@ -15,37 +15,36 @@ uv sync --directory python    # optional: the Python ports
 
 ## Adding or changing a lesson
 
-1. **Write the scenario** in `scenarios/<db>/<NN-chapter>/<slug>.ts` (`<db>` is `postgres`
-   or `mysql`) — default-export `scenario({...})` (see `harness/scenario.ts`, it's ~80
-   lines; everything database-specific lives in `harness/dialect.ts`). Assert every
-   outcome with `eq()`; a statement that must block goes through `.blocked`, one that
-   must fail through `.fails`. Mark the parts the lesson shows with `// #region name` /
-   `// #endregion`.
+1. **Write the scenario** in `scenarios/<db>/<NN-chapter>/<slug>.yaml` (`<db>` is
+   `postgres` or `mysql`): `title`, `claim`, `setup` SQL, `sessions`, and an ordered list
+   of `steps`. The format is defined by `harness/loader.ts` (~130 lines — read it) and
+   any existing scenario shows the idiom. Every claim is asserted: `expect:` (subset row
+   match), `affected:`, `error:` on `<session>.fails:` steps; a statement that must block
+   gets `blocks: p1`, resolved later by `- success: p1` or `- failure: p1`. Teaching
+   remarks go in `comment:` (rendered as `-- …` in the transcript) and `note:` steps.
+   Scenarios whose *client-side code* is the lesson (retry loops, listeners) may instead
+   be TypeScript files default-exporting `scenario({...})` — see
+   `scenarios/postgres/05-patterns/retry-serialization-failures.ts`.
 2. **Keep transcripts deterministic** — CI regenerates them and fails on any diff:
    - `ORDER BY` on every multi-row SELECT; no timestamps, durations, or raw pids/oids
      in output (xid and pid *columns* are normalized automatically; an id inside SQL
      text is not — on PostgreSQL filter `pg_stat_activity` by `application_name`; on
-     MySQL select id columns like `waiting_pid` and assert with `t.pid("A")`).
-   - Nondeterministic waits go in plain code (`Bun.sleep`) — invisible to transcripts.
+     MySQL select id columns like `waiting_pid` and expect `"$pid(A)"`).
+   - Nondeterministic waits go in `- sleep: <ms>` steps — invisible to transcripts.
    - Run `bun run gen` twice — the second run must produce no diff.
-3. **Port it to Python** if the chapter already has Python coverage (chapters 1–3):
-   mirror the file at `python/scenarios/<db>/<NN-chapter>/<slug>.py` with the same
-   `# region name` markers and the same assertions (see any existing port for the
-   pattern; `uv run --directory python pytest` must pass).
-4. **Write the lesson page** in `docs/<db>/<NN-chapter>/<slug>.md`: include scenario
-   regions with a code-group of all language ports and the transcript with
-   `<!--@include: ./parts/<slug>.md-->`:
+   There is no per-language porting step: pytest runs the same YAML through the Python
+   harness automatically.
+3. **Write the lesson page** in `docs/<db>/<NN-chapter>/<slug>.md`: prose plus the
+   transcript include — the transcript *is* the code readers see (plain SQL, one color
+   per session):
 
    ```md
-   ::: code-group
-   <<< ../../../scenarios/<db>/<NN-chapter>/<slug>.ts#demo{ts} [TypeScript]
-   <<< ../../../python/scenarios/<db>/<NN-chapter>/<slug>.py#demo{py} [Python]
-   :::
+   <!--@include: ./parts/<slug>.md-->
    ```
 
    Quotes from the PostgreSQL or MySQL manual must be verbatim and linked to the exact
    page (and anchor where one exists).
-5. **Generate and commit the transcript**: `bun run gen` — commit the changed files
+4. **Generate and commit the transcript**: `bun run gen` — commit the changed files
    under `docs/**/parts/` together with your scenario.
 
 ## Before opening a PR

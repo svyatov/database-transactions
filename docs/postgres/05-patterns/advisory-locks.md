@@ -7,16 +7,12 @@ progress". PostgreSQL has a lock type for exactly this —
 You pick a number; PostgreSQL guarantees only one session holds it; what the number
 *means* is entirely your business.
 
-<<< ../../../scenarios/postgres/05-patterns/advisory-locks.ts#demo{ts}
-
 <!--@include: ./parts/advisory-locks.md-->
 
 `pg_try_advisory_lock` is the shape most jobs want: *"someone else is already doing this —
 exit 0"* beats a pile of cron runners queueing up to do the same work again.
 
 ## Session locks vs. transaction locks
-
-<<< ../../../scenarios/postgres/05-patterns/advisory-locks.ts#session-vs-xact{ts}
 
 The scenario's second half is the part that pages people. A **session-level** lock
 ["is held until explicitly released or the session ends"](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS) —

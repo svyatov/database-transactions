@@ -1,0 +1,20 @@
+title: "NOWAIT: fail fast instead of queueing"
+claim: >-
+  SELECT ... FOR UPDATE NOWAIT refuses to wait: if the row is locked it fails
+  immediately with errno 3572 instead of joining the lock queue.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, B]
+steps:
+  - A: BEGIN
+  - A: SELECT id FROM accounts WHERE id = 1 FOR UPDATE
+
+  - B.fails: SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
+    error: "3572"
+    comment: ER_LOCK_NOWAIT — instantly, no waiting
+
+  - note: Once A is done, the same statement succeeds.
+  - A: COMMIT
+  - B: SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
+    expect: [{ id: 1 }]

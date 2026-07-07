@@ -1,0 +1,41 @@
+title: "Advisory locks: locking ideas, not rows"
+claim: >-
+  Advisory locks serialize application-defined work with no table involved:
+  try-lock answers instantly, session-level locks survive COMMIT and need an
+  explicit unlock, transaction-level locks vanish at COMMIT.
+setup: |
+  -- No tables. Advisory locks guard whatever the application says number 42 means.
+sessions: [A, B]
+steps:
+  - note: Two deploy runners must not migrate the same database at once. They agree lock 42 means 'migration in progress'.
+  - A: SELECT pg_advisory_lock(42)
+  - B: SELECT pg_try_advisory_lock(42) AS got_it
+    expect: [{ got_it: false }]
+    comment: an instant answer — no waiting
+
+  - note: "try-lock says no without waiting. A runner can also queue up for the lock:"
+  - B: SELECT pg_advisory_lock(42)
+    blocks: p1
+  - A: SELECT pg_advisory_unlock(42) AS released
+  - success: p1
+
+  - note: Session-level locks ignore transaction boundaries entirely — COMMIT releases nothing.
+  - A: BEGIN
+  - A: SELECT pg_advisory_lock(9)
+  - A: COMMIT
+  - B: SELECT pg_try_advisory_lock(9) AS got_it
+    expect: [{ got_it: false }]
+  - A: SELECT pg_advisory_unlock(9) AS released
+
+  - note: pg_advisory_xact_lock, by contrast, releases itself at COMMIT — there is no unlock function for it.
+  - A: BEGIN
+  - A: SELECT pg_advisory_xact_lock(7)
+  - B: SELECT pg_try_advisory_lock(7) AS got_it
+    expect: [{ got_it: false }]
+  - A: COMMIT
+  - B: SELECT pg_try_advisory_lock(7) AS got_it
+    expect: [{ got_it: true }]
+    comment: freed by A's COMMIT alone
+
+  - B: SELECT pg_advisory_unlock(7)
+  - B: SELECT pg_advisory_unlock(42)

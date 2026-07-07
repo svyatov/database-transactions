@@ -13,8 +13,13 @@ import psycopg
 import pymysql
 import pymysql.cursors
 from psycopg.rows import dict_row
+from psycopg.types.numeric import IntLoader
 
 from .scenario import DbError
+
+# xid columns (xmin, xmax, …) decode as int, matching Bun.sql — scenario expectations
+# would otherwise compare a YAML number against psycopg's string. OID 28 = pg_catalog.xid.
+psycopg.adapters.register_loader(28, IntLoader)
 
 
 @dataclass(frozen=True)

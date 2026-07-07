@@ -8,10 +8,6 @@ sure they can't live long.
 
 ## Finding them
 
-<<< ../../../scenarios/postgres/08-production/find-long-transactions.ts#demo{ts}
-
-<<< ../../../scenarios/postgres/08-production/find-long-transactions.ts#detect{ts}
-
 <!--@include: ./parts/find-long-transactions.md-->
 
 Note what detector 3 proved: the report **wrote nothing** (`backend_xid` is null — no
@@ -23,12 +19,6 @@ what matters: the session with the oldest `xact_start` is almost always the stor
 
 Detection finds today's incident; timeouts prevent next month's. PostgreSQL ships three,
 from narrowest to widest:
-
-<<< ../../../scenarios/postgres/08-production/timeout-guardrails.ts#statement{ts}
-
-<<< ../../../scenarios/postgres/08-production/timeout-guardrails.ts#transaction{ts}
-
-<<< ../../../scenarios/postgres/08-production/timeout-guardrails.ts#aftermath{ts}
 
 <!--@include: ./parts/timeout-guardrails.md-->
 

@@ -1,0 +1,32 @@
+title: REPEATABLE READ does NOT stop lost updates
+claim: >-
+  The interleaving that loses an update at READ COMMITTED loses it at
+  REPEATABLE READ too — MySQL raises no error, unlike PostgreSQL's 40001. The
+  fix must be a locking read or an atomic UPDATE.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, B]
+steps:
+  - note: The same two +10 deposits — this time at REPEATABLE READ, MySQL's default.
+  - A: BEGIN
+  - A: SELECT balance FROM accounts WHERE id = 1
+    capture: readA
+
+  - B: BEGIN
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+    capture: readB
+
+  - A: UPDATE accounts SET balance = ${readA.balance} + 10 WHERE id = 1
+  - A: COMMIT
+
+  - note: B's snapshot predates A's commit — but MySQL's UPDATE acts on the CURRENT row and raises nothing.
+  - B: UPDATE accounts SET balance = ${readB.balance} + 10 WHERE id = 1
+  - B: COMMIT
+
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 110 }]
+    comment: A's deposit is gone — silently, even at REPEATABLE READ
+
+  - note: PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not — don't port that assumption.

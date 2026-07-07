@@ -15,8 +15,6 @@ template, `await`s something slow. The database sees a session that is
 [VACUUM's horizon](/postgres/04-mvcc/long-transactions) — while your code isn't talking to it at
 all. Here is that story end to end, including the guardrail that ends it:
 
-<<< ../../../scenarios/postgres/05-patterns/idle-in-transaction-timeout.ts#demo{ts}
-
 <!--@include: ./parts/idle-in-transaction-timeout.md-->
 
 The timeout is

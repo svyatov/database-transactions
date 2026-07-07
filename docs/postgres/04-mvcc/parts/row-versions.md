@@ -2,7 +2,7 @@
 
 *Every row carries hidden system columns: xmin = the transaction that created this version, xmax = the one that deleted or replaced it (0 = nobody yet), ctid = its physical address (page, slot).*
 
-```
+```transcript
 A> SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1;
  xmin | xmax | ctid  | balance 
 ------+------+-------+---------
@@ -21,7 +21,7 @@ B> SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1;
 
 *A's UPDATE doesn't touch that version — it writes a brand-new one at a new ctid.*
 
-```
+```transcript
 A> UPDATE accounts SET balance = 200 WHERE id = 1
    RETURNING xmin, xmax, ctid, balance;
  xmin | xmax | ctid  | balance 
@@ -32,7 +32,7 @@ A> UPDATE accounts SET balance = 200 WHERE id = 1
 
 *B still reads the old version — but its xmax is no longer 0: A's xid is stamped on it.*
 
-```
+```transcript
 B> SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1;
  xmin | xmax | ctid  | balance 
 ------+------+-------+---------
@@ -51,7 +51,7 @@ B> SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1;
 
 *pageinspect shows both versions physically on page 0 — the old one points at its successor.*
 
-```
+```transcript
 A> SELECT lp, t_xmin, t_xmax, t_ctid
    FROM heap_page_items(get_raw_page('accounts', 0)) ORDER BY lp;
  lp | t_xmin | t_xmax | t_ctid 
@@ -63,7 +63,7 @@ A> SELECT lp, t_xmin, t_xmax, t_ctid
 
 *DELETE doesn't erase anything either — it only stamps xmax on the current version.*
 
-```
+```transcript
 A> DELETE FROM accounts WHERE id = 1 RETURNING xmin, xmax, ctid;
  xmin | xmax | ctid  
 ------+------+-------
@@ -79,7 +79,7 @@ A> SELECT count(*)::int AS live_rows FROM accounts;
 
 *Zero rows for SELECT — yet both versions are still on disk, awaiting VACUUM.*
 
-```
+```transcript
 A> SELECT lp, t_xmin, t_xmax, t_ctid
    FROM heap_page_items(get_raw_page('accounts', 0)) ORDER BY lp;
  lp | t_xmin | t_xmax | t_ctid 

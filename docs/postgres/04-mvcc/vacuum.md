@@ -6,8 +6,6 @@ almost never does is make the file smaller. This lesson proves both halves.
 
 ## What VACUUM actually does to a page
 
-<<< ../../../scenarios/postgres/04-mvcc/vacuum.ts#demo{ts}
-
 <!--@include: ./parts/vacuum.md-->
 
 Reading the after picture (`lp_flags` values aren't in the manual — the
@@ -21,8 +19,6 @@ that don't touch indexed columns link versions within the page, and index entrie
 pointing at the root slot.)
 
 ## Why your table didn't shrink
-
-<<< ../../../scenarios/postgres/04-mvcc/vacuum.ts#size{ts}
 
 The manual says it plainly: the standard form of VACUUM
 ["removes dead row versions in tables and indexes and marks the space available for future reuse.

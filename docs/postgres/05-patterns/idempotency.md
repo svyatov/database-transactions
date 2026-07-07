@@ -11,8 +11,6 @@ constraint pointed at a new target: not the data, but the *request identity*. Th
 names each logical operation once (`req-42`); the server inserts that name as its first
 move, and the insert's result — row or no row — decides everything:
 
-<<< ../../../scenarios/postgres/05-patterns/idempotency-key.ts#demo{ts}
-
 <!--@include: ./parts/idempotency-key.md-->
 
 The gate and the charge share one transaction, and that's the load-bearing detail: if
@@ -23,9 +21,7 @@ the gap leaves a claimed key with no charge: the retry then does nothing, foreve
 ## The in-flight retry
 
 "Already processed" was easy. The nastier duplicate arrives while the original is still
-running — no committed row exists to conflict with yet:
-
-<<< ../../../scenarios/postgres/05-patterns/idempotency-key.ts#race{ts}
+running — no committed row exists to conflict with yet.
 
 The unique index parks the retry until the original commits (the wait-on-transactionid
 mechanics from the [previous lesson](/postgres/05-patterns/check-then-insert)), then absorbs it:

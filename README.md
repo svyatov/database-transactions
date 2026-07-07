@@ -15,8 +15,8 @@ some other database. This project takes a different approach:
 
 - Every session transcript you see in the docs is **generated from a real run** against
   the database — never hand-written, so it can never drift from actual behavior.
-- Every lesson ships with a **scenario**: an executable script that orchestrates concurrent
-  sessions and **asserts** the outcome (`bun test` runs them all).
+- Every lesson ships with a **scenario**: an executable definition that orchestrates
+  concurrent sessions and **asserts** the outcome (`bun test` runs them all).
 - CI regenerates every transcript on every push and fails if anything changed.
   A green build literally means "every statement on the site was just re-verified".
 
@@ -50,9 +50,9 @@ the database client is built into Bun.
 | 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ | 🚧 |
 | 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ | 🚧 |
 
-Chapters 1–3 are also available in **Python** — every lesson shows TypeScript and Python
-side by side, and both are executed in CI. More languages (Ruby, PHP) are on the roadmap —
-the structure below is built for them.
+Every scenario is also re-verified from **Python** (psycopg + PyMySQL) in CI — same YAML,
+different driver. More languages (Ruby, PHP) are on the roadmap: each one is a ~100-line
+loader, not a re-write of the scenarios.
 
 ```sh
 uv sync --directory python && uv run --directory python pytest   # the same claims, from Python
@@ -60,18 +60,19 @@ uv sync --directory python && uv run --directory python pytest   # the same clai
 
 ## How it works
 
-- `scenarios/<db>/` — one TypeScript file per demo. Each opens named sessions (dedicated
-  database connections), interleaves their statements with plain `await` order, and asserts
-  outcomes — including "this query MUST block now" via live lock-wait monitoring.
-- `harness/` — ~500 lines that make the above work, with everything database-specific
-  side by side in `harness/dialect.ts`. Deliberately small and readable; it's part of the
-  learning material.
-- `python/` — the same scenarios and a thin harness in Python (psycopg + PyMySQL), run by
-  pytest in CI. Transcripts come only from the TypeScript harness — other languages
-  re-verify the claims.
-- `docs/<db>/` — the VitePress site, one track per database. Lesson pages include the
-  *actual scenario source* (VitePress snippet imports, with a language tab per port) and
-  the *generated transcripts* — nothing is duplicated by hand.
+- `scenarios/<db>/` — one **YAML file per demo**: named sessions (dedicated database
+  connections), an ordered list of SQL steps interleaving them, and the expected outcome
+  of each step — including "this query MUST block now", verified via live lock-wait
+  monitoring. A handful of scenarios whose *client code* is the lesson (retry loops,
+  LISTEN/NOTIFY) stay as TypeScript.
+- `harness/` — ~600 lines that make the above work: `loader.ts` interprets the YAML,
+  everything database-specific sits side by side in `harness/dialect.ts`. Deliberately
+  small and readable; it's part of the learning material.
+- `python/` — a thin Python harness with its own ~100-line loader, run by pytest in CI
+  against the *same* YAML scenarios. Transcripts come only from the TypeScript harness —
+  other languages re-verify the claims.
+- `docs/<db>/` — the VitePress site, one track per database. Lesson pages show plain SQL:
+  the *generated transcripts* (color-coded per session) — nothing is duplicated by hand.
 
 ## Contributing
 

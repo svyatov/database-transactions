@@ -1,0 +1,37 @@
+title: A saga and its compensating transaction
+claim: >-
+  A saga replaces one distributed transaction with a chain of local ones:
+  every step commits immediately and is visible to everyone, and a failed
+  step is undone by a new compensating transaction — not by ROLLBACK.
+setup: |
+  CREATE TABLE flights (id int PRIMARY KEY, seats int NOT NULL CHECK (seats >= 0));
+  CREATE TABLE hotels  (id int PRIMARY KEY, rooms int NOT NULL CHECK (rooms >= 0));
+  INSERT INTO flights VALUES (1, 5);
+  INSERT INTO hotels  VALUES (1, 0);  -- fully booked: step 2 will fail
+sessions: [Saga, Reader]
+steps:
+  - note: Step 1 — book the flight. A local transaction, committed immediately.
+  - Saga: BEGIN
+  - Saga: UPDATE flights SET seats = seats - 1 WHERE id = 1 RETURNING seats
+    expect: [{ seats: 4 }]
+  - Saga: COMMIT
+
+  - note: "A saga has no isolation: between steps, the whole world sees the half-done trip."
+  - Reader: SELECT seats FROM flights WHERE id = 1
+    expect: [{ seats: 4 }]
+
+  - note: "Step 2 — book the hotel. No rooms left: the step fails as a business outcome, not an error."
+  - Saga: BEGIN
+  - Saga: UPDATE hotels SET rooms = rooms - 1 WHERE id = 1 AND rooms > 0
+    affected: 0
+    comment: UPDATE 0 — nothing to book
+  - Saga: ROLLBACK
+
+  - note: >-
+      Step 1 already committed — there is nothing a ROLLBACK could undo. The
+      saga runs a COMPENSATING transaction: a new forward transaction that
+      reverses the booking.
+  - Saga: BEGIN
+  - Saga: UPDATE flights SET seats = seats + 1 WHERE id = 1 RETURNING seats
+    expect: [{ seats: 5 }]
+  - Saga: COMMIT

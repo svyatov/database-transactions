@@ -7,8 +7,6 @@ you, because each transaction's check honestly saw a world without the row.
 
 ## Watch the duplicate land
 
-<<< ../../../scenarios/postgres/05-patterns/check-then-insert-race.ts#demo{ts}
-
 <!--@include: ./parts/check-then-insert-race.md-->
 
 No error, no blocking — both transactions did exactly what they were told. The
@@ -20,8 +18,6 @@ little sibling: two decisions, each valid in its own snapshot, jointly wrong.)
 
 Uniqueness is the database's job. With `UNIQUE`, the same race becomes a wait-then-error —
 and `ON CONFLICT` turns even that error into a plan:
-
-<<< ../../../scenarios/postgres/05-patterns/on-conflict.ts#demo{ts}
 
 <!--@include: ./parts/on-conflict.md-->
 

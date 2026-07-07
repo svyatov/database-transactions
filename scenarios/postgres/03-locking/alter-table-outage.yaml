@@ -1,0 +1,34 @@
+title: The classic migration outage, in four statements
+claim: >-
+  An ALTER TABLE queued behind one long transaction blocks every later query
+  on that table — even plain SELECTs — because they must queue behind its
+  ACCESS EXCLUSIVE request.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, B, C, M]
+steps:
+  - note: A is any long-lived transaction that has touched the table — a report, a stuck job…
+  - A: BEGIN
+  - A: SELECT balance FROM accounts WHERE id = 1
+
+  - note: The migration needs ACCESS EXCLUSIVE, so it waits for A. Expected. But now —
+  - B: ALTER TABLE accounts ADD COLUMN note text
+    blocks: p1
+
+  - note: — every new query on the table queues behind the *waiting* ALTER. This is the outage.
+  - C: SELECT balance FROM accounts WHERE id = 1
+    blocks: p2
+
+  - M: |
+      SELECT waiter.application_name AS waiter, blocker.application_name AS blocker
+      FROM pg_stat_activity waiter
+      JOIN pg_stat_activity blocker ON blocker.pid = ANY (pg_blocking_pids(waiter.pid))
+      WHERE waiter.wait_event_type = 'Lock'
+      ORDER BY waiter.application_name, blocker.application_name
+    expect: [{ waiter: B, blocker: A }, { waiter: C, blocker: B }]
+
+  - note: Only when A ends does the pile-up drain — migration first, then the reads.
+  - A: COMMIT
+  - success: p1
+  - success: p2

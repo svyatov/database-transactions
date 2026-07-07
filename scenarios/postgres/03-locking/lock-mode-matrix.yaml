@@ -1,0 +1,33 @@
+title: The four row-lock modes, from friendly to exclusive
+claim: >-
+  FOR KEY SHARE < FOR SHARE < FOR NO KEY UPDATE < FOR UPDATE: two share-mode
+  locks coexist, but a share lock still stops writers, and FOR UPDATE stops
+  everything.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, B]
+steps:
+  - note: Two FOR SHARE locks on the same row coexist happily…
+  - A: BEGIN
+  - A: SELECT id FROM accounts WHERE id = 1 FOR SHARE
+  - B: BEGIN
+  - B: SELECT id FROM accounts WHERE id = 1 FOR SHARE
+  - B: COMMIT
+
+  - note: …but FOR SHARE still blocks a plain UPDATE (which takes FOR NO KEY UPDATE).
+  - B: UPDATE accounts SET balance = 200 WHERE id = 1
+    blocks: p1
+  - A: COMMIT
+  - success: p1
+
+  - note: The weakest lock, FOR KEY SHARE, even coexists with a running UPDATE…
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 300 WHERE id = 1
+  - B: SELECT id FROM accounts WHERE id = 1 FOR KEY SHARE
+
+  - note: …while the strongest, FOR UPDATE, has to wait for it.
+  - B: SELECT id FROM accounts WHERE id = 1 FOR UPDATE
+    blocks: p2
+  - A: COMMIT
+  - success: p2

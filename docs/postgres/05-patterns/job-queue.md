@@ -8,8 +8,6 @@ guarantees: **no job runs twice, no job is lost**.
 
 The whole trick is doing *claim → work → mark done* inside **one transaction**:
 
-<<< ../../../scenarios/postgres/05-patterns/job-queue.ts#demo{ts}
-
 <!--@include: ./parts/job-queue.md-->
 
 Both guarantees fall out of things this site already proved:

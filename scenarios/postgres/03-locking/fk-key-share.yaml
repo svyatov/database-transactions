@@ -1,0 +1,31 @@
+title: Foreign keys take row locks for you
+claim: >-
+  INSERTing a child row locks the referenced parent row with FOR KEY SHARE:
+  updating the parent's other columns still works, but deleting it blocks —
+  and then fails the moment the child commits.
+setup: |
+  CREATE TABLE customers (id int PRIMARY KEY, name text NOT NULL, balance int NOT NULL);
+  CREATE TABLE orders (id int PRIMARY KEY, customer_id int NOT NULL REFERENCES customers);
+  INSERT INTO customers VALUES (1, 'alice', 100);
+sessions: [A, B]
+steps:
+  - A: BEGIN
+  - A: INSERT INTO orders VALUES (1, 1)
+    comment: FK check locks customers row 1 FOR KEY SHARE
+
+  - note: FOR KEY SHARE doesn't mind non-key updates — B can change the balance.
+  - B: UPDATE customers SET balance = 50 WHERE id = 1
+
+  - note: But DELETE needs the strongest row lock (FOR UPDATE) — B has to wait.
+  - B: DELETE FROM customers WHERE id = 1
+    blocks: p1
+
+  - A: COMMIT
+
+  - note: A's order is now committed, so B's DELETE resumes — straight into the FK.
+  - failure: p1
+    error: "23503"
+
+  - B: SELECT balance FROM customers WHERE id = 1
+    expect: [{ balance: 50 }]
+    comment: the parent survived, with B's earlier non-key update intact

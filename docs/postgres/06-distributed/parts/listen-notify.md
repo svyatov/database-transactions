@@ -2,7 +2,7 @@
 
 *A psql process is attached and ran LISTEN orders; — a separate client, not one of our sessions.*
 
-```
+```transcript
 A> SELECT pg_backend_pid() AS pid;
   pid   
 --------
@@ -21,7 +21,7 @@ NOTIFY
 
 *The listener hears nothing — the notification is queued inside A's transaction.*
 
-```
+```transcript
 A> COMMIT;
 COMMIT
 ```
@@ -30,7 +30,7 @@ COMMIT
 
 *A rolled-back NOTIFY simply never happened:*
 
-```
+```transcript
 A> BEGIN;
 BEGIN
 
@@ -45,7 +45,7 @@ ROLLBACK
 
 *Identical notifications in one transaction are de-duplicated:*
 
-```
+```transcript
 A> BEGIN;
 BEGIN
 

@@ -11,14 +11,10 @@ the manual: after `PREPARE TRANSACTION`,
 
 "No longer associated with the current session" is not a figure of speech:
 
-<<< ../../../scenarios/postgres/06-distributed/two-phase-commit.ts#demo{ts}
-
 <!--@include: ./parts/two-phase-commit.md-->
 
 The session that *created* the transaction can't see its changes anymore — the
-transaction has left the session and lives on disk now. Then the scenario gets violent:
-
-<<< ../../../scenarios/postgres/06-distributed/two-phase-commit.ts#survives{ts}
+transaction has left the session and lives on disk now. Then the scenario gets violent.
 
 Everything this site showed about crashes so far — "PostgreSQL rolls back open
 transactions on disconnect" — stops at PREPARE. The killed backend took nothing with

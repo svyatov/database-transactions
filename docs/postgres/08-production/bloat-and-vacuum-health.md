@@ -6,8 +6,6 @@ reclaiming them, [one old snapshot starving it all](/postgres/04-mvcc/long-trans
 lesson is the dashboard version: the same facts from `pg_stat_user_tables`, the view
 your monitoring should already be scraping.
 
-<<< ../../../scenarios/postgres/08-production/vacuum-health.ts#demo{ts}
-
 <!--@include: ./parts/vacuum-health.md-->
 
 ## Reading the dashboard

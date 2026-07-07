@@ -19,8 +19,6 @@ snapshot was taken changes nothing.
 
 ## The three numbers, live
 
-<<< ../../../scenarios/postgres/04-mvcc/snapshots-under-the-hood.ts#demo{ts}
-
 <!--@include: ./parts/snapshots-under-the-hood.md-->
 
 Worth pausing on each beat:

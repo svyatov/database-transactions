@@ -6,29 +6,12 @@ world moved between them.
 
 ## Non-repeatable reads
 
-::: code-group
-<<< ../../../scenarios/mysql/02-isolation/non-repeatable-read.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/02-isolation/non-repeatable-read.py#demo{py} [Python]
-:::
-
-Readers never block — but two writers to the same row do queue up:
-
-::: code-group
-<<< ../../../scenarios/mysql/02-isolation/non-repeatable-read.ts#blocking{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/02-isolation/non-repeatable-read.py#blocking{py} [Python]
-:::
-
 <!--@include: ./parts/non-repeatable-read.md-->
 
 ## Phantoms
 
 The same effect on a *set* of rows: a `WHERE` clause can match rows in the second reading
 that didn't exist in the first.
-
-::: code-group
-<<< ../../../scenarios/mysql/02-isolation/phantom-read.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/02-isolation/phantom-read.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/phantom-read.md-->
 
@@ -37,11 +20,6 @@ that didn't exist in the first.
 When an UPDATE waits for a row lock and finally gets it, the row may no longer match its
 `WHERE` clause. READ COMMITTED re-evaluates and silently skips it
 ([semi-consistent read](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html#isolevel_read-committed)):
-
-::: code-group
-<<< ../../../scenarios/mysql/02-isolation/update-recheck.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/02-isolation/update-recheck.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/update-recheck.md-->
 

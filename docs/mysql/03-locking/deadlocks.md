@@ -6,11 +6,6 @@ back one transaction — the *victim* — with errno `1213`.
 
 ## The classic: opposite lock order
 
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/deadlock.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/deadlock.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/deadlock.md-->
 
 Note what `1213` did: unlike a [lock timeout](/mysql/03-locking/nowait-skip-locked), it
@@ -19,11 +14,6 @@ is to retry from the top. (InnoDB picks the victim by weight — roughly, the tr
 changed fewer rows; you can't choose it.)
 
 ## The cure: consistent lock order
-
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/deadlock-avoidance.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/deadlock-avoidance.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/deadlock-avoidance.md-->
 

@@ -12,8 +12,6 @@ The demo compresses the idea into one database so every claim stays assertable â
 two tables play the two services. The mechanics are the point: step 1 *commits for
 real*, so when step 2 fails, the only way back is a new forward transaction:
 
-<<< ../../../scenarios/postgres/06-distributed/saga-compensation.ts#demo{ts}
-
 <!--@include: ./parts/saga-compensation.md-->
 
 ## What the transcript just proved

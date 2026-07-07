@@ -131,6 +131,67 @@ export default defineConfig({
   cleanUrls: true,
   // Generated transcript fragments are included into lesson pages, never built as pages.
   srcExclude: ["**/parts/**"],
+  markdown: {
+    config(md) {
+      // ```transcript fences: one <span> per line, classed by the session that owns it
+      // (A> prompts, ⏳/⏵ markers; result lines inherit the last prompt's session).
+      // Statement lines are Shiki-highlighted as SQL; output lines stay plain.
+      // The session→color registry lives in `env`, so a session keeps its color
+      // across every transcript block of the page.
+      const fence = md.renderer.rules.fence!;
+      md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+        const token = tokens[idx]!;
+        if (token.info.trim() !== "transcript") return fence(tokens, idx, options, env, self);
+        const sessions: string[] = ((env as any).txSessions ??= []);
+        const cls = (name: string) => {
+          if (!sessions.includes(name)) sessions.push(name);
+          return ` tx-s${(sessions.indexOf(name) % 4) + 1}`;
+        };
+        const sqlLines = (code: string): string[] => {
+          const inner = md.options
+            .highlight?.(code, "sql", "")
+            ?.match(/<code[^>]*>([\s\S]*?)<\/code>/)?.[1];
+          return inner ? inner.split("\n") : code.split("\n").map((l) => md.utils.escapeHtml(l));
+        };
+
+        const out: string[] = [];
+        const lines = token.content.replace(/\n$/, "").split("\n");
+        let current = "";
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]!;
+          const prompt = line.match(/^(\w+)> /);
+          if (prompt) {
+            current = cls(prompt[1]!);
+            // Collect the whole statement: continuation lines until the `;` terminator
+            // (prompt() in harness/transcript.ts guarantees one, `;` or `; -- comment`).
+            const indent = prompt[0].length;
+            const stmt = [line];
+            while (
+              !/;\s*(--.*)?$/.test(stmt.at(-1)!) &&
+              i + 1 < lines.length &&
+              lines[i + 1]!.startsWith(" ".repeat(indent))
+            ) {
+              stmt.push(lines[++i]!);
+            }
+            const sql = sqlLines(stmt.map((l) => l.slice(indent)).join("\n"));
+            stmt.forEach((_, j) => {
+              const head =
+                j === 0
+                  ? `<span class="tx-prompt">${md.utils.escapeHtml(`${prompt[1]}>`)}</span> `
+                  : " ".repeat(indent);
+              out.push(`<span class="tx-line${current}">${head}${sql[j] ?? ""}</span>`);
+            });
+            continue;
+          }
+          const marker = line.match(/^[⏳⏵]\s*(\w+)/u);
+          if (marker) current = cls(marker[1]!);
+          const lineCls = line.trim() === "" ? "" : current;
+          out.push(`<span class="tx-line${lineCls}">${md.utils.escapeHtml(line)}</span>`);
+        }
+        return `<div class="transcript" v-pre><pre><code>${out.join("\n")}</code></pre></div>\n`;
+      };
+    },
+  },
   themeConfig: {
     nav: [
       { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },

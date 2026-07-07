@@ -5,10 +5,9 @@ fully doesn't**. The classic example: moving money between two accounts takes tw
 the world must never see — or keep — only one of them.
 
 ::: tip How to read the demos
-Each lesson shows the real scenario code (sessions `A`, `B`, … are separate MySQL
-connections) followed by a transcript generated from an actual run. The four verbs
-(`` A`…` ``, `A.fails`, `B.blocked`, `pending.success()`) are explained in
-[Why trust this site?](/about/methodology)
+Each lesson shows a transcript generated from an actual run of the scenario: plain SQL,
+color-coded per session (`A`, `B`, … are separate MySQL connections). How the transcripts
+are produced and verified is explained in [Why trust this site?](/about/methodology)
 :::
 
 ## ACID, briefly
@@ -28,11 +27,6 @@ All of this applies to **InnoDB**, MySQL's default storage engine. Tables on oth
 Session A transfers 150 from alice (who has only 100) to bob. The credit to bob *succeeds*;
 the debit from alice violates a `CHECK` constraint. Watch what happens to bob's
 already-successful credit:
-
-::: code-group
-<<< ../../../scenarios/mysql/01-basics/atomicity.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/01-basics/atomicity.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/atomicity.md-->
 

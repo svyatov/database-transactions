@@ -1,30 +1,22 @@
 """One test per scenario file, in path order — the Python mirror of tests/scenarios.test.ts.
 
-Scenario files use kebab-case names (mirroring the TypeScript tree 1:1), so they are
-loaded by path rather than imported as modules. Tests run serially — scenarios share
-one database per dialect.
+The canonical YAML scenarios at the repo root are the single source of truth; this
+suite re-verifies the same claims from Python drivers (psycopg, PyMySQL). Tests run
+serially — scenarios share one database per dialect.
 """
 
-import importlib.util
 from pathlib import Path
 
 import pytest
 
 from harness.dialects import dialect_for
+from harness.loader import load_scenario
 from harness.run import run_scenario
 
-ROOT = Path(__file__).parent.parent / "scenarios"
-FILES = sorted(ROOT.glob("**/*.py"))
+ROOT = Path(__file__).parent.parent.parent / "scenarios"
+FILES = sorted(ROOT.glob("**/*.yaml"))
 
 
-def load(path: Path):
-    spec = importlib.util.spec_from_file_location(path.stem.replace("-", "_"), path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.scenario
-
-
-@pytest.mark.parametrize("path", FILES, ids=lambda p: str(p.relative_to(ROOT)).removesuffix(".py"))
+@pytest.mark.parametrize("path", FILES, ids=lambda p: str(p.relative_to(ROOT)).removesuffix(".yaml"))
 def test_scenario(path: Path):
-    s = load(path)
-    run_scenario(s, dialect_for(str(path.relative_to(ROOT))))
+    run_scenario(load_scenario(path), dialect_for(str(path.relative_to(ROOT))))

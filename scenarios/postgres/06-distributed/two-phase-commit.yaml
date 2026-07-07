@@ -1,0 +1,51 @@
+title: PREPARE TRANSACTION survives its session
+claim: >-
+  PREPARE TRANSACTION detaches a transaction from its session: it survives
+  the session's death, keeps holding its locks, and any later session can
+  finish it by name with COMMIT PREPARED.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 100);
+sessions: [A, B, M]
+steps:
+  - note: A is one participant in a distributed transfer. It does its work, then PREPARES — phase one.
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 200 WHERE id = 1
+  - A: PREPARE TRANSACTION 'transfer-42'
+
+  - note: "PREPARE detached the transaction from the session: A itself no longer sees its own change."
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+
+  - M: SELECT gid, owner, database FROM pg_prepared_xacts
+    expect: [{ gid: "transfer-42", owner: "postgres", database: "postgres" }]
+
+  - note: The prepared transaction still holds its row locks — with no session attached.
+  - B.fails: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
+    error: "55P03"
+    comment: lock_not_available
+
+  - note: "Now the coordinator crashes: A's backend is killed outright."
+  - M: |-
+      SELECT pg_terminate_backend(pid) AS terminated
+      FROM pg_stat_activity WHERE application_name = 'A'
+    expect: [{ terminated: true }]
+
+  - sleep: 300 # let the client side notice the dead socket
+
+  - A.fails: SELECT 1
+    error: ["57P01", "ERR_POSTGRES_CONNECTION_CLOSED"] # psycopg sees the FATAL's SQLSTATE; Bun.sql only notices the closed socket
+
+  - note: >-
+      The session is gone. The prepared transaction is not — it survives
+      anything short of COMMIT/ROLLBACK PREPARED, including a full server
+      restart. And it still holds its locks:
+  - M: SELECT gid FROM pg_prepared_xacts
+    expect: [{ gid: "transfer-42" }]
+  - B.fails: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
+    error: "55P03"
+
+  - note: Phase two — any session can finish the job by name. B commits the orphan.
+  - B: COMMIT PREPARED 'transfer-42'
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 200 }]

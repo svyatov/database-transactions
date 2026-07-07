@@ -7,11 +7,6 @@ site-wide incident (you'll see the extreme version in
 
 ## First come, first locked
 
-::: code-group
-<<< ../../../scenarios/postgres/03-locking/lock-queue-fifo.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/03-locking/lock-queue-fifo.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/lock-queue-fifo.md-->
 
 ## Reading the transcript

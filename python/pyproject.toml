@@ -7,6 +7,7 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "pymysql>=1.1",
     "cryptography>=42",   # MySQL 8.4's caching_sha2_password auth needs it
+    "pyyaml>=6",
 ]
 
 [dependency-groups]

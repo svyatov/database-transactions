@@ -10,11 +10,6 @@ Even an `ALGORITHM=INSTANT` column add must wait for every open transaction that
 the table. While it waits, its exclusive request blocks **everyone who comes after it** —
 including plain SELECTs:
 
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/alter-table-outage.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/alter-table-outage.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/alter-table-outage.md-->
 
 ## The fix: run DDL with a lock_wait_timeout
@@ -22,11 +17,6 @@ including plain SELECTs:
 MDL waits are governed by `lock_wait_timeout` (a *different* variable from InnoDB's
 `innodb_lock_wait_timeout`, default: one year). Set it low for migrations so they fail fast
 instead of camping in the queue:
-
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/ddl-lock-timeout.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/ddl-lock-timeout.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/ddl-lock-timeout.md-->
 

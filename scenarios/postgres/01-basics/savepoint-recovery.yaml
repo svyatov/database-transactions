@@ -1,0 +1,30 @@
+title: "Savepoints: recover from errors mid-transaction"
+claim: >-
+  ROLLBACK TO SAVEPOINT un-aborts a failed transaction, discarding only the
+  work done after the savepoint — the rest commits normally.
+setup: |
+  CREATE TABLE items (id int PRIMARY KEY, name text NOT NULL UNIQUE);
+  INSERT INTO items VALUES (1, 'widget');
+sessions: [A]
+steps:
+  - A: BEGIN
+  - A: INSERT INTO items VALUES (2, 'gadget')
+  - A: SAVEPOINT before_risky
+
+  - A.fails: INSERT INTO items VALUES (3, 'widget')
+    error: "23505"
+    comment: unique_violation — the transaction is aborted
+
+  - note: >-
+      Without the savepoint this transaction would be doomed. With it, we
+      rewind past the failure and carry on.
+  - A: ROLLBACK TO SAVEPOINT before_risky
+  - A: INSERT INTO items VALUES (3, 'doohickey')
+  - A: COMMIT
+
+  - A: SELECT id, name FROM items ORDER BY id
+    expect:
+      - { id: 1, name: widget }
+      - { id: 2, name: gadget }
+      - { id: 3, name: doohickey }
+    comment: survived — it predates the savepoint

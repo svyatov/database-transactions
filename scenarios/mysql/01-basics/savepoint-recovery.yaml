@@ -1,0 +1,30 @@
+title: "Savepoints: discard a risky branch mid-transaction"
+claim: >-
+  ROLLBACK TO SAVEPOINT discards only the work done after the savepoint — the
+  rest of the transaction commits normally.
+setup: |
+  CREATE TABLE items (id int PRIMARY KEY, name varchar(50) NOT NULL UNIQUE);
+  INSERT INTO items VALUES (1, 'widget');
+sessions: [A]
+steps:
+  - A: BEGIN
+  - A: INSERT INTO items VALUES (2, 'gadget')
+  - A: SAVEPOINT before_risky
+
+  - note: The risky branch makes real progress before it fails…
+  - A: INSERT INTO items VALUES (3, 'gizmo')
+  - A.fails: INSERT INTO items VALUES (4, 'widget')
+    error: "1062"
+    comment: ER_DUP_ENTRY
+
+  - note: The transaction is still alive — but the branch is half-done. Rewind all of it in one go.
+  - A: ROLLBACK TO SAVEPOINT before_risky
+  - A: INSERT INTO items VALUES (3, 'doohickey')
+  - A: COMMIT
+
+  - A: SELECT id, name FROM items ORDER BY id
+    expect:
+      - { id: 1, name: widget }
+      - { id: 2, name: gadget }
+      - { id: 3, name: doohickey }
+    comment: survived — it predates the savepoint; 'gizmo' is gone with the branch

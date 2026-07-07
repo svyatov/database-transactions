@@ -21,7 +21,7 @@ This runs every scenario in `scenarios/` — both the `postgres/` and `mysql/` t
 the real databases and asserts every outcome — the same check CI runs before anything is
 published.
 
-The Python ports run with [uv](https://docs.astral.sh/uv/):
+The Python harness re-verifies the same scenarios with [uv](https://docs.astral.sh/uv/):
 
 ```sh
 uv sync --directory python
@@ -44,13 +44,13 @@ session's next statement runs, and watch who blocks whom in real time.
 The best way to learn is to break things. Open any scenario, change something, and watch:
 
 ```sh
-# e.g. edit scenarios/postgres/02-isolation/non-repeatable-read.ts:
+# e.g. edit scenarios/postgres/02-isolation/non-repeatable-read.yaml:
 #   change  BEGIN ISOLATION LEVEL READ COMMITTED
 #   to      BEGIN ISOLATION LEVEL REPEATABLE READ
 bun test
 ```
 
-The assertion `eq(second!.balance, 200)` now fails — at REPEATABLE READ the second read
+The `expect: [{ balance: 200 }]` assertion now fails — at REPEATABLE READ the second read
 returns `100`, because the anomaly you just read about *can no longer happen*. Every failing
 scenario prints its transcript up to the failure, so you can see exactly where reality
 diverged from the script.

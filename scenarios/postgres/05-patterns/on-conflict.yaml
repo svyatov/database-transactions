@@ -1,0 +1,34 @@
+title: "UNIQUE + ON CONFLICT: closing the race at the source"
+claim: >-
+  A UNIQUE constraint makes the concurrent duplicate wait for the first
+  insert's fate and then fail with 23505 — and ON CONFLICT turns that error
+  into a clean no-op or upsert.
+setup: |
+  CREATE TABLE signups (id serial PRIMARY KEY, email text UNIQUE NOT NULL);
+sessions: [A, B]
+steps:
+  - note: Same double-click, but now the table has UNIQUE (email).
+  - A: BEGIN
+  - A: INSERT INTO signups (email) VALUES ('bob@example.com')
+
+  - note: B's insert can't decide yet — the winner hasn't committed. It waits on A's transaction.
+  - B: INSERT INTO signups (email) VALUES ('bob@example.com')
+    blocks: p1
+  - A: COMMIT
+  - failure: p1
+    error: "23505"
+  - note: unique_violation — the race is now loud instead of silent.
+
+  - note: "ON CONFLICT DO NOTHING absorbs the duplicate instead of erroring:"
+  - B: |-
+      INSERT INTO signups (email) VALUES ('bob@example.com')
+      ON CONFLICT (email) DO NOTHING
+    affected: 0
+    comment: INSERT 0 0
+
+  - note: "And DO UPDATE makes it an upsert — here just to read back the existing row's id:"
+  - B: |-
+      INSERT INTO signups (email) VALUES ('bob@example.com')
+      ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
+      RETURNING id, email
+    expect: [{ id: 1, email: "bob@example.com" }]

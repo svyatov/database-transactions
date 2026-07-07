@@ -8,14 +8,13 @@
  * <id> is any unique part of the scenario path: "deadlock", "02-isolation/write-skew-rr", …
  */
 import { dialectFor } from "../harness/dialect";
-import type { Scenario } from "../harness/scenario";
+import { loadScenario } from "../harness/loader";
 import { runScenario, type Event } from "../harness/run";
 import { liveRenderer } from "../harness/transcript";
 
 const root = new URL("..", import.meta.url).pathname;
-const files = [...new Bun.Glob("**/*.ts").scanSync({ cwd: `${root}scenarios` })].sort();
-const load = async (file: string) =>
-  ((await import(`${root}scenarios/${file}`)) as { default: Scenario }).default;
+const files = [...new Bun.Glob("**/*.{ts,yaml}").scanSync({ cwd: `${root}scenarios` })].sort();
+const load = (file: string) => loadScenario(`${root}scenarios/${file}`);
 
 const args = Bun.argv.slice(2);
 const step = args.includes("--step");
@@ -26,14 +25,16 @@ if (!query) {
   for (const file of files) {
     const dir = file.split("/").slice(0, 2).join("/");
     if (dir !== chapter) console.log(`\n${(chapter = dir)}`);
-    console.log(`  ${file.replace(/\.ts$/, "").padEnd(44)} ${(await load(file)).title}`);
+    console.log(`  ${file.replace(/\.(ts|yaml)$/, "").padEnd(44)} ${(await load(file)).title}`);
   }
   console.log("\nRun one:  bun lesson <id> [--step]");
   process.exit(0);
 }
 
-const exact = files.find((f) => [f, f.replace(/\.ts$/, ""), f.replace(/^.*\/|\.ts$/g, "")].includes(query));
-const matches = exact ? [exact] : files.filter((f) => f.replace(/\.ts$/, "").includes(query));
+const exact = files.find((f) =>
+  [f, f.replace(/\.(ts|yaml)$/, ""), f.replace(/^.*\/|\.(ts|yaml)$/g, "")].includes(query),
+);
+const matches = exact ? [exact] : files.filter((f) => f.replace(/\.(ts|yaml)$/, "").includes(query));
 if (matches.length !== 1) {
   console.error(
     matches.length

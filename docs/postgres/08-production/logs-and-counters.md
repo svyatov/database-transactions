@@ -11,8 +11,6 @@ A [deadlock](/postgres/03-locking/deadlocks) that's caught by a
 tracker. The database still counts it — `pg_stat_database.deadlocks`:
 ["Number of deadlocks detected in this database"](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-DATABASE-VIEW):
 
-<<< ../../../scenarios/postgres/08-production/deadlock-counter.ts#demo{ts}
-
 <!--@include: ./parts/deadlock-counter.md-->
 
 A counter that only ever goes up is an alerting gift: graph its rate, alert on a jump.

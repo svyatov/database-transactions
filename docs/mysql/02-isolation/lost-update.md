@@ -6,11 +6,6 @@ raised — the data is simply wrong.
 
 ## At READ COMMITTED
 
-::: code-group
-<<< ../../../scenarios/mysql/02-isolation/lost-update-read-committed.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/02-isolation/lost-update-read-committed.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/lost-update-read-committed.md-->
 
 ## REPEATABLE READ does *not* save you
@@ -19,11 +14,6 @@ This is the sharpest MySQL/PostgreSQL divergence in the whole chapter. PostgreSQ
 REPEATABLE READ [detects the stale write and aborts it](/postgres/02-isolation/lost-update)
 with `40001`. MySQL's UPDATE is a [current read](/mysql/02-isolation/repeatable-read) — it
 applies your stale arithmetic to the newest row version and raises nothing:
-
-::: code-group
-<<< ../../../scenarios/mysql/02-isolation/lost-update-repeatable-read.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/02-isolation/lost-update-repeatable-read.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/lost-update-repeatable-read.md-->
 

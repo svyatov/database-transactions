@@ -1,0 +1,42 @@
+title: Finding long and idle transactions
+claim: >-
+  Three pg_stat_activity queries find the forgotten transaction: the oldest
+  xact_start, sessions sitting idle in transaction, and the backend_xmin that
+  pins VACUUM's horizon.
+setup: |
+  CREATE TABLE orders (id int PRIMARY KEY, total int NOT NULL);
+  INSERT INTO orders VALUES (1, 90), (2, 75);
+sessions: [A, M]
+steps:
+  - note: A starts a 'quick report' at REPEATABLE READ… and never gets around to committing.
+  - A: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - A: SELECT count(*)::int AS orders FROM orders
+
+  - sleep: 1200 # let the forgotten transaction age past the detector's threshold
+
+  - note: "Detector 1 — the oldest open transaction, and how long it's been open:"
+  - M: |
+      SELECT application_name, state, now() - xact_start > interval '1 second' AS older_than_1s
+      FROM pg_stat_activity
+      WHERE xact_start IS NOT NULL AND pid <> pg_backend_pid()
+      ORDER BY xact_start LIMIT 1
+    expect: [{ application_name: A, state: idle in transaction, older_than_1s: true }]
+
+  - note: "Detector 2 — sessions holding a transaction open while doing nothing:"
+  - M: |
+      SELECT application_name
+      FROM pg_stat_activity
+      WHERE state = 'idle in transaction' AND now() - state_change > interval '1 second'
+    expect: [{ application_name: A }]
+
+  - note: >-
+      Detector 3 — the reason it matters even for a read-only report: A's
+      snapshot (backend_xmin) is what VACUUM must preserve.
+  - M: |
+      SELECT application_name, backend_xid IS NOT NULL AS wrote_anything,
+             backend_xmin IS NOT NULL AS pins_vacuum_horizon
+      FROM pg_stat_activity
+      WHERE backend_xmin IS NOT NULL AND pid <> pg_backend_pid()
+    expect: [{ application_name: A, wrote_anything: false, pins_vacuum_horizon: true }]
+
+  - A: COMMIT

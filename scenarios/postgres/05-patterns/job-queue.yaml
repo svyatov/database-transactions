@@ -1,0 +1,40 @@
+title: A job queue on FOR UPDATE SKIP LOCKED
+claim: >-
+  The full worker loop — claim with FOR UPDATE SKIP LOCKED, work, mark done,
+  commit — never double-processes a job and never loses one: a worker crash
+  returns its job to the queue automatically.
+setup: |
+  CREATE TABLE jobs (id int PRIMARY KEY, task text NOT NULL, state text NOT NULL DEFAULT 'queued');
+  INSERT INTO jobs (id, task) VALUES (1, 'send welcome email'), (2, 'generate invoice');
+sessions: [A, B]
+steps:
+  - note: "Two workers run the same loop: claim the oldest queued job, do the work, mark it done, commit."
+  - A: BEGIN
+  - A: |-
+      SELECT id, task FROM jobs WHERE state = 'queued'
+      ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+    expect: [{ id: 1 }]
+
+  - B: BEGIN
+  - B: |-
+      SELECT id, task FROM jobs WHERE state = 'queued'
+      ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+    expect: [{ id: 2 }]
+    comment: job 1 is claimed — skipped without waiting
+
+  - note: A finishes and commits. B crashes mid-job — its claim evaporates with its transaction.
+  - A: UPDATE jobs SET state = 'done' WHERE id = 1
+  - A: COMMIT
+  - B: ROLLBACK
+
+  - note: A restarted worker finds job 2 right back in the queue — nothing was lost, nothing ran twice.
+  - B: BEGIN
+  - B: |-
+      SELECT id, task FROM jobs WHERE state = 'queued'
+      ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+    expect: [{ id: 2 }]
+  - B: UPDATE jobs SET state = 'done' WHERE id = 2
+  - B: COMMIT
+
+  - A: SELECT id, state FROM jobs ORDER BY id
+    expect: [{ id: 1, state: "done" }, { id: 2, state: "done" }]

@@ -6,22 +6,12 @@ S coexists with S; everything else conflicts.
 
 ## FOR UPDATE blocks writers, never readers
 
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/for-update-blocks.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/for-update-blocks.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/for-update-blocks.md-->
 
 ## The whole matrix: S and X
 
 PostgreSQL has [a four-mode ladder](/postgres/03-locking/row-locks) of row locks. InnoDB has
 two strengths, and the full compatibility story fits in one demo:
-
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/lock-mode-matrix.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/lock-mode-matrix.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/lock-mode-matrix.md-->
 
@@ -31,15 +21,10 @@ Every `INSERT` into a child table locks the referenced parent row with an S lock
 InnoDB guarantees the parent can't vanish mid-insert. With no weaker lock available, even an
 innocent update of the parent's *other columns* has to wait:
 
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/fk-shared-lock.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/fk-shared-lock.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/fk-shared-lock.md-->
 
 ::: warning The silent no-op FK
-Note the `setup` above: MySQL **silently ignores** the inline `REFERENCES` syntax
+MySQL **silently ignores** the inline `REFERENCES` syntax
 (`customer_id int REFERENCES customers (id)` creates *no constraint at all*). Foreign keys
 must be declared table-level: `FOREIGN KEY (customer_id) REFERENCES customers (id)`.
 :::

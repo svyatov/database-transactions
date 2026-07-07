@@ -18,7 +18,7 @@ export function renderMarkdown(run: RunResult, dialect: Dialect): string {
   let fence: string[] = [];
   const flush = () => {
     if (fence.length) {
-      chunks.push("```\n" + fence.join("\n").trimEnd() + "\n```");
+      chunks.push("```transcript\n" + fence.join("\n").trimEnd() + "\n```");
       fence = [];
     }
   };
@@ -60,8 +60,10 @@ function renderEvent(e: Exclude<Event, { kind: "note" }>, norm: Normalizer, dial
 function prompt(session: string, sql: string): string {
   const [first = "", ...rest] = sql.split("\n");
   const lines = [`${session}> ${first}`, ...rest.map((l) => `${" ".repeat(session.length)}  ${l}`)];
+  // A trailing `-- comment` sits after the ; the CLI would require: `COMMIT; -- why`.
+  const comment = lines.at(-1)!.match(/^(.*\S)(\s+--.*)$/);
+  if (comment && !/;$/.test(comment[1]!)) lines[lines.length - 1] = `${comment[1]};${comment[2]}`;
   const text = lines.join("\n");
-  // Append the ; the CLI would require — unless one is already there or a trailing comment is in the way.
   return /;\s*$/.test(text) || /--/.test(lines.at(-1)!) ? text : text + ";";
 }
 

@@ -2,7 +2,7 @@
 
 *Transaction ids are handed out lazily — a transaction that only reads never gets one.*
 
-```
+```transcript
 A> BEGIN;
 BEGIN
 
@@ -30,7 +30,7 @@ A> SELECT pg_current_xact_id_if_assigned() AS xid;
 
 *B grabs the next xid and commits immediately. A is still in progress.*
 
-```
+```transcript
 B> UPDATE accounts SET balance = 200 WHERE id = 2 RETURNING xmin, balance;
  xmin | balance 
 ------+---------
@@ -40,7 +40,7 @@ B> UPDATE accounts SET balance = 200 WHERE id = 2 RETURNING xmin, balance;
 
 *C opens a transaction and inspects its own snapshot: the three numbers that decide all visibility.*
 
-```
+```transcript
 C> BEGIN ISOLATION LEVEL REPEATABLE READ;
 BEGIN
 
@@ -54,7 +54,7 @@ C> SELECT pg_snapshot_xmin(pg_current_snapshot()) AS xmin,
 
 *xip = the xids that were in progress at snapshot time. A is on the list — so A is invisible even after it commits.*
 
-```
+```transcript
 C> SELECT pg_snapshot_xip(pg_current_snapshot()) AS xid;
  xid  
 ------
@@ -64,7 +64,7 @@ C> SELECT pg_snapshot_xip(pg_current_snapshot()) AS xid;
 
 *The arithmetic in action: B (committed, below xmax) is visible; A (in xip) is not.*
 
-```
+```transcript
 C> SELECT id, owner, balance FROM accounts ORDER BY id;
  id | owner | balance 
 ----+-------+---------
@@ -78,7 +78,7 @@ COMMIT
 
 *A has now committed — but C's snapshot already decided: still invisible.*
 
-```
+```transcript
 C> SELECT id, owner, balance FROM accounts ORDER BY id;
  id | owner | balance 
 ----+-------+---------
@@ -92,7 +92,7 @@ COMMIT
 
 *Only a NEW snapshot changes the verdict.*
 
-```
+```transcript
 C> SELECT id, owner, balance FROM accounts ORDER BY id;
  id | owner | balance 
 ----+-------+---------

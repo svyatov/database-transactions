@@ -10,8 +10,6 @@ isolation level.
 If the new value can be expressed in SQL, the whole bug class evaporates — there is no
 stale read to write back:
 
-<<< ../../../scenarios/postgres/05-patterns/fix-lost-update-atomic.ts#demo{ts}
-
 <!--@include: ./parts/fix-lost-update-atomic.md-->
 
 B's UPDATE waits for A's row lock, then — this is the
@@ -23,8 +21,6 @@ read-modify-write dangerous makes single-statement math safe.
 
 Sometimes the new value genuinely needs application code — business rules, an external
 rate lookup. Then lock the row *at the read*, so the read-modify-write becomes a queue:
-
-<<< ../../../scenarios/postgres/05-patterns/fix-lost-update-for-update.ts#demo{ts}
 
 <!--@include: ./parts/fix-lost-update-for-update.md-->
 
@@ -40,8 +36,6 @@ Pessimistic locking holds a lock while the app thinks. If "thinking" includes a 
 staring at an edit form, that's unacceptable — you can't hold a row lock across HTTP
 requests. Optimistic locking holds nothing and instead *detects* the conflict at write
 time:
-
-<<< ../../../scenarios/postgres/05-patterns/fix-lost-update-version-column.ts#demo{ts}
 
 <!--@include: ./parts/fix-lost-update-version-column.md-->
 

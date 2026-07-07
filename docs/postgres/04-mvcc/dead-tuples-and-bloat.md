@@ -8,8 +8,6 @@ non-blocking reads.
 
 ## One row, four tuples
 
-<<< ../../../scenarios/postgres/04-mvcc/dead-tuples-and-bloat.ts#demo{ts}
-
 <!--@include: ./parts/dead-tuples-and-bloat.md-->
 
 Each update stamps the current version's `t_xmax`, writes a fresh copy one slot over, and
@@ -17,8 +15,6 @@ moves on. `SELECT` walks the chain and returns exactly one row; the page holds t
 entire biography.
 
 ## The same thing, at file scale
-
-<<< ../../../scenarios/postgres/04-mvcc/dead-tuples-and-bloat.ts#size{ts}
 
 Three facts worth reading twice:
 

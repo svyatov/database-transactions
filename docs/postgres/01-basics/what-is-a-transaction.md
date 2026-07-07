@@ -5,9 +5,9 @@ fully doesn't**. The classic example: moving money between two accounts takes tw
 the world must never see — or keep — only one of them.
 
 ::: tip How to read the demos
-Each lesson shows the real scenario code (sessions `A`, `B`, … are separate PostgreSQL
-connections) followed by a transcript generated from an actual run. The four verbs
-(`` A`…` ``, `A.fails`, `B.blocked`, `pending.success()`) are explained in
+Each lesson shows a transcript generated from an actual run of the lesson's scenario
+(sessions `A`, `B`, … are separate PostgreSQL connections). How the scenarios work — and
+why the transcripts can't drift from reality — is explained in
 [Why trust this site?](/about/methodology)
 :::
 
@@ -25,11 +25,6 @@ connections) followed by a transcript generated from an actual run. The four ver
 Session A transfers 150 from alice (who has only 100) to bob. The credit to bob *succeeds*;
 the debit from alice violates a `CHECK` constraint. Watch what happens to bob's
 already-successful credit:
-
-::: code-group
-<<< ../../../scenarios/postgres/01-basics/atomicity.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/01-basics/atomicity.py#demo{py} [Python]
-:::
 
 <!--@include: ./parts/atomicity.md-->
 

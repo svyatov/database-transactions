@@ -1,0 +1,39 @@
+title: Lost update at READ COMMITTED
+claim: >-
+  Two read-modify-write transactions at READ COMMITTED can silently overwrite
+  each other: two deposits of 10 grow the balance by only 10.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, B]
+steps:
+  - note: >-
+      Two app servers process a +10 deposit each: read the balance, add 10 in
+      code, write it back.
+  - A: SET TRANSACTION ISOLATION LEVEL READ COMMITTED
+  - A: BEGIN
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+    capture: readA
+
+  - B: SET TRANSACTION ISOLATION LEVEL READ COMMITTED
+  - B: BEGIN
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+    capture: readB
+    comment: B reads the same 100 — A hasn't committed
+
+  - A: UPDATE accounts SET balance = ${readA.balance} + 10 WHERE id = 1
+  - A: COMMIT
+
+  - note: B computed 100 + 10 from its stale read. Nothing stops the write — A's transaction is long gone.
+  - B: UPDATE accounts SET balance = ${readB.balance} + 10 WHERE id = 1
+  - B: COMMIT
+
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 110 }]
+    comment: two +10 deposits, but only one survived
+
+  - note: >-
+      A's deposit vanished without any error. Fixes: atomic UPDATE or SELECT
+      FOR UPDATE — see the lesson.

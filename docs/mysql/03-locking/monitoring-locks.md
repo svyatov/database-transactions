@@ -3,19 +3,7 @@
 When production "hangs", the question is always the same: *who holds what, and who is waiting
 for whom?* MySQL answers both from `performance_schema`.
 
-## What one UPDATE really holds
-
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/monitoring-locks.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/monitoring-locks.py#demo{py} [Python]
-:::
-
-## Spotting the waiter
-
-::: code-group
-<<< ../../../scenarios/mysql/03-locking/monitoring-locks.ts#waiter{ts} [TypeScript]
-<<< ../../../python/scenarios/mysql/03-locking/monitoring-locks.py#waiter{py} [Python]
-:::
+## What one UPDATE really holds — and spotting the waiter
 
 <!--@include: ./parts/monitoring-locks.md-->
 

@@ -6,11 +6,6 @@ is the guided tour; the production runbook chapter will build alerting on top of
 
 ## What one UPDATE really holds
 
-::: code-group
-<<< ../../../scenarios/postgres/03-locking/monitoring-locks.ts#demo{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/03-locking/monitoring-locks.py#demo{py} [Python]
-:::
-
 <!--@include: ./parts/monitoring-locks.md-->
 
 Reading those four rows:
@@ -29,11 +24,6 @@ Notice what's *missing*: the locked **row** itself. Row locks live in the row he
 how many rows you could lock.
 
 ## Finding the blocker
-
-::: code-group
-<<< ../../../scenarios/postgres/03-locking/monitoring-locks.ts#waiter{ts} [TypeScript]
-<<< ../../../python/scenarios/postgres/03-locking/monitoring-locks.py#waiter{py} [Python]
-:::
 
 The one query worth memorizing — or bookmarking — is the **wait chain**:
 

@@ -6,15 +6,16 @@ claimed — everything is demonstrated.**
 
 ## Every lesson is an executable scenario
 
-Each demo you see is a TypeScript file in
+Each demo you see is a YAML file in
 [`scenarios/`](https://github.com/svyatov/database-transactions/tree/main/scenarios) —
 namespaced by database, `scenarios/postgres/…` and `scenarios/mysql/…` — that opens real,
 separate database connections (the "sessions" `A`, `B`, `C` in the transcripts), interleaves
 their statements in a precise order, and **asserts** every outcome:
 
-```ts
-const [second] = await A`SELECT balance FROM accounts WHERE id = 1`;
-eq(second!.balance, 200); // same query, same transaction — different answer
+```yaml
+- A: SELECT balance FROM accounts WHERE id = 1
+  expect: [{ balance: 200 }]
+  comment: same query, same transaction — different answer
 ```
 
 If PostgreSQL ever stops behaving the way a lesson describes, the assertion fails and the
@@ -22,12 +23,17 @@ build goes red.
 
 Reading the scenarios is easy once you know the four verbs:
 
-| Code | Meaning |
+| Step | Meaning |
 |---|---|
-| ``await A`SQL` `` | session A runs a statement; the scenario fails if it errors |
-| ``await A.fails`SQL` `` | the statement **must** error; returns the error so its code (SQLSTATE on PostgreSQL, errno on MySQL) can be asserted |
-| ``await B.blocked`SQL` `` | the statement **must** block on a lock — verified live via the database's lock-wait views |
-| `await pending.success()` / `.failure()` | the blocked statement must later complete / must later fail |
+| `A: SQL` | session A runs a statement; the scenario fails if it errors (add `expect:` to assert the rows it returns) |
+| `A.fails: SQL` | the statement **must** error, with the exact `error:` code (SQLSTATE on PostgreSQL, errno on MySQL) |
+| `blocks: p1` | the statement **must** block on a lock — verified live via the database's lock-wait views |
+| `success: p1` / `failure: p1` | the blocked statement must later complete / must later fail |
+
+A handful of scenarios stay TypeScript instead of YAML — the
+[`40001` retry helper](/postgres/05-patterns/retrying-serialization-failures) and the
+[LISTEN/NOTIFY listener](/postgres/06-distributed/listen-notify) — because there the
+client-side code *is* the lesson.
 
 Even "this query blocks now" is a verified claim: the harness polls the server
 (`pg_stat_activity` on PostgreSQL, `performance_schema.data_locks` on MySQL) until the
@@ -54,11 +60,11 @@ backend/connection ids (rendered as `pid(A)`).
 ## One transcript, many languages
 
 Transcripts show SQL and its results — they don't depend on the client language, so the
-TypeScript harness is the **sole transcript generator**. Every other language (Python today,
-more planned) ships a full port of the scenarios plus a thin harness of its own
-([`python/`](https://github.com/svyatov/database-transactions/tree/main/python)), and CI runs
-those ports against the same databases, asserting the same claims. The language tabs above
-each transcript show real, tested code — never illustrative pseudocode.
+TypeScript harness is the **sole transcript generator**, and the transcript is the only code
+a lesson page shows: plain SQL, color-coded per session. The same YAML scenarios are then
+re-verified from a second language: a thin Python harness
+([`python/`](https://github.com/svyatov/database-transactions/tree/main/python)) runs every
+scenario under pytest against the same databases, asserting the same claims.
 
 ## The harness is part of the reading material
 
