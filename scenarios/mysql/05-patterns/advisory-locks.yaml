@@ -1,0 +1,49 @@
+title: "Advisory locks: locking ideas, not rows"
+claim: >-
+  GET_LOCK serializes application-defined work with no table involved:
+  timeout 0 gives an instant yes/no, a positive timeout gives a bounded wait,
+  and the lock ignores transactions entirely — only RELEASE_LOCK (or
+  disconnecting) lets go.
+setup: |
+  -- No tables. Advisory locks guard whatever the application says 'migration' means.
+sessions: [A, B]
+steps:
+  - note: >-
+      Two deploy runners must not migrate the same database at once. They agree
+      the name 'migration' means "migration in progress".
+  - A: SELECT GET_LOCK('migration', 0) AS got_it
+    expect: [{ got_it: 1 }]
+  - B: SELECT GET_LOCK('migration', 0) AS got_it
+    expect: [{ got_it: 0 }]
+    comment: timeout 0 — an instant answer, no waiting
+
+  - note: "A positive timeout waits, but only that long. B gives it one second:"
+  - B: SELECT GET_LOCK('migration', 1) AS got_it
+    expect: [{ got_it: 0 }]
+    comment: A still holds it — B gets 0 after the deadline instead of an error
+
+  - B: SELECT IS_FREE_LOCK('migration') AS free
+    expect: [{ free: 0 }]
+    comment: you can ask without trying to take it
+
+  - note: Advisory locks ignore transaction boundaries entirely — COMMIT releases nothing.
+  - A: BEGIN
+  - A: COMMIT
+  - B: SELECT GET_LOCK('migration', 0) AS got_it
+    expect: [{ got_it: 0 }]
+    comment: A's COMMIT changed nothing — the lock belongs to A's SESSION
+
+  - A: SELECT RELEASE_LOCK('migration') AS released
+    expect: [{ released: 1 }]
+  - B: SELECT GET_LOCK('migration', 0) AS got_it
+    expect: [{ got_it: 1 }]
+    comment: now B is the migration runner
+
+  - note: >-
+      One session can hold many named locks; RELEASE_ALL_LOCKS drops the lot.
+      Disconnecting releases them too — a crashed runner can't jam the queue
+      forever.
+  - B: SELECT GET_LOCK('cache-rebuild', 0) AS got_it
+    expect: [{ got_it: 1 }]
+  - B: SELECT RELEASE_ALL_LOCKS() AS released
+    expect: [{ released: 2 }]

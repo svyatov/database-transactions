@@ -8,13 +8,8 @@ setup: |
   CREATE TABLE counters (id int PRIMARY KEY, v int NOT NULL);
   INSERT INTO counters VALUES (1, 0);
   CREATE PROCEDURE bump(n INT) BEGIN DECLARE i INT DEFAULT 0; WHILE i < n DO UPDATE counters SET v = v + 1 WHERE id = 1; SET i = i + 1; END WHILE; END;
-  CREATE TABLE hll_before (n bigint);
 sessions: [A, R]
 steps:
-  - sleep: 1500
-  - A: INSERT INTO hll_before SELECT count FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'
-    comment: snapshot the history list length before the experiment
-
   - note: R opens a read view — and then simply does nothing.
   - R: BEGIN
   - R: SELECT v FROM counters
@@ -27,9 +22,9 @@ steps:
   - A: CALL bump(200)
     comment: 200 committed single-row updates
 
-  - A: SELECT im.count - b.n >= 100 AS history_grew FROM information_schema.INNODB_METRICS im, hll_before b WHERE im.name = 'trx_rseg_history_len'
-    expect: [{ history_grew: 1 }]
-    comment: the history list tracks R's lifetime, not the table's size
+  - A: SELECT count >= 200 AS pinned_by_reader FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'
+    expect: [{ pinned_by_reader: 1 }]
+    comment: none of those 200 undo logs can be purged while R's read view lives
 
   - R: SELECT v FROM counters
     expect: [{ v: 0 }]

@@ -1,0 +1,41 @@
+title: "UNIQUE + ON DUPLICATE KEY: closing the race at the source"
+claim: >-
+  A UNIQUE constraint makes the concurrent duplicate wait for the first
+  insert's fate and then fail with errno 1062 — and ON DUPLICATE KEY UPDATE
+  turns that error into a clean upsert (INSERT IGNORE absorbs it, at a price).
+setup: |
+  CREATE TABLE signups (
+    id int AUTO_INCREMENT PRIMARY KEY,
+    email varchar(50) NOT NULL UNIQUE,
+    attempts int NOT NULL DEFAULT 1
+  );
+sessions: [A, B]
+steps:
+  - note: Same double-click as the previous lesson, but now the table has UNIQUE (email).
+  - A: BEGIN
+  - A: INSERT INTO signups (email) VALUES ('bob@example.com')
+
+  - note: B's insert can't decide yet — the winner hasn't committed. It waits on A's transaction.
+  - B: INSERT INTO signups (email) VALUES ('bob@example.com')
+    blocks: p1
+  - A: COMMIT
+  - failure: p1
+    error: "1062"
+  - note: ER_DUP_ENTRY — the race is now loud instead of silent.
+
+  - note: "ON DUPLICATE KEY UPDATE makes the duplicate do something useful instead of erroring:"
+  - B: |-
+      INSERT INTO signups (email) VALUES ('bob@example.com')
+      ON DUPLICATE KEY UPDATE attempts = attempts + 1
+    affected: 2
+    comment: "affected = 2 is MySQL's way of saying 'existing row updated'"
+  - B: SELECT email, attempts FROM signups
+    expect: [{ email: "bob@example.com", attempts: 2 }]
+    comment: one row, and it counted the duplicate attempt
+
+  - note: >-
+      INSERT IGNORE also absorbs the duplicate (0 rows affected) — but it
+      downgrades EVERY error on the statement to a warning, not just 1062.
+      Prefer ON DUPLICATE KEY UPDATE: it targets exactly the race you mean.
+  - B: INSERT IGNORE INTO signups (email) VALUES ('bob@example.com')
+    affected: 0

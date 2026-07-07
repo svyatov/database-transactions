@@ -1,0 +1,47 @@
+title: "Fixing lost updates #3: optimistic locking with a version column"
+claim: >-
+  A version column makes the lost update detectable instead of silent: the
+  stale write matches 0 rows, and retrying against the new version lands both
+  deposits — no locks held while the app thinks.
+setup: |
+  CREATE TABLE accounts (
+    id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL, version int NOT NULL DEFAULT 1
+  );
+  INSERT INTO accounts VALUES (1, 'alice', 100, 1);
+sessions: [A, B]
+steps:
+  - note: Both app servers read the row — including its version — with no locks held.
+  - A: BEGIN
+  - A: SELECT balance, version FROM accounts WHERE id = 1
+    capture: readA
+  - B: BEGIN
+  - B: SELECT balance, version FROM accounts WHERE id = 1
+    expect: [{ balance: 100, version: 1 }]
+    capture: readB
+
+  - note: Every write bumps the version and only matches the version it read.
+  - A: |-
+      UPDATE accounts SET balance = ${readA.balance} + 10, version = version + 1
+      WHERE id = 1 AND version = ${readA.version}
+  - A: COMMIT
+
+  - B: |-
+      UPDATE accounts SET balance = ${readB.balance} + 10, version = version + 1
+      WHERE id = 1 AND version = ${readB.version}
+    affected: 0
+    comment: 0 rows matched — the row moved on; B's deposit did NOT silently vanish
+
+  - note: "Zero affected rows is the signal to retry: roll back, re-read, write against the new version."
+  - B: ROLLBACK
+  - B: BEGIN
+  - B: SELECT balance, version FROM accounts WHERE id = 1
+    expect: [{ balance: 110, version: 2 }]
+    capture: retry
+  - B: |-
+      UPDATE accounts SET balance = ${retry.balance} + 10, version = version + 1
+      WHERE id = 1 AND version = ${retry.version}
+  - B: COMMIT
+
+  - A: SELECT balance, version FROM accounts WHERE id = 1
+    expect: [{ balance: 120, version: 3 }]
+    comment: both deposits survived

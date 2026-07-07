@@ -131,6 +131,18 @@ const mysql: DefaultTheme.SidebarItem[] = [
       { text: "Purge", link: "/mysql/04-mvcc/purge" },
     ],
   },
+  {
+    text: "5. Real-world patterns",
+    items: [
+      { text: "Fixing lost updates", link: "/mysql/05-patterns/fixing-lost-updates" },
+      { text: "Retrying deadlocks", link: "/mysql/05-patterns/retrying-deadlocks" },
+      { text: "A job queue on SKIP LOCKED", link: "/mysql/05-patterns/job-queue" },
+      { text: "Advisory locks", link: "/mysql/05-patterns/advisory-locks" },
+      { text: "Check-then-insert", link: "/mysql/05-patterns/check-then-insert" },
+      { text: "Idempotency keys", link: "/mysql/05-patterns/idempotency" },
+      { text: "ORM pitfalls", link: "/mysql/05-patterns/orm-pitfalls" },
+    ],
+  },
 ];
 
 export default defineConfig({
