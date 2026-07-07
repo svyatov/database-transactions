@@ -7,7 +7,7 @@ the world must never see — or keep — only one of them.
 ::: tip How to read the demos
 Each lesson shows a transcript generated from an actual run of the scenario: plain SQL,
 color-coded per session (`A`, `B`, … are separate MySQL connections). How the transcripts
-are produced and verified is explained in [Why trust this site?](/about/methodology)
+are produced and verified is explained in [What this is](/about/methodology)
 :::
 
 ## ACID, briefly

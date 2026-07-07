@@ -13,7 +13,7 @@ hero:
       text: Learn MySQL transactions
       link: /mysql/01-basics/what-is-a-transaction
     - theme: alt
-      text: Why trust this site?
+      text: What this is & how it works
       link: /about/methodology
 
 features:

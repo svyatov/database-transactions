@@ -1,8 +1,14 @@
-# Why trust this site?
+# What this is
 
-Most articles about database transactions contain statements that are subtly wrong, outdated,
-or true only for some *other* database. This site takes a different approach: **nothing here is
-claimed — everything is demonstrated.**
+A hands-on guide to database transactions — isolation levels, anomalies, locking, MVCC, and
+the concurrency patterns that survive production — for PostgreSQL and MySQL, side by side.
+Every lesson is built around a transcript of real sessions racing each other, so you see the
+anomaly happen (and the fix work) instead of reading that it would.
+
+It was built because most writing about transactions is subtly wrong, outdated, or true only
+for some *other* database — and nothing on the page tells you which parts. So this site holds
+itself to one rule: **nothing here is claimed — everything is demonstrated.** The rest of this
+page is the machinery that keeps that promise.
 
 ## Every lesson is an executable scenario
 

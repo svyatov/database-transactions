@@ -8,7 +8,7 @@ the world must never see — or keep — only one of them.
 Each lesson shows a transcript generated from an actual run of the lesson's scenario
 (sessions `A`, `B`, … are separate PostgreSQL connections). How the scenarios work — and
 why the transcripts can't drift from reality — is explained in
-[Why trust this site?](/about/methodology)
+[What this is](/about/methodology)
 :::
 
 ## ACID, briefly

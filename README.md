@@ -8,10 +8,10 @@ a real database.
 
 📖 **Read online:** https://svyatov.github.io/database-transactions/
 
-## Why trust this tutorial?
+## How it works
 
 Most database articles contain statements that are subtly wrong, outdated, or true only for
-some other database. This project takes a different approach:
+some other database. This project's rule is that nothing is claimed, everything is demonstrated:
 
 - Every session transcript you see in the docs is **generated from a real run** against
   the database — never hand-written, so it can never drift from actual behavior.

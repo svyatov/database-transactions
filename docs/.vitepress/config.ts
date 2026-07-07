@@ -3,7 +3,7 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 const about: DefaultTheme.SidebarItem = {
   text: "About",
   items: [
-    { text: "Why trust this site?", link: "/about/methodology" },
+    { text: "What this is", link: "/about/methodology" },
     { text: "Run it locally", link: "/about/run-locally" },
   ],
 };
