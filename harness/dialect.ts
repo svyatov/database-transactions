@@ -75,13 +75,23 @@ export const postgres: Dialect = {
     await admin`SELECT pg_cancel_backend(${id})`;
   },
 
-  exec(conn, strings, values) {
-    return conn(strings, ...values) as Promise<Rows>;
+  // Bun's extended-protocol encoder corrupts a multi-byte UTF-8 character that
+  // straddles its first write-buffer boundary (~byte 38 of the statement) — em
+  // dashes in `comment:` text land there. Parameterless statements take the
+  // simple query protocol, which encodes correctly.
+  exec(conn, strings, values, text) {
+    return (values.length ? conn(strings, ...values) : conn.unsafe(text)) as Promise<Rows>;
   },
 
   /** Bun puts the SQLSTATE in `errno`; move it to `code`, where scenarios expect it. */
   toError(e) {
     if (e?.errno) e.code = String(e.errno);
+    // unsafe() on a server-killed connection throws a bare Error with no code
+    // and an internal message — normalize both to the template-path error
+    else if (!e?.code && /connection/i.test(e?.message ?? "")) {
+      e.code = "ERR_POSTGRES_CONNECTION_CLOSED";
+      e.message = "Connection closed";
+    }
     return e;
   },
 
