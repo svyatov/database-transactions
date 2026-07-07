@@ -10,12 +10,15 @@ sessions: [A, B, C, M]
 steps:
   - A: BEGIN
   - A: UPDATE accounts SET balance = balance + 1 WHERE id = 1
+    tl: UPDATE +1 (takes the row lock)
 
   - B: BEGIN
   - B: UPDATE accounts SET balance = balance + 10 WHERE id = 1
     blocks: p1
+    tl: UPDATE +10
   - C: UPDATE accounts SET balance = balance + 100 WHERE id = 1
     blocks: p2
+    tl: UPDATE +100
 
   - note: A fourth session, M, can watch the pile-up in pg_stat_activity.
   - M: |
@@ -24,9 +27,11 @@ steps:
       WHERE wait_event_type = 'Lock'
       ORDER BY application_name
     expect: [{ waiting: B }, { waiting: C }]
+    tl: who's waiting? → B and C
 
   - note: A commits. The lock goes to B — the head of the queue — not to C.
   - A: COMMIT
+    tl: COMMIT → lock passes to B
   - success: p1
   # C wakes to requeue behind B; wait until it's provably waiting again
   - locked: C
@@ -40,6 +45,7 @@ steps:
     comment: C is still in line, now behind B
 
   - B: COMMIT
+    tl: COMMIT → lock passes to C
   - success: p2
 
   - C: SELECT balance FROM accounts WHERE id = 1

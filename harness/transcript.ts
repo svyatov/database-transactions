@@ -1,6 +1,6 @@
 import type { Dialect } from "./dialect";
 import type { Event, RunResult } from "./run";
-import type { Row, Rows } from "./scenario";
+import type { DbError, Row, Rows } from "./scenario";
 
 /**
  * Renders a scenario run as CLI-flavored markdown.
@@ -33,6 +33,26 @@ export function renderMarkdown(run: RunResult, dialect: Dialect): string {
   }
   flush();
   return `${chunks.join("\n\n")}\n`;
+}
+
+/**
+ * Opt-in interleaving summary rendered above the transcript (```timeline fence):
+ * one line per `tl:`-labeled event, in run order. Blocked/error/resume markers
+ * come from the actual run, so the diagram cannot drift from the proof below it.
+ * Returns null when no step carries a label.
+ */
+export function renderTimeline(run: RunResult): string | null {
+  const oops = (e: DbError) => `← ${e.code} ${e.message.split(/[;\n]/)[0]}`;
+  const lines: string[] = [];
+  for (const e of run.events) {
+    if (e.kind === "note" || !e.tl) continue;
+    if (e.kind === "query") lines.push(`${e.session}: ${e.tl}`);
+    else if (e.kind === "blocked") lines.push(`${e.session}: ${e.tl} → ⏳ waits`);
+    else if (e.kind === "error") lines.push(`${e.session}: ${e.tl} ${oops(e.error)}`);
+    else if (e.kind === "resume") lines.push(`${e.session}: ⏵ ${e.tl} → completes`);
+    else lines.push(`${e.session}: ⏵ ${e.tl} ${oops(e.error)}`);
+  }
+  return lines.length ? `\`\`\`timeline\n${lines.join("\n")}\n\`\`\`` : null;
 }
 
 /** Event-by-event renderer for live console replay (`bun lesson`). */

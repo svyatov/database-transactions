@@ -11,14 +11,17 @@ steps:
   - note: A is any long-lived transaction that has touched the table — a report, a stuck job…
   - A: BEGIN
   - A: SELECT balance FROM accounts WHERE id = 1
+    tl: SELECT (a long-lived transaction)
 
   - note: The migration needs an exclusive metadata lock, so it waits for A. Expected. But now —
   - B: ALTER TABLE accounts ADD COLUMN note varchar(50)
     blocks: p1
+    tl: ALTER TABLE … ADD COLUMN
 
   - note: — every new query on the table queues behind the *waiting* ALTER. This is the outage.
   - C: SELECT balance FROM accounts WHERE id = 1
     blocks: p2
+    tl: SELECT — just a read!
 
   - M: |
       SELECT state, info FROM performance_schema.processlist
@@ -29,5 +32,6 @@ steps:
 
   - note: Only when A ends does the pile-up drain — migration first, then the reads.
   - A: COMMIT
+    tl: COMMIT
   - success: p1
   - success: p2

@@ -12,18 +12,25 @@ steps:
   - A: BEGIN
   - A: SELECT count(*)::int AS existing FROM signups WHERE email = 'bob@example.com'
     expect: [{ existing: 0 }]
+    tl: any bob? → 0
 
   - B: BEGIN
   - B: SELECT count(*)::int AS existing FROM signups WHERE email = 'bob@example.com'
     expect: [{ existing: 0 }]
     comment: B's check also passes — A hasn't committed anything
+    tl: any bob? → 0
 
   - note: Both checks passed, so both insert. Nothing blocks, nothing errors.
   - A: INSERT INTO signups (email) VALUES ('bob@example.com')
+    tl: INSERT bob
   - A: COMMIT
+    tl: COMMIT
   - B: INSERT INTO signups (email) VALUES ('bob@example.com')
+    tl: INSERT bob (check already passed)
   - B: COMMIT
+    tl: COMMIT
 
   - A: SELECT count(*)::int AS bobs FROM signups WHERE email = 'bob@example.com'
     expect: [{ bobs: 2 }]
     comment: the "impossible" duplicate
+    tl: count bobs → 2 — the "impossible" duplicate

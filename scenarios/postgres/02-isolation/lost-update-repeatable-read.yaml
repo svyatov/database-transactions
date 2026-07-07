@@ -12,14 +12,18 @@ steps:
   - A: BEGIN ISOLATION LEVEL REPEATABLE READ
   - A: SELECT balance FROM accounts WHERE id = 1
     capture: readA
+    tl: SELECT balance → 100
 
   - B: BEGIN ISOLATION LEVEL REPEATABLE READ
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
     capture: readB
+    tl: SELECT balance → 100 (same snapshot)
 
   - A: UPDATE accounts SET balance = ${readA.balance} + 10 WHERE id = 1
+    tl: UPDATE balance = 100 + 10
   - A: COMMIT
+    tl: COMMIT
 
   - note: >-
       B's snapshot predates A's commit, so B's write is refused instead of
@@ -27,10 +31,12 @@ steps:
   - B.fails: UPDATE accounts SET balance = ${readB.balance} + 10 WHERE id = 1
     error: "40001"
     comment: serialization_failure
+    tl: UPDATE balance = 100 + 10
   - B: ROLLBACK
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 110 }]
     comment: A's deposit is safe; B retries and lands on 120
+    tl: SELECT balance → 110 — nothing lost, B retries
 
   - note: Retrying B from scratch reads the fresh 110 and correctly produces 120.

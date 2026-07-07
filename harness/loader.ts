@@ -38,6 +38,7 @@ const RESERVED = new Set([
   "comment",
   "capture",
   "blocks",
+  "tl",
 ]);
 const REQUIRED = ["title", "claim", "setup", "sessions", "steps"] as const;
 
@@ -72,8 +73,8 @@ export function fromYaml(doc: Doc, path: string): Scenario {
       };
 
       for (const step of doc.steps) {
-        if (step.comment && ["note", "sleep", "locked", "success", "failure"].some((k) => step[k] !== undefined)) {
-          fail(`a comment here is never rendered — use a note instead (${JSON.stringify(step)})`);
+        if ((step.comment || step.tl) && ["note", "sleep", "locked", "success", "failure"].some((k) => step[k] !== undefined)) {
+          fail(`a comment/tl here is never rendered — use a note, or put tl on the statement step (${JSON.stringify(step)})`);
         }
         if (step.note !== undefined) {
           t.note(step.note);
@@ -92,7 +93,7 @@ export function fromYaml(doc: Doc, path: string): Scenario {
           if (keys.length !== 1) fail(`step must have exactly one session key, got: ${JSON.stringify(step)}`);
           const [name = "", verb] = keys[0]!.split(".");
           const session = sessions[name] ?? fail(`unknown session "${name}" in step ${JSON.stringify(step)}`);
-          const sql = template(interpolate(String(step[keys[0]!]), captures, fail), step.comment);
+          const sql = template(interpolate(String(step[keys[0]!]), captures, fail), step.comment, step.tl);
 
           if (verb === "fails") {
             checkCode((await session.fails(sql)).code, step.error);
@@ -121,11 +122,16 @@ function checkCode(code: string, want: unknown) {
   }
 }
 
-/** A plain SQL string as the tagged-template call the Session API expects. */
-function template(sql: string, comment?: string): TemplateStringsArray {
+/**
+ * A plain SQL string as the tagged-template call the Session API expects.
+ * `tl` rides along as an own-property; the runner copies it onto the events
+ * this statement emits (see renderTimeline).
+ */
+function template(sql: string, comment?: string, tl?: string): TemplateStringsArray {
   const text = comment ? `${sql} -- ${comment}` : sql;
   return Object.assign([text], {
     raw: [text],
+    tl,
   }) as unknown as TemplateStringsArray;
 }
 

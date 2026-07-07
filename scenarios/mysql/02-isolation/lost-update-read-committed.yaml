@@ -15,6 +15,7 @@ steps:
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
     capture: readA
+    tl: SELECT balance → 100
 
   - B: SET TRANSACTION ISOLATION LEVEL READ COMMITTED
   - B: BEGIN
@@ -22,17 +23,23 @@ steps:
     expect: [{ balance: 100 }]
     capture: readB
     comment: B reads the same 100 — A hasn't committed
+    tl: SELECT balance → 100 (same stale read)
 
   - A: UPDATE accounts SET balance = ${readA.balance} + 10 WHERE id = 1
+    tl: UPDATE balance = 100 + 10
   - A: COMMIT
+    tl: COMMIT
 
   - note: B computed 100 + 10 from its stale read. Nothing stops the write — A's transaction is long gone.
   - B: UPDATE accounts SET balance = ${readB.balance} + 10 WHERE id = 1
+    tl: UPDATE balance = 100 + 10 (stale math)
   - B: COMMIT
+    tl: COMMIT
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 110 }]
     comment: two +10 deposits, but only one survived
+    tl: SELECT balance → 110 — one deposit gone
 
   - note: >-
       A's deposit vanished without any error. Fixes: atomic UPDATE or SELECT

@@ -9,18 +9,22 @@ sessions: [A, B]
 steps:
   - A: BEGIN
   - A: SELECT * FROM accounts WHERE id = 1 FOR UPDATE
+    tl: SELECT … FOR UPDATE (locks the row)
 
   - note: Reading the locked row costs B nothing — MVCC readers don't take row locks.
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
+    tl: SELECT balance → 100 (readers don't block)
 
   - note: "Writing to it is another story: B's UPDATE must wait for A."
   - B: UPDATE accounts SET balance = balance - 10 WHERE id = 1
     blocks: p1
+    tl: UPDATE -10
 
   - A: UPDATE accounts SET balance = 150 WHERE id = 1
   - A: COMMIT
     comment: releases the row lock
+    tl: COMMIT (releases the lock)
 
   - success: p1
   - B: SELECT balance FROM accounts WHERE id = 1

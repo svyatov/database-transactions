@@ -11,13 +11,16 @@ steps:
   - A: BEGIN
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
+    tl: SELECT balance → 100
 
   - note: While A's transaction is still open, B updates the row and commits.
   - B: UPDATE accounts SET balance = 200 WHERE id = 1
+    tl: UPDATE balance = 200 (autocommit)
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 200 }]
     comment: same query, same transaction — different answer
+    tl: SELECT balance → 200 — same txn, different answer
   - A: COMMIT
 
   - note: >-

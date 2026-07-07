@@ -11,9 +11,11 @@ steps:
   - note: A updates a row and then… goes to lunch. The transaction stays open.
   - A: BEGIN
   - A: UPDATE accounts SET balance = 200 WHERE id = 1
+    tl: UPDATE, then goes to lunch (idle in txn)
 
   - B: UPDATE accounts SET balance = 300 WHERE id = 1
     blocks: p1
+    tl: UPDATE balance = 300
 
   - note: "Someone pages you: 'updates are hanging'. This is the query you paste:"
   - M: |
@@ -25,6 +27,7 @@ steps:
       FROM pg_stat_activity waiter
       JOIN pg_stat_activity blocker ON blocker.pid = ANY (pg_blocking_pids(waiter.pid))
       WHERE waiter.wait_event_type = 'Lock'
+    tl: who blocks whom? → B waits on idle A
     expect:
       - waiter: B
         waiting_query: UPDATE accounts SET balance = 300 WHERE id = 1
@@ -37,6 +40,7 @@ steps:
       SELECT pg_terminate_backend(pid) AS terminated
       FROM pg_stat_activity WHERE application_name = 'A'
     expect: [{ terminated: true }]
+    tl: pg_terminate_backend(A)
 
   - note: A's transaction dies and rolls back; B gets the lock and finishes at last.
   - success: p1

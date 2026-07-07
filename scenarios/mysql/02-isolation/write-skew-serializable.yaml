@@ -16,26 +16,32 @@ steps:
 
   - A: SELECT count(*) AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 2 }]
+    tl: on-call count → 2 (takes shared locks)
 
   - B: SELECT count(*) AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 2 }]
+    tl: on-call count → 2 (takes shared locks)
 
   - note: Those SELECTs took shared locks on the rows they read. A's write now waits for B…
   - A: UPDATE doctors SET on_call = false WHERE name = 'alice'
     blocks: p1
+    tl: alice off call
 
   - note: …and B's write closes the cycle. InnoDB detects the deadlock and rolls B back entirely.
   - B.fails: UPDATE doctors SET on_call = false WHERE name = 'bob'
     error: "1213"
     comment: ER_LOCK_DEADLOCK
+    tl: bob off call
 
   - note: B's rollback freed the locks — A's update proceeds.
   - success: p1
   - A: COMMIT
+    tl: COMMIT
 
   - A: SELECT count(*) AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 1 }]
     comment: the invariant survived
+    tl: on-call count → 1 — invariant survived
 
   - note: >-
       PostgreSQL detects the same skew without blocking (SSI, at COMMIT). MySQL

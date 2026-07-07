@@ -12,21 +12,28 @@ steps:
   - A: BEGIN
   - A: SELECT balance FROM accounts WHERE id = 1
     capture: readA
+    tl: SELECT balance → 100
 
   - B: BEGIN
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
     capture: readB
+    tl: SELECT balance → 100 (same snapshot)
 
   - A: UPDATE accounts SET balance = ${readA.balance} + 10 WHERE id = 1
+    tl: UPDATE balance = 100 + 10
   - A: COMMIT
+    tl: COMMIT
 
   - note: B's snapshot predates A's commit — but MySQL's UPDATE acts on the CURRENT row and raises nothing.
   - B: UPDATE accounts SET balance = ${readB.balance} + 10 WHERE id = 1
+    tl: UPDATE balance = 100 + 10 — no error!
   - B: COMMIT
+    tl: COMMIT
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 110 }]
     comment: A's deposit is gone — silently, even at REPEATABLE READ
+    tl: SELECT balance → 110 — deposit gone, silently
 
   - note: PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not — don't port that assumption.

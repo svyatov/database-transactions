@@ -4,11 +4,11 @@ import type { DbError, Pending, Rows, Scenario, Session } from "./scenario";
 import { renderMarkdown } from "./transcript";
 
 export type Event =
-  | { kind: "query"; session: string; sql: string; rows: Rows }
-  | { kind: "error"; session: string; sql: string; error: DbError }
-  | { kind: "blocked"; session: string; sql: string }
-  | { kind: "resume"; session: string; sql: string; rows: Rows }
-  | { kind: "resume-error"; session: string; sql: string; error: DbError }
+  | { kind: "query"; session: string; sql: string; rows: Rows; tl?: string }
+  | { kind: "error"; session: string; sql: string; error: DbError; tl?: string }
+  | { kind: "blocked"; session: string; sql: string; tl?: string }
+  | { kind: "resume"; session: string; sql: string; rows: Rows; tl?: string }
+  | { kind: "resume-error"; session: string; sql: string; error: DbError; tl?: string }
   | { kind: "note"; text: string };
 
 export interface RunResult {
@@ -113,26 +113,28 @@ function makeSession(
 ): Session {
   const call = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<Rows> => {
     const text = renderSql(strings, values);
+    const tl = (strings as any).tl as string | undefined;
     await hooks?.before?.(name, text);
     try {
       const rows = await dialect.exec(conn, strings, values, text);
-      emit({ kind: "query", session: name, sql: text, rows });
+      emit({ kind: "query", session: name, sql: text, rows, tl });
       return rows;
     } catch (raw: any) {
       const e = dialect.toError(raw);
-      emit({ kind: "error", session: name, sql: text, error: e });
+      emit({ kind: "error", session: name, sql: text, error: e, tl });
       throw new Error(`[${name}] unexpected error (${e.code}) on: ${text}\n${e.message}`);
     }
   };
 
   call.fails = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<DbError> => {
     const text = renderSql(strings, values);
+    const tl = (strings as any).tl as string | undefined;
     await hooks?.before?.(name, text);
     try {
       await dialect.exec(conn, strings, values, text);
     } catch (raw: any) {
       const e = dialect.toError(raw);
-      emit({ kind: "error", session: name, sql: text, error: e });
+      emit({ kind: "error", session: name, sql: text, error: e, tl });
       return e;
     }
     throw new Error(`[${name}] expected an error, but statement succeeded: ${text}`);
@@ -140,6 +142,7 @@ function makeSession(
 
   call.blocked = async (strings: TemplateStringsArray, ...values: unknown[]): Promise<Pending> => {
     const text = renderSql(strings, values);
+    const tl = (strings as any).tl as string | undefined;
     await hooks?.before?.(name, text);
     const executing = dialect.exec(conn, strings, values, text);
     executing.catch(() => {}); // consumed later via pending.success() / pending.failure()
@@ -165,8 +168,8 @@ function makeSession(
       }
     }
 
-    emit({ kind: "blocked", session: name, sql: text });
-    const pending = new PendingImpl(name, text, executing, dialect, emit, unconsumed);
+    emit({ kind: "blocked", session: name, sql: text, tl });
+    const pending = new PendingImpl(name, text, tl, executing, dialect, emit, unconsumed);
     unconsumed.add(pending);
     return pending;
   };
@@ -178,6 +181,7 @@ class PendingImpl implements Pending {
   constructor(
     readonly session: string,
     readonly sql: string,
+    readonly tl: string | undefined,
     private executing: Promise<Rows>,
     private dialect: Dialect,
     private emit: (e: Event) => void,
@@ -193,6 +197,7 @@ class PendingImpl implements Pending {
           session: this.session,
           sql: this.sql,
           rows,
+          tl: this.tl,
         });
         return rows;
       },
@@ -203,6 +208,7 @@ class PendingImpl implements Pending {
           session: this.session,
           sql: this.sql,
           error: e,
+          tl: this.tl,
         });
         throw new Error(
           `[${this.session}] blocked statement failed unexpectedly (${e.code}): ${this.sql}\n${e.message}`,
@@ -224,6 +230,7 @@ class PendingImpl implements Pending {
           session: this.session,
           sql: this.sql,
           error: e,
+          tl: this.tl,
         });
         return e;
       },

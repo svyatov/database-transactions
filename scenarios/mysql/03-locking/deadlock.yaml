@@ -12,19 +12,23 @@ steps:
   - A: BEGIN
   - A: UPDATE accounts SET balance = balance - 10 WHERE id = 1
     comment: A locks alice
+    tl: locks alice (id=1)
 
   - B: BEGIN
   - B: UPDATE accounts SET balance = balance - 25 WHERE id = 2
     comment: B locks bob
+    tl: locks bob (id=2)
 
   - note: A now needs bob's row (B has it) — it waits.
   - A: UPDATE accounts SET balance = balance + 10 WHERE id = 2
     blocks: p1
+    tl: needs bob (id=2)
 
   - note: "B now needs alice's row (A has it). A waits for B, B waits for A: a cycle."
   - B.fails: UPDATE accounts SET balance = balance + 25 WHERE id = 1
     error: "1213"
     comment: ER_LOCK_DEADLOCK — B's whole transaction is rolled back…
+    tl: needs alice (id=1)
 
   - note: The victim's abort frees bob's row, so A's stuck UPDATE completes.
   - success: p1

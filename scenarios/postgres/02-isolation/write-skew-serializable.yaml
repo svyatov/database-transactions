@@ -14,17 +14,22 @@ steps:
 
   - A: SELECT count(*)::int AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 2 }]
+    tl: on-call count → 2
   - B: SELECT count(*)::int AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 2 }]
-
+    tl: on-call count → 2
   - A: UPDATE doctors SET on_call = false WHERE name = 'alice'
+    tl: alice off call
   - B: UPDATE doctors SET on_call = false WHERE name = 'bob'
+    tl: bob off call
 
   - note: The first committer wins. The second cannot be serialized against it and is aborted.
   - A: COMMIT
+    tl: COMMIT — first committer wins
   - B.fails: COMMIT
     error: "40001"
     comment: serialization_failure
+    tl: COMMIT
 
   - A: SELECT count(*)::int AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 1 }]
