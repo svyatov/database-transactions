@@ -122,6 +122,15 @@ const mysql: DefaultTheme.SidebarItem[] = [
       { text: "Monitoring locks", link: "/mysql/03-locking/monitoring-locks" },
     ],
   },
+  {
+    text: "4. MVCC under the hood",
+    items: [
+      { text: "Undo logs", link: "/mysql/04-mvcc/undo-logs" },
+      { text: "Read views", link: "/mysql/04-mvcc/read-views" },
+      { text: "The history list", link: "/mysql/04-mvcc/history-list-length" },
+      { text: "Purge", link: "/mysql/04-mvcc/purge" },
+    ],
+  },
 ];
 
 export default defineConfig({

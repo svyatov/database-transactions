@@ -1,0 +1,43 @@
+title: "The read view: taken at first read, not at BEGIN"
+claim: >-
+  BEGIN does not take the snapshot — the transaction's first read does. START
+  TRANSACTION WITH CONSISTENT SNAPSHOT takes it immediately. And until it
+  writes, a transaction doesn't even get a real transaction ID — readers are
+  cheap by design.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100);
+sessions: [A, R]
+steps:
+  - R: BEGIN
+  - note: R has "begun" — but hasn't read anything. A commits a change meanwhile.
+  - A: UPDATE accounts SET balance = 999 WHERE id = 1
+
+  - R: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 999 }]
+    comment: A's update is visible — the read view was created just now, by this SELECT
+  - R: COMMIT
+
+  - note: "START TRANSACTION WITH CONSISTENT SNAPSHOT moves the snapshot to the start:"
+  - R: START TRANSACTION WITH CONSISTENT SNAPSHOT
+  - A: UPDATE accounts SET balance = 111 WHERE id = 1
+  - R: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 999 }]
+    comment: this time the read view predates A's update
+
+  - note: >-
+      One more thing R hasn't needed so far: a transaction ID. InnoDB hands
+      read-only transactions a placeholder above 2^48 instead of consuming a
+      real, persistent ID.
+  - sleep: 300
+  - A: SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx
+    expect: [{ placeholder_id: 1 }]
+    comment: R is the only open transaction — and its ID is fake
+
+  - R: UPDATE accounts SET balance = balance + 1 WHERE id = 1
+    comment: R's first write…
+  - sleep: 300
+  - A: SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx
+    expect: [{ placeholder_id: 0 }]
+    comment: …and only now does it get a real transaction ID
+  - R: COMMIT

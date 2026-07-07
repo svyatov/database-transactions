@@ -1,0 +1,33 @@
+title: Old row versions live in the undo log
+claim: >-
+  A committed DELETE removes rows only from the current version of the table.
+  A transaction whose read view predates it keeps reading the old versions,
+  rebuilt on demand from the undo log — long after the "real" rows are gone.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 200), (3, 'carol', 300);
+sessions: [A, R]
+steps:
+  - R: BEGIN
+  - R: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 100 }, { id: 2, balance: 200 }, { id: 3, balance: 300 }]
+    comment: the read view opens here
+
+  - note: A deletes every row — and commits. This is not a trick; the data is gone.
+  - A: DELETE FROM accounts
+    affected: 3
+  - A: SELECT count(*) AS remaining FROM accounts
+    expect: [{ remaining: 0 }]
+
+  - note: >-
+      R's SELECT finds three rows anyway. InnoDB follows each deleted record's
+      roll pointer into the undo log and rebuilds the version R's read view is
+      entitled to — row by row, on every read.
+  - R: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 100 }, { id: 2, balance: 200 }, { id: 3, balance: 300 }]
+    comment: reconstructed from undo, not read from the table
+
+  - R: COMMIT
+  - R: SELECT count(*) AS remaining FROM accounts
+    expect: [{ remaining: 0 }]
+    comment: the read view is gone — and with it, R's claim on that history

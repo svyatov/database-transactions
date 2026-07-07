@@ -1,0 +1,42 @@
+title: One idle reader, and history piles up
+claim: >-
+  While any read view stays open, purge cannot remove the undo history behind
+  it: every committed write transaction adds to the history list, and the
+  history list length — InnoDB's bloat metric — grows for as long as the
+  reader lives.
+setup: |
+  CREATE TABLE counters (id int PRIMARY KEY, v int NOT NULL);
+  INSERT INTO counters VALUES (1, 0);
+  CREATE PROCEDURE bump(n INT) BEGIN DECLARE i INT DEFAULT 0; WHILE i < n DO UPDATE counters SET v = v + 1 WHERE id = 1; SET i = i + 1; END WHILE; END;
+  CREATE TABLE hll_before (n bigint);
+sessions: [A, R]
+steps:
+  - sleep: 1500
+  - A: INSERT INTO hll_before SELECT count FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'
+    comment: snapshot the history list length before the experiment
+
+  - note: R opens a read view — and then simply does nothing.
+  - R: BEGIN
+  - R: SELECT v FROM counters
+    expect: [{ v: 0 }]
+
+  - note: >-
+      Meanwhile the application hums along: 200 small transactions, each
+      updating one row and committing. Every one of them must keep its undo —
+      R's read view might still need any of those versions.
+  - A: CALL bump(200)
+    comment: 200 committed single-row updates
+
+  - A: SELECT im.count - b.n >= 100 AS history_grew FROM information_schema.INNODB_METRICS im, hll_before b WHERE im.name = 'trx_rseg_history_len'
+    expect: [{ history_grew: 1 }]
+    comment: the history list tracks R's lifetime, not the table's size
+
+  - R: SELECT v FROM counters
+    expect: [{ v: 0 }]
+    comment: R still reads its original world — that's what all that undo buys
+
+  - R: COMMIT
+  - note: >-
+      With the read view gone, purge is free to reclaim all 200 versions in
+      the background. The one number to watch in production is exactly this
+      counter — trx_rseg_history_len.
