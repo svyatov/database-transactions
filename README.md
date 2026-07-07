@@ -50,12 +50,13 @@ the database client is built into Bun.
 | 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ | 🚧 |
 | 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ | 🚧 |
 
-Every scenario is also re-verified from **Python** (psycopg + PyMySQL) in CI — same YAML,
-different driver. More languages (Ruby, PHP) are on the roadmap: each one is a ~100-line
-loader, not a re-write of the scenarios.
+Every scenario is also re-verified in CI through a **second, independent pair of drivers**
+(psycopg + PyMySQL, via a thin Python harness). Two drivers agreeing on every assertion is
+the proof that a claim is database behavior, not a driver artifact — where they genuinely
+differ (e.g. on server-side connection kills), the scenario says so explicitly.
 
 ```sh
-uv sync --directory python && uv run --directory python pytest   # the same claims, from Python
+uv sync --directory python && uv run --directory python pytest   # the same claims, second drivers
 ```
 
 ## How it works
@@ -68,9 +69,9 @@ uv sync --directory python && uv run --directory python pytest   # the same clai
 - `harness/` — ~600 lines that make the above work: `loader.ts` interprets the YAML,
   everything database-specific sits side by side in `harness/dialect.ts`. Deliberately
   small and readable; it's part of the learning material.
-- `python/` — a thin Python harness with its own ~100-line loader, run by pytest in CI
-  against the *same* YAML scenarios. Transcripts come only from the TypeScript harness —
-  other languages re-verify the claims.
+- `python/` — the cross-driver check: a second thin harness (psycopg + PyMySQL) that
+  pytest runs in CI against the *same* YAML scenarios. Transcripts come only from the
+  TypeScript harness — this one exists purely to re-verify the claims.
 - `docs/<db>/` — the VitePress site, one track per database. Lesson pages show plain SQL:
   the *generated transcripts* (color-coded per session) — nothing is duplicated by hand.
 

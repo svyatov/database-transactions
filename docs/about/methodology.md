@@ -57,14 +57,18 @@ against the pinned database version* (see the footer under each transcript). Onl
 are normalized for reproducibility — transaction ids (rendered as `1001, 1002, …`) and
 backend/connection ids (rendered as `pid(A)`).
 
-## One transcript, many languages
+## Every claim is checked through two independent drivers
 
-Transcripts show SQL and its results — they don't depend on the client language, so the
-TypeScript harness is the **sole transcript generator**, and the transcript is the only code
-a lesson page shows: plain SQL, color-coded per session. The same YAML scenarios are then
-re-verified from a second language: a thin Python harness
-([`python/`](https://github.com/svyatov/database-transactions/tree/main/python)) runs every
-scenario under pytest against the same databases, asserting the same claims.
+Transcripts show SQL and its results — they don't depend on the client, so the TypeScript
+harness is the **sole transcript generator**, and the transcript is the only code a lesson
+page shows: plain SQL, color-coded per session. But a single driver can lie: what looks like
+database behavior may be an artifact of how that driver reports it. So the same YAML
+scenarios are re-verified through a completely independent pair of drivers — a thin Python
+harness ([`python/`](https://github.com/svyatov/database-transactions/tree/main/python),
+psycopg + PyMySQL) runs every scenario under pytest against the same databases. A claim only
+stands when both agree; where the drivers genuinely differ — e.g. after a server-side
+connection kill, one reports the server's FATAL error code while the other only notices the
+closed socket — the scenario must list both accepted outcomes explicitly.
 
 ## The harness is part of the reading material
 

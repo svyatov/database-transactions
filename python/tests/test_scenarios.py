@@ -1,7 +1,8 @@
 """One test per scenario file, in path order — the Python mirror of tests/scenarios.test.ts.
 
 The canonical YAML scenarios at the repo root are the single source of truth; this
-suite re-verifies the same claims from Python drivers (psycopg, PyMySQL). Tests run
+suite re-verifies the same claims through a second pair of drivers (psycopg, PyMySQL).
+Tests run
 serially — scenarios share one database per dialect.
 """
 

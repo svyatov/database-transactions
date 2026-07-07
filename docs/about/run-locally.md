@@ -21,7 +21,8 @@ This runs every scenario in `scenarios/` — both the `postgres/` and `mysql/` t
 the real databases and asserts every outcome — the same check CI runs before anything is
 published.
 
-The Python harness re-verifies the same scenarios with [uv](https://docs.astral.sh/uv/):
+A second, independent pair of drivers (psycopg + PyMySQL — the Python harness) re-verifies
+the same scenarios, run with [uv](https://docs.astral.sh/uv/):
 
 ```sh
 uv sync --directory python

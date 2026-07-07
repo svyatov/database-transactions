@@ -1,8 +1,9 @@
-"""The API Python scenarios are written against — a mirror of harness/scenario.ts.
+"""The API scenarios run against — a mirror of harness/scenario.ts.
 
 A scenario opens one dedicated database connection per named session and interleaves
 their statements in plain call order. Everything it claims, it asserts. The TypeScript
-harness is the transcript generator; these ports re-verify the same claims from Python.
+harness is the transcript generator; this harness re-verifies the same claims through
+an independent pair of drivers (psycopg + PyMySQL).
 """
 
 from dataclasses import dataclass

@@ -10,7 +10,7 @@ linked) says. If you can't prove it, don't write it.
 bun install
 docker compose up -d --wait   # PostgreSQL on :54321, MySQL on :33061
 bun test                      # all scenarios must pass before you start
-uv sync --directory python    # optional: the Python ports
+uv sync --directory python    # optional: the cross-driver check
 ```
 
 ## Adding or changing a lesson
@@ -32,8 +32,8 @@ uv sync --directory python    # optional: the Python ports
      MySQL select id columns like `waiting_pid` and expect `"$pid(A)"`).
    - Nondeterministic waits go in `- sleep: <ms>` steps — invisible to transcripts.
    - Run `bun run gen` twice — the second run must produce no diff.
-   There is no per-language porting step: pytest runs the same YAML through the Python
-   harness automatically.
+   There is no porting step: pytest re-runs the same YAML through a second, independent
+   pair of drivers (psycopg + PyMySQL) automatically.
 3. **Write the lesson page** in `docs/<db>/<NN-chapter>/<slug>.md`: prose plus the
    transcript include — the transcript *is* the code readers see (plain SQL, one color
    per session):
@@ -53,7 +53,7 @@ uv sync --directory python    # optional: the Python ports
 bunx tsc --noEmit                     # types
 bun test                              # every claim re-verified, both databases
 bun run gen                           # then `git diff` must be empty — transcripts committed & stable
-uv run --directory python pytest      # the Python ports agree
+uv run --directory python pytest      # the second pair of drivers agrees
 bun run docs:build                    # site builds, all internal links resolve
 ```
 

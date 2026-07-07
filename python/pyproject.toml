@@ -1,7 +1,7 @@
 [project]
 name = "database-transactions-python"
 version = "0.1.0"
-description = "Python ports of the database-transactions scenarios — same claims, asserted from Python"
+description = "Cross-driver check for the database-transactions scenarios — same YAML claims, asserted through psycopg + PyMySQL"
 requires-python = ">=3.12"
 dependencies = [
     "psycopg[binary]>=3.2",
