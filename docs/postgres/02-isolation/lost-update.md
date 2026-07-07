@@ -1,15 +1,10 @@
 # Lost updates
 
-The most common transaction bug in real applications looks like this innocent pseudocode:
-
-```ts
-const balance = await db.query("SELECT balance FROM accounts WHERE id = $1", [id]);
-await db.query("UPDATE accounts SET balance = $1 WHERE id = $2", [balance + 10, id]);
-```
-
-Read, modify in application code, write back. Run two of these concurrently and one deposit
-simply **vanishes** — no error, no log line, nothing. The SQL standard doesn't even list this
-anomaly; production incident reports list it constantly.
+Read a value, modify it in application code, write it back — run two of these concurrently
+and one deposit simply **vanishes**: no error, no log line, nothing. Why the innocent
+read-modify-write pattern loses data is
+[Concepts: the lost update problem](/concepts/lost-update); this page proves the loss on
+PostgreSQL, then shows the isolation level that refuses to play along.
 
 ## Watch a deposit disappear
 
@@ -28,11 +23,9 @@ overwrite a row modified after B's snapshot — and refuses:
   If you remember one thing from this chapter, make it this.
 - REPEATABLE READ (and SERIALIZABLE) convert the silent loss into SQLSTATE `40001` — data
   is safe, and the losing transaction retries.
-- Raising the isolation level is only one of the fixes, and often not the best one.
-  [Fixing lost updates](/postgres/05-patterns/fixing-lost-updates) demonstrates the alternatives:
-  - **atomic updates** — `SET balance = balance + 10`: race-free even at READ COMMITTED;
-  - **pessimistic locking** — `SELECT … FOR UPDATE`;
-  - **optimistic locking** — a version column checked in the WHERE clause.
+- Raising the isolation level is only one of [the fixes](/concepts/lost-update#the-fixes),
+  and often not the best one — [fixing lost updates](/postgres/05-patterns/fixing-lost-updates)
+  demonstrates atomic updates, `FOR UPDATE`, and version columns, each with a transcript.
 
 ## Further reading
 

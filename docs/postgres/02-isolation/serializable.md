@@ -14,7 +14,7 @@ SQLSTATE `40001` — keep it, retry it, done.
 
 Two transactions each check an invariant ("at least one doctor on call"), each update a
 *different* row, and both commit. No write-write conflict ever happens — and the invariant
-still breaks:
+still breaks. That's [write skew](/concepts/write-skew), the anomaly with no smoking gun:
 
 <!--@include: ./parts/write-skew-rr.md-->
 

@@ -1,8 +1,8 @@
 # Serializable
 
-Some anomalies have no write-write conflict to detect. In **write skew**, two transactions
-each read an invariant, each write to a *different* row, and both commit — jointly breaking
-the rule both of them checked.
+Some anomalies have no write-write conflict to detect. In
+**[write skew](/concepts/write-skew)**, two transactions each read an invariant, each write
+to a *different* row, and both commit — jointly breaking the rule both of them checked.
 
 ## Write skew at REPEATABLE READ
 

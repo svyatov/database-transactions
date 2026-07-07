@@ -1,5 +1,6 @@
 ---
 layout: home
+description: Learn database transactions from verified, runnable examples — isolation levels, anomalies, locking, MVCC, and real-world concurrency patterns on PostgreSQL and MySQL, every claim proven against a real database.
 
 hero:
   name: Database Transactions

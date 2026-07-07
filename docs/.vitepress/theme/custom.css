@@ -60,3 +60,48 @@
 /* Shiki dual-theme tokens inside statements (independent of VitePress's .vp-code hook). */
 .transcript span[style*="--shiki-light"] { color: var(--shiki-light); }
 .dark .transcript span[style*="--shiki-dark"] { color: var(--shiki-dark); }
+
+/* Timeline diagrams (```timeline fences): one column per session, one row per
+   step, time flowing downward. Same session palette as the transcripts.
+   Rule order matters: .tl-head resets the .tl-sN card styles for header cells. */
+
+.timeline {
+  display: grid;
+  gap: 6px 14px;
+  margin: 16px 0;
+  padding: 20px 24px;
+  border-radius: 8px;
+  background-color: var(--vp-code-block-bg);
+  overflow-x: auto;
+  font-family: var(--vp-font-family-mono);
+  font-size: var(--vp-code-font-size);
+  line-height: var(--vp-code-line-height);
+}
+
+.timeline .tl-cell {
+  padding: 5px 12px;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  color: var(--vp-code-block-color);
+}
+
+.timeline .tl-s1 { border-color: var(--tx-s1); background-color: color-mix(in srgb, var(--tx-s1) 7%, transparent); }
+.timeline .tl-s2 { border-color: var(--tx-s2); background-color: color-mix(in srgb, var(--tx-s2) 7%, transparent); }
+.timeline .tl-s3 { border-color: var(--tx-s3); background-color: color-mix(in srgb, var(--tx-s3) 7%, transparent); }
+.timeline .tl-s4 { border-color: var(--tx-s4); background-color: color-mix(in srgb, var(--tx-s4) 7%, transparent); }
+
+.timeline .tl-head {
+  padding: 0 12px 6px;
+  font-weight: 600;
+  background: none;
+  border-left: none;
+  border-bottom: 2px solid;
+}
+
+.timeline .tl-head.tl-s1 { color: var(--tx-s1); }
+.timeline .tl-head.tl-s2 { color: var(--tx-s2); }
+.timeline .tl-head.tl-s3 { color: var(--tx-s3); }
+.timeline .tl-head.tl-s4 { color: var(--tx-s4); }
+
+.timeline .tl-result { margin-left: 8px; color: var(--vp-c-text-2); }
+.timeline .tl-note { display: block; font-weight: 600; color: var(--vp-c-danger-1); }

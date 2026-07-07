@@ -4,8 +4,9 @@ InnoDB is an MVCC engine: readers look at a **consistent snapshot** instead of l
 so plain SELECTs never block writers and writers never block plain SELECTs. Which snapshot a
 statement sees — and when reads take locks anyway — is decided by the **isolation level**.
 
-MySQL implements all four SQL-standard levels, and unlike PostgreSQL, all four are *actually
-different*:
+MySQL implements all four SQL-standard levels
+([the ladder and its vocabulary, in theory](/concepts/isolation-levels)) — and unlike
+PostgreSQL, all four are *actually different*:
 
 | Level | Dirty read | Non-repeatable read | Phantom | Snapshot |
 |---|---|---|---|---|

@@ -1,11 +1,11 @@
 # The anomaly catalog
 
-Every isolation anomaly with a formal name, what each level does about it, and — in the
-spirit of this site — a link to the scenario that *proves* each cell. The codes (G0, G1a, …)
-come from Adya's dependency-graph formalism, popularized by
-[Hermitage](https://github.com/ept/hermitage), Martin Kleppmann's cross-database isolation
-test suite; this catalog covers every case Hermitage tests. READ UNCOMMITTED is omitted:
-in PostgreSQL it
+What each PostgreSQL isolation level does about every named anomaly, and — in the spirit of
+this site — a link to the scenario that *proves* each cell. The anomalies themselves
+(definitions, diagrams, and where the G-codes come from) live in
+[Concepts: the anomaly catalog](/concepts/isolation-anomalies); this page is PostgreSQL's
+answer sheet, covering every case [Hermitage](https://github.com/ept/hermitage) tests.
+READ UNCOMMITTED is omitted: in PostgreSQL it
 [behaves exactly like READ COMMITTED](/postgres/02-isolation/read-committed#no-dirty-reads-even-if-you-ask-for-them).
 
 | Code | Anomaly | READ COMMITTED *(default)* | REPEATABLE READ | SERIALIZABLE |
@@ -73,18 +73,6 @@ Once a transaction commits, readers see all of it or none of it — even while a
 transaction is busy overwriting half of its rows:
 
 <!--@include: ./parts/observed-transaction-vanishes.md-->
-
-## What the standard's table doesn't tell you
-
-The SQL standard's three-anomaly table (dirty / non-repeatable / phantom) dates from 1992.
-Lost updates, write skew, and the read-only anomaly were formalized later² — and they're the
-ones that actually bite in modern applications, because they emerge from *application logic*
-(read, decide, write) rather than from raw statement visibility.
-
-² Berenson et al., [*A Critique of ANSI SQL Isolation Levels*](https://www.microsoft.com/en-us/research/publication/a-critique-of-ansi-sql-isolation-levels/) (1995);
-Adya, [*Weak Consistency: A Generalized Theory and Optimistic Implementations for Distributed Transactions*](https://pmg.csail.mit.edu/papers/adya-phd.pdf) (MIT PhD thesis, 1999) — the source of the G-codes;
-Fekete et al., [*Making Snapshot Isolation Serializable*](https://doi.org/10.1145/1071610.1071615)
-(ACM TODS, 2005).
 
 ## Further reading
 

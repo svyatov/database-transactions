@@ -28,9 +28,9 @@ your statements:
 
 ## Read skew: a total that never existed
 
-Non-repeatable reads have a nastier multi-row cousin — *read skew* (formally Adya's
-G-single): read row 1, let someone move money to row 2, read row 2. Every row you saw was
-committed and correct, yet the combination existed at no point in time:
+Non-repeatable reads have a nastier multi-row cousin —
+[read skew](/concepts/non-repeatable-read#read-skew): every row you read was committed and
+correct, yet the combination existed at no point in time:
 
 <!--@include: ./parts/read-skew.md-->
 

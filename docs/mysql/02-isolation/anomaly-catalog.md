@@ -1,10 +1,10 @@
 # The anomaly catalog
 
-Every isolation anomaly with a formal name, what each MySQL level does about it, and the
-proof. The codes (G0, G1a, …) come from Adya's formalism, popularized by
-[Hermitage](https://github.com/ept/hermitage), Martin Kleppmann's cross-database isolation
-test suite; this catalog covers every case Hermitage tests — including the rows where
-MySQL's answer differs from PostgreSQL's.
+What each MySQL isolation level does about every named anomaly, and the proof. The anomalies
+themselves (definitions, diagrams, and where the G-codes come from) live in
+[Concepts: the anomaly catalog](/concepts/isolation-anomalies); this page is MySQL's answer
+sheet, covering every case [Hermitage](https://github.com/ept/hermitage) tests — including
+the rows where MySQL's answer differs from PostgreSQL's.
 
 | Code | Anomaly | READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ *(default)* | SERIALIZABLE |
 |---|---|---|---|---|---|

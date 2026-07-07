@@ -1,34 +1,11 @@
 # Snapshots & the four levels
 
 Isolation — the I in ACID — answers one question: **what do concurrent transactions see of
-each other's work?** Perfect isolation (every transaction behaves as if it ran alone) costs
-performance, so SQL lets you trade correctness for speed by choosing an *isolation level*.
-This chapter shows you exactly what each trade buys — and what it silently gives away.
-
-## The SQL standard's view
-
-The SQL standard defines four levels by which *anomalies* they permit
-([Table 13.1](https://www.postgresql.org/docs/current/transaction-iso.html#MVCC-ISOLEVEL-TABLE)
-in the manual):
-
-| Level | Dirty read | Non-repeatable read | Phantom read |
-|---|---|---|---|
-| READ UNCOMMITTED | permitted | permitted | permitted |
-| READ COMMITTED | — | permitted | permitted |
-| REPEATABLE READ | — | — | permitted |
-| SERIALIZABLE | — | — | — |
-
-The vocabulary, in one line each:
-
-- **Dirty read** — seeing another transaction's *uncommitted* data.
-- **Non-repeatable read** — reading the same row twice and getting different data, because
-  someone committed in between.
-- **Phantom read** — running the same *range query* twice and getting new rows.
-
-The standard's list is famously incomplete — it says nothing about **lost updates**,
-**write skew**, or the **read-only anomaly**. All three are real, all three are demonstrated
-in this chapter, and the [anomaly catalog](/postgres/02-isolation/anomaly-catalog) maps every one of
-them to the level that stops it.
+each other's work?** The SQL standard's four-level ladder, and the anomaly vocabulary that
+defines it (dirty read, non-repeatable read, phantom — and the ones the standard famously
+forgot), is covered in [Concepts: isolation levels](/concepts/isolation-levels). This chapter
+shows what each level does *on PostgreSQL* — exactly what each trade buys, and what it
+silently gives away.
 
 ## How PostgreSQL actually does it: snapshots
 

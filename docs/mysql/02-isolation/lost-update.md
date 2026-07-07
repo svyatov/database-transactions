@@ -1,8 +1,9 @@
 # Lost updates
 
-The most common real-world transaction bug: two clients read a value, compute a new one in
-application code, and write it back. One update silently erases the other. No error is
-raised — the data is simply wrong.
+Two clients read a value, compute a new one in application code, and write it back — one
+update silently erases the other. Why the read-modify-write pattern loses data is
+[Concepts: the lost update problem](/concepts/lost-update); this page is about what makes
+MySQL's version of it uniquely dangerous.
 
 ## At READ COMMITTED
 
@@ -20,16 +21,11 @@ applies your stale arithmetic to the newest row version and raises nothing:
 ## The fixes
 
 Raising the isolation level is not one of them (short of SERIALIZABLE). On MySQL you fix
-lost updates *structurally*:
-
-1. **Atomic UPDATE** — do the math in SQL, not in the app:
-   `UPDATE accounts SET balance = balance + 10 WHERE id = 1`. The row lock serializes the
-   two increments.
-2. **Pessimistic lock** — read with `SELECT … FOR UPDATE`; the second reader waits until the
-   first commits, then sees the fresh value ([chapter 3](/mysql/03-locking/row-locks)).
-3. **Optimistic version column** —
-   `UPDATE … SET balance = ?, version = version + 1 WHERE id = ? AND version = ?`; if
-   `affectedRows` is 0, someone got there first: reread and retry.
+lost updates *structurally* — atomic UPDATEs, `SELECT … FOR UPDATE`
+([chapter 3](/mysql/03-locking/row-locks)), or an optimistic version column checked via
+`affectedRows`. The three patterns are defined in
+[the concept page](/concepts/lost-update#the-fixes) and each proven with a transcript in
+[fixing lost updates](/mysql/05-patterns/fixing-lost-updates).
 
 ## Key takeaways
 

@@ -8,8 +8,34 @@ const about: DefaultTheme.SidebarItem = {
   ],
 };
 
+// The engine-neutral theory pages; collapsed inside the two track sidebars,
+// expanded when browsing /concepts/ itself.
+const concepts = (collapsed: boolean): DefaultTheme.SidebarItem => ({
+  text: "Concepts",
+  link: "/concepts/",
+  collapsed,
+  items: [
+    { text: "What is a transaction? (ACID)", link: "/concepts/what-is-a-transaction" },
+    { text: "Isolation levels", link: "/concepts/isolation-levels" },
+    {
+      text: "The anomaly catalog",
+      link: "/concepts/isolation-anomalies",
+      collapsed,
+      items: [
+        { text: "Dirty read", link: "/concepts/dirty-read" },
+        { text: "Non-repeatable read", link: "/concepts/non-repeatable-read" },
+        { text: "Phantom read", link: "/concepts/phantom-read" },
+        { text: "Lost update", link: "/concepts/lost-update" },
+        { text: "Write skew", link: "/concepts/write-skew" },
+      ],
+    },
+    { text: "Dual writes & the outbox", link: "/concepts/transactional-outbox" },
+  ],
+});
+
 const postgres: DefaultTheme.SidebarItem[] = [
   about,
+  concepts(true),
   {
     text: "1. Transactions 101",
     items: [
@@ -91,6 +117,7 @@ const postgres: DefaultTheme.SidebarItem[] = [
 
 const mysql: DefaultTheme.SidebarItem[] = [
   about,
+  concepts(true),
   {
     text: "1. Transactions 101",
     items: [
@@ -176,6 +203,48 @@ export default defineConfig({
   cleanUrls: true,
   // Generated transcript fragments are included into lesson pages, never built as pages.
   srcExclude: ["**/parts/**"],
+  // VitePress resolves sitemap <loc>s against this URL, so it must include the
+  // base path WITH the trailing slash — without it the base is dropped.
+  sitemap: { hostname: "https://svyatov.github.io/database-transactions/" },
+  // Distinct SERP titles for the two tracks: "Read Committed — PostgreSQL | …"
+  // vs "Read Committed — MySQL | …". Concepts/about/home keep the default.
+  transformPageData(pageData) {
+    const track = pageData.relativePath.startsWith("postgres/")
+      ? "PostgreSQL"
+      : pageData.relativePath.startsWith("mysql/")
+        ? "MySQL"
+        : null;
+    if (track) return { titleTemplate: `:title — ${track} | Database Transactions` };
+  },
+  // Canonical URL, Open Graph tags, and a unique per-page description:
+  // frontmatter `description` if present, else the page's first paragraph.
+  // Emitting a description meta here suppresses the global fallback.
+  transformHead({ page, pageData, title, description, content }) {
+    if (page === "404.md") return;
+    const path = pageData.relativePath.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, "");
+    const url = `https://svyatov.github.io/database-transactions/${path}`;
+    const text = content
+      .match(/<p>([\s\S]*?)<\/p>/)?.[1]
+      ?.replace(/<[^>]+>/g, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+    const firstParagraph =
+      text && text.length > 160 ? `${text.slice(0, 160).replace(/\s+\S*$/, "")}…` : text;
+    const desc = pageData.description || firstParagraph || description;
+    return [
+      ["link", { rel: "canonical", href: url }],
+      ["meta", { name: "description", content: desc }],
+      ["meta", { property: "og:title", content: title }],
+      ["meta", { property: "og:description", content: desc }],
+      ["meta", { property: "og:url", content: url }],
+      ["meta", { property: "og:type", content: path ? "article" : "website" }],
+    ];
+  },
   markdown: {
     config(md) {
       // ```transcript fences: one <span> per line, classed by the session that owns it
@@ -235,17 +304,54 @@ export default defineConfig({
         }
         return `<div class="transcript" v-pre><pre><code>${out.join("\n")}</code></pre></div>\n`;
       };
+
+      // ```timeline fences: engine-neutral interleaving diagrams for the concepts
+      // pages — one grid column per session, one row per step, time flowing down.
+      // Line format: `A: statement → result ← annotation`. Reuses the transcript
+      // session palette (--tx-s1..4); output is plain HTML text, crawlable.
+      const txFence = md.renderer.rules.fence!;
+      md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+        const token = tokens[idx]!;
+        if (token.info.trim() !== "timeline") return txFence(tokens, idx, options, env, self);
+        const esc = md.utils.escapeHtml;
+        const lanes: string[] = [];
+        const cells: string[] = [];
+        const lines = token.content.split("\n").filter((l) => l.trim() !== "");
+        lines.forEach((line, row) => {
+          const m = line.match(/^([^:]+):\s+(.*)$/);
+          if (!m) return;
+          if (!lanes.includes(m[1]!)) lanes.push(m[1]!);
+          const lane = lanes.indexOf(m[1]!);
+          let body = m[2]!;
+          const note = body.match(/←\s*(.*)$/);
+          if (note) body = body.slice(0, note.index);
+          const result = body.match(/→\s*(.*)$/);
+          if (result) body = body.slice(0, result.index);
+          cells.push(
+            `<div class="tl-cell tl-s${(lane % 4) + 1}" style="grid-area:${row + 2}/${lane + 1}">${esc(body.trim())}` +
+              (result ? `<span class="tl-result">→ ${esc(result[1]!)}</span>` : "") +
+              (note ? `<span class="tl-note">← ${esc(note[1]!)}</span>` : "") +
+              `</div>`,
+          );
+        });
+        const head = lanes
+          .map((n, i) => `<div class="tl-head tl-s${(i % 4) + 1}" style="grid-area:1/${i + 1}">${esc(n)}</div>`)
+          .join("");
+        return `<div class="timeline" v-pre style="grid-template-columns:repeat(${lanes.length},minmax(0,1fr))">${head}${cells.join("")}</div>\n`;
+      };
     },
   },
   themeConfig: {
     nav: [
       { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },
       { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
+      { text: "Concepts", link: "/concepts/" },
       { text: "Methodology", link: "/about/methodology" },
     ],
     sidebar: {
       "/postgres/": postgres,
       "/mysql/": mysql,
+      "/concepts/": [concepts(false), about],
       "/about/": postgres,
     },
     socialLinks: [{ icon: "github", link: "https://github.com/svyatov/database-transactions" }],

@@ -1,27 +1,27 @@
 # The dual-write problem & the transactional outbox
 
 Every problem so far lived inside one database, where `BEGIN` … `COMMIT` could always
-save you. This chapter is about the moment that stops being true: your transaction needs
-to reach a *second* system — a message broker, a search index, another service's API.
-There is no `BEGIN` that spans PostgreSQL and Kafka.
+save you. This chapter is about the moment that stops being true: there is no `BEGIN`
+that spans PostgreSQL and Kafka. The theory — why two writes to two systems can't be
+made atomic, and how an outbox shrinks the damage — is
+[Concepts: dual writes & the outbox](/concepts/transactional-outbox); this page proves
+it on PostgreSQL, crashes included.
 
 ## The dual-write problem
 
 Write to the database and publish to the broker — two writes, two systems, and a process
-that can die between them. It doesn't matter which write goes first; each order just
-picks which lie you end up with:
+that can die between them:
 
 <!--@include: ./parts/dual-write-problem.md-->
 
-Write-first loses events (downstream never learns about order 1); publish-first invents
-them (downstream processes an order that was never placed). Retries don't fix this —
-they just change the odds. The two systems need to agree, and nothing makes them.
+Write-first loses events; publish-first invents them.
+[Retries only change the odds](/concepts/transactional-outbox#the-dual-write-problem).
 
 ## The fix: only ever write to one system
 
-The outbox pattern's insight is that the application never talks to the broker at all.
-The event is written **to the same database, in the same transaction** as the order —
-and [atomicity](/postgres/01-basics/what-is-a-transaction), which the database has guaranteed
+The application never talks to the broker at all. The event is written **to the same
+database, in the same transaction** as the order — and
+[atomicity](/postgres/01-basics/what-is-a-transaction), which PostgreSQL has guaranteed
 since chapter 1, does the rest:
 
 <!--@include: ./parts/transactional-outbox.md-->
@@ -33,23 +33,17 @@ the `outbox` table.
 ## At-least-once, by construction
 
 Look closely at what the crash proved. The relay published the event, then died before
-committing the `DELETE` — so the event is delivered *twice*. That is not a bug to fix
-but the deal you signed: the relay can only guarantee **at-least-once** delivery,
-because "publish to the broker" and "delete from the outbox" are themselves two writes
-to two systems. The dual-write problem never disappears; the outbox shrinks it from
-"events can be lost or invented" down to "events can repeat" — and repeats are exactly
-what chapter 5's [idempotency keys](/postgres/05-patterns/idempotency) already handle on the
-consumer side.
+committing the `DELETE` — so the event is delivered *twice*. That is
+[the deal you signed](/concepts/transactional-outbox#at-least-once-by-construction):
+at-least-once delivery — and repeats are exactly what chapter 5's
+[idempotency keys](/postgres/05-patterns/idempotency) already handle on the consumer side.
 
 ## Key takeaways
 
-- You cannot atomically write to two systems. Write once — to the database — and let a
-  relay forward events from an outbox table.
 - The order and its event commit or vanish **together**; there is no window where one
   exists without the other.
 - The relay is a SKIP LOCKED worker: crash-safe, parallelizable, five lines of SQL.
-- Delivery becomes at-least-once, so consumers must be idempotent. Exactly-once is not
-  on the menu; idempotent at-least-once is how grown-ups spell it.
+  Consumers must be idempotent — delivery is at-least-once by construction.
 - Polling the outbox adds latency; the [next lesson](/postgres/06-distributed/listen-notify)
   replaces the polling with a transactional wake-up call.
 
