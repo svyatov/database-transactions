@@ -45,3 +45,4 @@ Both guarantees fall out of things this site already proved:
 ## Further reading
 
 - [PostgreSQL docs: The Locking Clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE)
+- [The same lesson on MySQL](/mysql/05-patterns/job-queue)

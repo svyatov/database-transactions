@@ -60,3 +60,4 @@ safely. Every ORM's "optimistic concurrency" feature is this one WHERE clause.
 
 - [PostgreSQL docs: Row-Level Locks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)
 - [PostgreSQL docs: The Locking Clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE)
+- [The same lesson on MySQL](/mysql/05-patterns/fixing-lost-updates)

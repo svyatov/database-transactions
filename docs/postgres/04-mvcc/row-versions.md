@@ -55,3 +55,4 @@ shows what piles up in the meantime.
 - [PostgreSQL docs: System Columns](https://www.postgresql.org/docs/current/ddl-system-columns.html)
 - [PostgreSQL docs: Introduction to MVCC](https://www.postgresql.org/docs/current/mvcc-intro.html)
 - [PostgreSQL docs: pageinspect](https://www.postgresql.org/docs/current/pageinspect.html)
+- [The same lesson on MySQL](/mysql/04-mvcc/undo-logs)

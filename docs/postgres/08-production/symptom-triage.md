@@ -20,3 +20,7 @@ Two habits make every row of this table easier:
   `pg_stat_activity` forever.
 - **Alert before the page.** Most of these symptoms have a leading indicator — the
   [alerting checklist](/postgres/08-production/alerting-checklist) lists the handful worth watching.
+
+## Further reading
+
+- [The same triage for MySQL](/mysql/08-production/symptom-triage)

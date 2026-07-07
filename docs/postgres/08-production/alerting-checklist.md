@@ -25,3 +25,7 @@ Three notes on using the list:
   [`lock_timeout` for DDL](/postgres/03-locking/table-locks-and-ddl),
   [`log_lock_waits`](/postgres/08-production/logs-and-counters). An alert that fires often is a
   setting waiting to be set.
+
+## Further reading
+
+- [The same checklist for MySQL](/mysql/08-production/alerting-checklist)

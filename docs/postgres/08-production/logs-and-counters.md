@@ -61,3 +61,4 @@ Two logging GUCs turn the log into a lock-debugging tool *before* things deadloc
 
 - [PostgreSQL docs: pg_stat_database](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-DATABASE-VIEW)
 - [PostgreSQL docs: error reporting and logging](https://www.postgresql.org/docs/current/runtime-config-logging.html#GUC-LOG-LOCK-WAITS)
+- [The same lesson on MySQL](/mysql/08-production/logs-and-counters)

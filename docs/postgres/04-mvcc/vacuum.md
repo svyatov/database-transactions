@@ -50,3 +50,4 @@ compaction.
 - [PostgreSQL docs: Recovering Disk Space](https://www.postgresql.org/docs/current/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY)
 - [PostgreSQL docs: VACUUM](https://www.postgresql.org/docs/current/sql-vacuum.html)
 - [PostgreSQL docs: Heap-Only Tuples (HOT)](https://www.postgresql.org/docs/current/storage-hot.html)
+- [The same lesson on MySQL](/mysql/04-mvcc/purge)

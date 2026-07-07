@@ -58,3 +58,4 @@ consumer side.
 - [microservices.io: Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html)
 - [microservices.io: Polling publisher](https://microservices.io/patterns/data/polling-publisher.html) —
   the relay variant shown here
+- [The same lesson on MySQL](/mysql/06-distributed/transactional-outbox)

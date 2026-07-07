@@ -44,11 +44,11 @@ the database client is built into Bun.
 | 1. Transactions 101 — ACID, BEGIN/COMMIT/ROLLBACK, savepoints | ✅ | ✅ |
 | 2. Isolation levels & anomalies — dirty reads, non-repeatable reads, phantoms, lost updates, write skew | ✅ | ✅ |
 | 3. Locking — row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | ✅ | ✅ |
-| 4. MVCC internals — snapshots, bloat, VACUUM / undo logs, history length | ✅ | 🚧 |
-| 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | ✅ | 🚧 |
-| 6. Transactions across services — outbox, sagas, two-phase commit | ✅ | 🚧 |
-| 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ | 🚧 |
-| 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ | 🚧 |
+| 4. MVCC internals — snapshots, bloat, VACUUM / undo logs, history length | ✅ | ✅ |
+| 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | ✅ | ✅ |
+| 6. Transactions across services — outbox, sagas, two-phase commit | ✅ | ✅ |
+| 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ | ✅ |
+| 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ | ✅ |
 
 Every scenario is also re-verified in CI through a **second, independent pair of drivers**
 (psycopg + PyMySQL, via a thin Python harness). Two drivers agreeing on every assertion is

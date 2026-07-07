@@ -39,3 +39,4 @@ Two escalation levels, straight from the manual:
 
 - [PostgreSQL docs: Server Signaling Functions](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL)
 - [PostgreSQL docs: pg_stat_activity](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW)
+- [The same lesson on MySQL](/mysql/08-production/who-is-blocking-whom)

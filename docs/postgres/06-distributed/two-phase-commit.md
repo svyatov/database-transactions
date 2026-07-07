@@ -58,3 +58,4 @@ modes you can sleep through.
 
 - [PostgreSQL docs: PREPARE TRANSACTION](https://www.postgresql.org/docs/current/sql-prepare-transaction.html)
 - [PostgreSQL docs: `max_prepared_transactions`](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-MAX-PREPARED-TRANSACTIONS)
+- [The same lesson on MySQL](/mysql/06-distributed/xa-transactions)

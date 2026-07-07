@@ -88,3 +88,7 @@ died between the phases. Nothing expires it.
 **Fix:** consistent lock ordering; retry `40P01` like `40001`; watch the counter.
 **Proof:** [deadlocks](/postgres/03-locking/deadlocks) ·
 [the permanent trace](/postgres/08-production/logs-and-counters)
+
+---
+
+MySQL has different sharp edges — [its own compendium](/mysql/07-pitfalls/compendium) covers the traps PostgreSQL doesn't have.

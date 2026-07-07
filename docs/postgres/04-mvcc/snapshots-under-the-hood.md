@@ -54,3 +54,4 @@ Worth pausing on each beat:
 - [PostgreSQL docs: Transaction ID and Snapshot Information Functions](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-PG-SNAPSHOT)
 - [PostgreSQL docs: Transactions and Identifiers](https://www.postgresql.org/docs/current/transaction-id.html)
 - [PostgreSQL docs: Introduction to MVCC](https://www.postgresql.org/docs/current/mvcc-intro.html)
+- [The same lesson on MySQL](/mysql/04-mvcc/read-views)

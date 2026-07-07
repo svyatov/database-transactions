@@ -64,3 +64,4 @@ won't rerun your business logic for you.
 
 - [PostgreSQL docs: `idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT)
 - [PostgreSQL docs: Error Codes Appendix](https://www.postgresql.org/docs/current/errcodes-appendix.html)
+- [The same lesson on MySQL](/mysql/05-patterns/orm-pitfalls)

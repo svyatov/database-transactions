@@ -41,3 +41,4 @@ your monitoring should already be scraping.
 - [PostgreSQL docs: pg_stat_all_tables](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW)
 - [PostgreSQL docs: routine vacuuming](https://www.postgresql.org/docs/current/routine-vacuuming.html) —
   including the wraparound section chapter 4 walked through
+- [The same lesson on MySQL](/mysql/08-production/history-list-health)

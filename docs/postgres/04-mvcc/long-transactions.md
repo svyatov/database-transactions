@@ -63,3 +63,4 @@ primary, a stuck migration. Guardrails exist for each:
 
 - [PostgreSQL docs: Recovering Disk Space](https://www.postgresql.org/docs/current/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY)
 - [PostgreSQL docs: `pg_stat_activity`](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW)
+- [The same lesson on MySQL](/mysql/04-mvcc/history-list-length)

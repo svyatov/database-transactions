@@ -40,3 +40,4 @@ even exists.
 
 - [PostgreSQL docs: Advisory Locks](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS)
 - [PostgreSQL docs: Advisory Lock Functions](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS)
+- [The same lesson on MySQL](/mysql/05-patterns/advisory-locks)

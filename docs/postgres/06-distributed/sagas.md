@@ -46,3 +46,4 @@ real*, so when step 2 fails, the only way back is a new forward transaction:
   the original paper; the word predates microservices by three decades
 - [microservices.io: Saga](https://microservices.io/patterns/data/saga.html) —
   orchestration vs. choreography, in detail
+- [The same lesson on MySQL](/mysql/06-distributed/sagas)

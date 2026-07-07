@@ -44,3 +44,4 @@ guarantee:
 ## Further reading
 
 - [PostgreSQL docs: INSERT ... ON CONFLICT](https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT)
+- [The same lesson on MySQL](/mysql/05-patterns/check-then-insert)

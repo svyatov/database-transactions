@@ -53,3 +53,4 @@ The de-duplication is documented behavior, not an accident:
 
 - [PostgreSQL docs: NOTIFY](https://www.postgresql.org/docs/current/sql-notify.html)
 - [PostgreSQL docs: LISTEN](https://www.postgresql.org/docs/current/sql-listen.html)
+- [MySQL has no LISTEN/NOTIFY](/mysql/06-distributed/transactional-outbox) — its outbox lesson covers polling and binlog CDC instead

@@ -48,3 +48,4 @@ only the application knows where its transaction's logic begins.
 
 - [PostgreSQL docs: Serialization Failure Handling](https://www.postgresql.org/docs/current/mvcc-serialization-failure-handling.html)
 - [PostgreSQL docs: Repeatable Read Isolation Level](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-REPEATABLE-READ)
+- [The same lesson on MySQL](/mysql/05-patterns/retrying-deadlocks)

@@ -42,3 +42,4 @@ Three facts worth reading twice:
 
 - [PostgreSQL docs: Vacuuming Basics](https://www.postgresql.org/docs/current/routine-vacuuming.html#VACUUM-BASICS)
 - [PostgreSQL docs: pageinspect](https://www.postgresql.org/docs/current/pageinspect.html)
+- [The same lesson on MySQL](/mysql/04-mvcc/history-list-length)
