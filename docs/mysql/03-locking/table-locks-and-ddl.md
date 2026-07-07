@@ -4,6 +4,12 @@ Row locks aren't the only game. Every statement that touches a table also holds 
 lock (MDL)** on it for the whole transaction, and DDL needs that lock *exclusively*. This is
 how a one-millisecond `ALTER TABLE` takes a production system down.
 
+::: warning DDL commits your open transaction
+Every DDL statement on MySQL commits implicitly — whatever your transaction had done so far
+is committed, and the DDL itself cannot be rolled back. A "transactional" migration that
+mixes DML and DDL is not transactional — see [ORM pitfalls](/mysql/05-patterns/orm-pitfalls).
+:::
+
 ## The classic migration outage
 
 Even an `ALGORITHM=INSTANT` column add must wait for every open transaction that has touched
@@ -28,9 +34,8 @@ instead of camping in the queue:
   caused by the queue, not the DDL itself.
 - Diagnose with `performance_schema.processlist` — the stuck sessions all show
   `Waiting for table metadata lock`.
-- Two differences from [PostgreSQL](/postgres/03-locking/table-locks-and-ddl): MySQL DDL
-  **commits your open transaction implicitly** and cannot be rolled back; and the timeout
-  knob is `lock_wait_timeout` (seconds), not `lock_timeout` (ms).
+- The timeout knob differs from [PostgreSQL](/postgres/03-locking/table-locks-and-ddl)'s:
+  `lock_wait_timeout` (seconds), not `lock_timeout` (ms).
 
 ## Further reading
 

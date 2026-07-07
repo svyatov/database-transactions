@@ -5,6 +5,24 @@ actually observe. Each entry links to the scenario that reproduces it and the le
 fixes it. If you're staring at a live incident, start with the
 [symptom triage table](/mysql/08-production/symptom-triage) instead.
 
+**Jump to your symptom:**
+
+1. [Increments vanish under load](#_1-increments-vanish-under-load)
+2. [Duplicates despite an "is it taken?" check](#_2-duplicates-despite-an-is-it-taken-check)
+3. [A customer is charged twice](#_3-a-customer-is-charged-twice)
+4. [An invariant across rows breaks with no error](#_4-an-invariant-across-rows-breaks-with-no-error)
+5. [Your report's numbers are self-contradictory](#_5-your-report-s-numbers-are-self-contradictory)
+6. [After a timeout, "retrying" corrupted the transaction](#_6-after-a-timeout-retrying-corrupted-the-transaction)
+7. [A "transactional" migration left half its work behind](#_7-a-transactional-migration-left-half-its-work-behind)
+8. [INSERTs block with no duplicate in sight](#_8-inserts-block-with-no-duplicate-in-sight)
+9. [Deadlocks between transactions that "never touch the same row"](#_9-deadlocks-between-transactions-that-never-touch-the-same-row)
+10. [A "trivial" migration takes the site down](#_10-a-trivial-migration-takes-the-site-down)
+11. [The connection pool is empty, but the database is idle](#_11-the-connection-pool-is-empty-but-the-database-is-idle)
+12. [Disk keeps growing though no table grew](#_12-disk-keeps-growing-though-no-table-grew)
+13. [Events lost (or invented) between the database and the broker](#_13-events-lost-or-invented-between-the-database-and-the-broker)
+14. [Locks are held, and no session owns them](#_14-locks-are-held-and-no-session-owns-them)
+15. [A deadlock — and both transactions looked innocent](#_15-a-deadlock-—-and-both-transactions-looked-innocent)
+
 ## 1. Increments vanish under load
 
 **Broken:** read a value, compute in application code, write it back — concurrent writers

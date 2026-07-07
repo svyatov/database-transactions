@@ -23,15 +23,18 @@ The cruel part: the `ALTER` itself is instant. What kills you is a *waiting* `AL
 every later query — reads included — must queue behind its `ACCESS EXCLUSIVE` request. One
 forgotten `BEGIN` in a console session plus one routine migration equals a full table outage.
 
+::: warning Never run DDL without `lock_timeout`
+A migration that fails fast and retries is a non-event; a migration that queues is an outage.
+:::
+
 ## The fix: lock_timeout + retry
 
 <!--@include: ./parts/ddl-lock-timeout.md-->
 
 ## Key takeaways
 
-- **Never run DDL without `lock_timeout`.** A migration that fails fast and retries is a
-  non-event; a migration that queues is an outage. Configure it once in your migration tool
-  (per session, not in `postgresql.conf` — the manual
+- Configure `lock_timeout` once in your migration tool — per session, not in
+  `postgresql.conf` (the manual
   [advises against setting it globally](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT)).
 - The blast radius of DDL = (longest transaction currently touching the table) × (all traffic
   on that table). Long-running transactions and migrations are natural enemies.

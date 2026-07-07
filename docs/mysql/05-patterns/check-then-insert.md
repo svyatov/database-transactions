@@ -6,6 +6,11 @@ concurrency it is simply wrong, and the failure needs no exotic interleaving:
 
 <!--@include: ./parts/check-then-insert-race.md-->
 
+::: warning A check in code is not a constraint
+This race ships silently — no error, no lock wait, nothing in the logs — and surfaces as
+"impossible" duplicate rows weeks later. If uniqueness matters, declare it `UNIQUE`.
+:::
+
 Both transactions told the truth: at the moment each SELECT ran, no `bob@example.com`
 existed. The check and the insert are two statements; the world may change between them,
 and no isolation knob makes two statements one. Only the database can close that gap,

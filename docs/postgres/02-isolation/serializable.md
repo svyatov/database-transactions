@@ -33,6 +33,11 @@ would invalidate the already-committed report:
 
 ## The fine print
 
+::: warning A swallowed `40001` is a lost write
+Logging a serialization failure and moving on means the transaction never happened.
+`40001` is not an error to report — it's an instruction to retry.
+:::
+
 - **Retries are part of the deal.** Any serializable transaction — even a read-only one — can
   be aborted with `40001`. Your application must retry;
   [a small wrapper makes this painless](/postgres/05-patterns/retrying-serialization-failures).

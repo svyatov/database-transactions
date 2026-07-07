@@ -8,6 +8,15 @@ answer sheet, covering every case [Hermitage](https://github.com/ept/hermitage) 
 READ UNCOMMITTED is omitted: in PostgreSQL it
 [behaves exactly like READ COMMITTED](/postgres/02-isolation/read-committed#no-dirty-reads-even-if-you-ask-for-them).
 
+**TL;DR:**
+
+- Staying on the default (READ COMMITTED)? The whole G1 family is already impossible — but
+  [lost updates are on you](/postgres/02-isolation/lost-update#watch-a-deposit-disappear).
+- REPEATABLE READ gives a stable snapshot and refuses stale writes — plan to
+  [retry on `40001`](#how-to-use-this-table).
+- Invariants that span rows (write skew) are only automatic at SERIALIZABLE —
+  [proof](/postgres/02-isolation/serializable#the-same-interleaving-serializable).
+
 | Code | Anomaly | READ COMMITTED *(default)* | REPEATABLE READ | SERIALIZABLE |
 |---|---|---|---|---|
 | G0 | **Dirty write** | ✅ impossible — [proof](#dirty-writes-g0) | ✅ impossible | ✅ impossible |

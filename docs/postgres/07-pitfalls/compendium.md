@@ -5,6 +5,21 @@ observe. Each entry links to the scenario that reproduces it and the lesson that
 it. If you're staring at a live incident, start with the
 [symptom triage table](/postgres/08-production/symptom-triage) instead.
 
+**Jump to your symptom:**
+
+1. [Increments vanish under load](#_1-increments-vanish-under-load)
+2. [Duplicates despite an "is it taken?" check](#_2-duplicates-despite-an-is-it-taken-check)
+3. [A customer is charged twice](#_3-a-customer-is-charged-twice)
+4. [An invariant across rows breaks with no error](#_4-an-invariant-across-rows-breaks-with-no-error)
+5. [A "trivial" migration takes the site down](#_5-a-trivial-migration-takes-the-site-down)
+6. [The connection pool is empty, but the database is idle](#_6-the-connection-pool-is-empty-but-the-database-is-idle)
+7. [A table keeps growing though rows are deleted](#_7-a-table-keeps-growing-though-rows-are-deleted)
+8. [Random `40001` errors under load](#_8-random-40001-errors-under-load)
+9. [Two workers process the same job](#_9-two-workers-process-the-same-job)
+10. [Events reach the broker for data that doesn't exist (or never reach it)](#_10-events-reach-the-broker-for-data-that-doesn-t-exist-or-never-reach-it)
+11. [Locks are held, VACUUM is stuck — and no session owns any of it](#_11-locks-are-held-vacuum-is-stuck-—-and-no-session-owns-any-of-it)
+12. [A deadlock — and both transactions looked innocent](#_12-a-deadlock-—-and-both-transactions-looked-innocent)
+
 ## 1. Increments vanish under load
 
 **Broken:** read a value, compute in application code, write it back — at the default

@@ -6,6 +6,15 @@ themselves (definitions, diagrams, and where the G-codes come from) live in
 sheet, covering every case [Hermitage](https://github.com/ept/hermitage) tests — including
 the rows where MySQL's answer differs from PostgreSQL's.
 
+**TL;DR:**
+
+- On MySQL, [isolation levels protect reads, not read-modify-write](#the-mysql-specific-pattern) —
+  the ⚠️ in the bottom half of this table are fixed with locks or SQL arithmetic, not the
+  isolation knob.
+- The REPEATABLE READ default [still loses updates](/mysql/02-isolation/lost-update#repeatable-read-does-not-save-you),
+  and [current reads see phantoms](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot).
+- SERIALIZABLE closes the rest with locks — plan to [retry on `1213`](#error-codes-to-retry-on).
+
 | Code | Anomaly | READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ *(default)* | SERIALIZABLE |
 |---|---|---|---|---|---|
 | G0 | **Dirty write** | ✅ impossible — [proof](#dirty-writes-g0) | ✅ | ✅ | ✅ |

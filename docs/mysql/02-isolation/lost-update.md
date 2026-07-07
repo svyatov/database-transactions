@@ -16,6 +16,12 @@ REPEATABLE READ [detects the stale write and aborts it](/postgres/02-isolation/l
 with `40001`. MySQL's UPDATE is a [current read](/mysql/02-isolation/repeatable-read) — it
 applies your stale arithmetic to the newest row version and raises nothing:
 
+::: warning The isolation knob will not fix this
+Every ORM `save()` that read, computed, and writes back has this bug at MySQL's default
+level. The fix is structural — atomic SQL, a locking read, or a version column — not a
+`SET TRANSACTION` away.
+:::
+
 <!--@include: ./parts/lost-update-repeatable-read.md-->
 
 ## The fixes

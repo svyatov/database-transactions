@@ -14,6 +14,11 @@ application's uniqueness "rule" lived only in application code, and concurrent c
 paths don't read each other's minds. (This is [write skew](/postgres/02-isolation/serializable)'s
 little sibling: two decisions, each valid in its own snapshot, jointly wrong.)
 
+::: warning A check in code is not a constraint
+This race ships silently — no error, no lock wait, nothing in the logs — and surfaces as
+"impossible" duplicate rows weeks later. If uniqueness matters, declare it `UNIQUE`.
+:::
+
 ## The fix is a constraint, not cleverer code
 
 Uniqueness is the database's job. With `UNIQUE`, the same race becomes a wait-then-error —

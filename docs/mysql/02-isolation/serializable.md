@@ -25,6 +25,12 @@ mid-transaction. Same guarantee, very different failure mode — your retry logi
 `1213`, and it will fire *before* commit, not at it.
 :::
 
+::: warning Every SELECT becomes a locking read
+Switching SERIALIZABLE on globally turns your entire read traffic into shared-lock traffic —
+lock waits and deadlock storms where SELECTs used to be free. Scope it to the transactions
+whose invariants need it.
+:::
+
 ## Key takeaways
 
 - REPEATABLE READ does not stop write skew — both transactions commit, the invariant dies

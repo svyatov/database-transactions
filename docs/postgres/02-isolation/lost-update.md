@@ -10,6 +10,11 @@ PostgreSQL, then shows the isolation level that refuses to play along.
 
 <!--@include: ./parts/lost-update-read-committed.md-->
 
+::: warning No error to catch
+There is nothing to handle, retry, or alert on — at the default level the loss is invisible
+to your code, your logs, and your monitoring. You find it in the books, weeks later.
+:::
+
 ## REPEATABLE READ turns it into an error
 
 The same interleaving, one isolation level up. PostgreSQL detects that B's write would
