@@ -1,0 +1,45 @@
+title: The transactional outbox
+claim: >-
+  Writing the order and its event in one transaction makes them atomic, and a
+  SKIP LOCKED relay gives at-least-once delivery: a crashed relay redelivers
+  the event instead of losing it.
+setup: |
+  CREATE TABLE orders (id int PRIMARY KEY, customer varchar(20) NOT NULL, amount int NOT NULL);
+  CREATE TABLE outbox (id int AUTO_INCREMENT PRIMARY KEY, event varchar(50) NOT NULL);
+sessions: [App, Relay]
+steps:
+  - note: The order and its event are written in ONE transaction — both land in the same database.
+  - App: BEGIN
+  - App: INSERT INTO orders VALUES (1, 'alice', 90)
+  - App: "INSERT INTO outbox (event) VALUES ('order_placed: order 1')"
+  - App: COMMIT
+
+  - note: "Atomicity covers the failure path too: no committed order, no event."
+  - App: BEGIN
+  - App: INSERT INTO orders VALUES (2, 'bob', 75)
+  - App: "INSERT INTO outbox (event) VALUES ('order_placed: order 2')"
+  - App: ROLLBACK
+  - App: SELECT id, event FROM outbox ORDER BY id
+    expect: [{ id: 1, event: "order_placed: order 1" }]
+
+  - note: A relay claims the event exactly like a chapter-5 job-queue worker…
+  - Relay: BEGIN
+  - Relay: SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+    expect: [{ id: 1, event: "order_placed: order 1" }]
+
+  - note: …publishes it to the broker (an HTTP call — outside any transaction), deletes it, and crashes before COMMIT.
+  - Relay: DELETE FROM outbox WHERE id = 1
+  - Relay: ROLLBACK
+
+  - note: >-
+      The delete evaporated with the crash — the event is still in the outbox.
+      The restarted relay publishes it AGAIN: at-least-once delivery, so
+      consumers must be idempotent.
+  - Relay: BEGIN
+  - Relay: SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+    expect: [{ id: 1, event: "order_placed: order 1" }]
+  - Relay: DELETE FROM outbox WHERE id = 1
+  - Relay: COMMIT
+
+  - Relay: SELECT count(*) AS pending FROM outbox
+    expect: [{ pending: 0 }]

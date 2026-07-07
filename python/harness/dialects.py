@@ -94,14 +94,23 @@ def _my_connect():
 
 def _my_reset(admin) -> None:
     with admin.cursor() as cur:
+        # Orphaned XA transactions survive their session AND the drop — roll them
+        # back first, or DROP DATABASE blocks on their row locks.
+        cur.execute("XA RECOVER")
+        for row in cur.fetchall():
+            data = row["data"]
+            gid = (data.decode() if isinstance(data, (bytes, bytearray)) else str(data)).replace("'", "''")
+            cur.execute(f"XA ROLLBACK '{gid}'")
         cur.execute("DROP DATABASE IF EXISTS app; CREATE DATABASE app; USE app;")
         while cur.nextset():
             pass
 
 
-def _my_open_session(conn, _name: str) -> int:
-    # No application_name equivalent — sessions are identified by connection id alone.
+def _my_open_session(conn, name: str) -> int:
+    # No application_name equivalent — @session_name makes the session findable via
+    # performance_schema.user_variables_by_thread (deterministic KILLs and monitoring).
     with conn.cursor() as cur:
+        cur.execute("SET @session_name = '%s'" % name.replace("'", "''"))
         cur.execute("SELECT CONNECTION_ID() AS pid")
         return cur.fetchone()["pid"]
 

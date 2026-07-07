@@ -130,14 +130,20 @@ export const mysql: Dialect = {
   },
 
   // Recreate the whole database; fresh session connections pick `app` from the URL.
+  // Orphaned XA transactions survive their session AND the drop — roll them back
+  // first, or DROP DATABASE blocks on their row locks (mirrors the postgres reset).
   async reset(admin) {
+    for (const { data } of await admin.unsafe("XA RECOVER")) {
+      await admin.unsafe(`XA ROLLBACK '${String(data).replace(/'/g, "''")}'`);
+    }
     await admin.unsafe("DROP DATABASE IF EXISTS app; CREATE DATABASE app; USE app;");
   },
 
-  // No application_name equivalent — sessions are identified by connection id alone.
-  // Monitoring scenarios must select id columns (normalized to pid(A)) rather than
-  // filter by a literal id, which would be nondeterministic in transcripts.
+  // No application_name equivalent — @session_name makes the session findable via
+  // performance_schema.user_variables_by_thread (deterministic KILLs and monitoring
+  // filters). Assertions still use id columns, normalized to pid(A) in transcripts.
   async openSession(conn, name) {
+    await conn.unsafe(`SET @session_name = '${name.replace(/'/g, "''")}'`);
     const [row] = await conn`SELECT CONNECTION_ID() AS pid`;
     return row!.pid;
   },
@@ -170,6 +176,12 @@ export const mysql: Dialect = {
   /** Scenarios assert MySQL error numbers — "1213" is what you grep for, not SQLSTATE. */
   toError(e) {
     if (e?.errno) e.code = String(e.errno);
+    // a server-killed connection throws a bare Error with no code and an
+    // internal message — normalize both (same trap as the postgres dialect)
+    else if (!e?.code && /connection/i.test(e?.message ?? "")) {
+      e.code = "ERR_MYSQL_CONNECTION_CLOSED";
+      e.message = "Connection closed";
+    }
     return e;
   },
 

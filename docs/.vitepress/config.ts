@@ -143,6 +143,14 @@ const mysql: DefaultTheme.SidebarItem[] = [
       { text: "ORM pitfalls", link: "/mysql/05-patterns/orm-pitfalls" },
     ],
   },
+  {
+    text: "6. Transactions across services",
+    items: [
+      { text: "The outbox pattern", link: "/mysql/06-distributed/transactional-outbox" },
+      { text: "Sagas", link: "/mysql/06-distributed/sagas" },
+      { text: "XA transactions (2PC)", link: "/mysql/06-distributed/xa-transactions" },
+    ],
+  },
 ];
 
 export default defineConfig({

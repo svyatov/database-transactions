@@ -1,0 +1,34 @@
+title: The dual-write problem
+claim: >-
+  Two systems, two writes, no shared transaction: whichever write goes first,
+  a failure between them leaves the database and the broker permanently
+  disagreeing.
+setup: |
+  CREATE TABLE orders (id int PRIMARY KEY, customer varchar(20) NOT NULL, amount int NOT NULL CHECK (amount > 0));
+  -- Stand-in for a message broker. In real life this is a SEPARATE system (Kafka,
+  -- RabbitMQ, an HTTP call) — you cannot BEGIN a transaction that spans both.
+  CREATE TABLE broker (event varchar(50) NOT NULL);
+sessions: [App]
+steps:
+  - note: Attempt 1 — write, then publish. The order commits…
+  - App: BEGIN
+  - App: INSERT INTO orders VALUES (1, 'alice', 90)
+  - App: COMMIT
+  - note: …and the process crashes before the publish step ever runs. The broker never hears about order 1.
+  - App: |-
+      SELECT (SELECT count(*) FROM orders) AS orders,
+             (SELECT count(*) FROM broker) AS events
+    expect: [{ orders: 1, events: 0 }]
+
+  - note: Attempt 2 — publish first, then write. The event goes out…
+  - App: "INSERT INTO broker VALUES ('order_placed: order 2')"
+  - note: …and then the order INSERT fails — a constraint, a crash, a timeout, anything.
+  - App.fails: INSERT INTO orders VALUES (2, 'mallory', -5)
+    error: "3819"
+    comment: ER_CHECK_CONSTRAINT_VIOLATED
+
+  - note: Downstream services now process an order that never existed.
+  - App: |-
+      SELECT (SELECT count(*) FROM orders WHERE id = 2) AS orders,
+             (SELECT count(*) FROM broker WHERE event LIKE '%order 2%') AS events
+    expect: [{ orders: 0, events: 1 }]

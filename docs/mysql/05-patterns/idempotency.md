@@ -26,8 +26,9 @@ values" ("skip; return the stored result"):
   get 1 — and correctly do the work itself.
 - **The key and the work commit together.** The INSERT and the balance UPDATE share a
   transaction, so there's no window where the charge happened but the key is missing (or
-  vice versa). This is the same discipline as the transactional outbox in the next
-  chapter — state and evidence in one atomic unit.
+  vice versa). This is the same discipline as the
+  [transactional outbox](/mysql/06-distributed/transactional-outbox) — state and evidence
+  in one atomic unit.
 
 One design note: store the *result* (or enough to reconstruct the response) in the
 idempotency row, as the `amount` column sketches here — a retry must answer the client,

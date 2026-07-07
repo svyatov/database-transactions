@@ -1,0 +1,59 @@
+title: XA PREPARE survives its session
+claim: >-
+  XA PREPARE detaches a transaction from its session: it survives the
+  session's death, keeps holding its locks, and any later session can finish
+  it by name with XA COMMIT.
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 100);
+  CREATE PROCEDURE kill_session(sname VARCHAR(16))
+  BEGIN
+    DECLARE cid BIGINT;
+    SELECT t.processlist_id INTO cid
+      FROM performance_schema.user_variables_by_thread v
+      JOIN performance_schema.threads t ON t.thread_id = v.thread_id
+      WHERE v.variable_name = 'session_name' AND v.variable_value = sname;
+    SET @stmt = CONCAT('KILL ', cid);
+    PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;
+  END;
+sessions: [A, B, M]
+steps:
+  - note: A is one participant in a distributed transfer. It does its work, then PREPARES — phase one.
+  - A: XA START 'transfer-42'
+  - A: UPDATE accounts SET balance = 200 WHERE id = 1
+  - A: XA END 'transfer-42'
+  - A: XA PREPARE 'transfer-42'
+
+  - note: "XA PREPARE detached the transaction from the session: A itself no longer sees its own change."
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+
+  - M: XA RECOVER
+    expect: [{ formatID: 1, data: "transfer-42" }]
+
+  - note: The prepared transaction still holds its row locks — with no session attached.
+  - B.fails: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
+    error: "3572"
+    comment: ER_LOCK_NOWAIT
+
+  - note: "Now the coordinator crashes: A's connection is killed outright."
+  - M: CALL kill_session('A')
+
+  - sleep: 300 # let the client side notice the dead socket
+
+  - A.fails: SELECT 1
+    error: ["2013", "ERR_MYSQL_CONNECTION_CLOSED"] # PyMySQL reports the lost connection; Bun.sql only notices the closed socket
+
+  - note: >-
+      The session is gone. The prepared transaction is not — it survives
+      anything short of XA COMMIT/XA ROLLBACK, including a full server
+      restart. And it still holds its locks:
+  - M: XA RECOVER
+    expect: [{ data: "transfer-42" }]
+  - B.fails: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
+    error: "3572"
+
+  - note: Phase two — any session can finish the job by name. B commits the orphan.
+  - B: XA COMMIT 'transfer-42'
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 200 }]
