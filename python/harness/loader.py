@@ -12,6 +12,7 @@ from pathlib import Path
 
 import yaml
 
+from .run import Pending
 from .scenario import Scenario, eq
 
 RESERVED = {"note", "sleep", "locked", "success", "failure", "expect", "affected", "error", "comment", "capture", "blocks", "tl"}
@@ -28,7 +29,7 @@ def load_scenario(path: Path) -> Scenario:
 
     def run(sessions, t):
         captures: dict[str, dict] = {}
-        pendings: dict[str, object] = {}
+        pendings: dict[str, Pending] = {}
 
         def finish(rows, step):
             if "expect" in step:
