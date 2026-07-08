@@ -27,8 +27,14 @@ export interface RunHooks {
   event?(e: Event): void;
 }
 
-/** How long we wait for an expected lock wait to show up before calling the claim false. */
-const BLOCK_DEADLINE_MS = 10_000;
+/**
+ * How long we wait for an expected lock wait to show up before calling the claim false.
+ * Both callers (`.blocked` and the `locked` requeue fence) break the instant the wait is
+ * detected, so this budget is paid only when a claim is genuinely false — a green run never
+ * spends it. Kept generous because a CPU-starved CI runner can take seconds to re-register a
+ * waiter after a lock handoff (the lock-queue requeue race), and a tight budget flaked there.
+ */
+const BLOCK_DEADLINE_MS = 30_000;
 
 export async function runScenario(s: Scenario<any>, dialect: Dialect, hooks?: RunHooks): Promise<RunResult> {
   const sql = dialect.connect(s.sessions.length + 1);
