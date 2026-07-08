@@ -14,7 +14,7 @@ import yaml
 
 from .scenario import Scenario, eq
 
-RESERVED = {"note", "sleep", "locked", "success", "failure", "expect", "affected", "error", "comment", "capture", "blocks"}
+RESERVED = {"note", "sleep", "locked", "success", "failure", "expect", "affected", "error", "comment", "capture", "blocks", "tl"}
 REQUIRED = ("title", "claim", "setup", "sessions", "steps")
 PID = re.compile(r"^\$pid\((\w+)\)$")
 CAPTURE = re.compile(r"\$\{(\w+)\.(\w+)\}")
