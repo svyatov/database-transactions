@@ -73,8 +73,13 @@ export function fromYaml(doc: Doc, path: string): Scenario {
       };
 
       for (const step of doc.steps) {
-        if ((step.comment || step.tl) && ["note", "sleep", "locked", "success", "failure"].some((k) => step[k] !== undefined)) {
-          fail(`a comment/tl here is never rendered — use a note, or put tl on the statement step (${JSON.stringify(step)})`);
+        if (
+          (step.comment || step.tl) &&
+          ["note", "sleep", "locked", "success", "failure"].some((k) => step[k] !== undefined)
+        ) {
+          fail(
+            `a comment/tl here is never rendered — use a note, or put tl on the statement step (${JSON.stringify(step)})`,
+          );
         }
         if (step.note !== undefined) {
           t.note(step.note);

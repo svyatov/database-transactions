@@ -14,7 +14,8 @@ exit 0"* beats a pile of cron runners queueing up to do the same work again.
 
 ## Session locks vs. transaction locks
 
-The scenario's second half is the part that pages people. A **session-level** lock
+The scenario's second half is the part that pages people. A session-level lock, in the
+manual's words,
 ["is held until explicitly released or the session ends"](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS) —
 `COMMIT` does nothing to it. It gets stranger: session-level advisory locks
 ["do not honor transaction semantics: a lock acquired during a transaction that is later rolled back will still be held following the rollback"](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS).
@@ -22,19 +23,19 @@ The scenario's second half is the part that pages people. A **session-level** lo
 site: taken inside a transaction, released automatically at its end, no unlock function
 even exists.
 
-## Key takeaways
+These locks fit anywhere you need to serialize work rather than data: cron mutual
+exclusion, migration guards, one worker per tenant. Default to `pg_advisory_xact_lock`
+and let `COMMIT` clean up after you; reach for a session-level lock only when the
+protected work genuinely spans transactions, and then treat its explicit unlock as
+seriously as a `finally` block. Disconnecting releases everything a session holds, so a
+crashed holder can't strand a lock, and `pg_try_advisory_lock` stays the polite option
+for "skip if busy" work: it answers instead of queueing.
 
-- Advisory locks serialize **application-defined work** with zero tables: perfect for
-  cron mutual exclusion, migration guards, "one worker per tenant".
-- Default to `pg_advisory_xact_lock` — commit-and-forget. Reach for session-level locks
-  only when the protected work genuinely spans transactions, and treat the explicit
-  unlock as seriously as a `finally` block. (Disconnecting releases everything — a
-  crashed holder can't strand a lock.)
-- `pg_try_advisory_lock` answers instantly instead of queueing — the polite option for
-  "skip if busy" jobs.
-- All advisory locks share **one global number space** (a single 64-bit key, or two
-  32-bit keys). Two features using the same number will exclude each other; keep a
-  registry of who owns which key.
+One sharp edge is worth a registry entry: the lock key is a global name. Numbers come in
+two separate spaces — a single 64-bit key, or a pair of 32-bit keys, which the manual
+notes ["do not overlap"](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS) —
+but within whichever space you standardize on, two features that pick the same number
+will silently exclude each other. Keep a registry of who owns which key.
 
 ## Further reading
 

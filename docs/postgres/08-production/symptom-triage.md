@@ -13,13 +13,12 @@ start from the symptom, run one query, land on the mechanism you already learned
 | Sporadic `40001` / `40P01` errors under load | [Serialization failures](/postgres/02-isolation/serializable) and [deadlocks](/postgres/03-locking/deadlocks) — expected, must be retried | [Logs & counters](/postgres/08-production/logs-and-counters), [the retry wrapper](/postgres/05-patterns/retrying-serialization-failures) |
 | Locks held but *no session* owns them | An orphaned [prepared transaction](/postgres/06-distributed/two-phase-commit) | `SELECT gid FROM pg_prepared_xacts;` |
 
-Two habits make every row of this table easier:
-
-- **Name your sessions.** Every scenario on this site sets `application_name`, and every
-  triage query returns it. One line in your connection setup buys you readable
-  `pg_stat_activity` forever.
-- **Alert before the page.** Most of these symptoms have a leading indicator — the
-  [alerting checklist](/postgres/08-production/alerting-checklist) lists the handful worth watching.
+Two habits make every row of this table easier. Name your sessions: every scenario on
+this site sets `application_name`, and every triage query returns it, so one line in your
+connection setup buys you readable `pg_stat_activity` forever. And alert before the page,
+because most of these symptoms have a leading indicator, and the
+[alerting checklist](/postgres/08-production/alerting-checklist) lists the handful worth
+watching.
 
 ## Further reading
 

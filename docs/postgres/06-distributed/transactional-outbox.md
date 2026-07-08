@@ -19,14 +19,14 @@ Write-first loses events; publish-first invents them.
 
 ## The fix: only ever write to one system
 
-The application never talks to the broker at all. The event is written **to the same
-database, in the same transaction** as the order — and
+The application never talks to the broker at all. The event is written to the same
+database, in the same transaction as the order — and
 [atomicity](/postgres/01-basics/what-is-a-transaction), which PostgreSQL has guaranteed
 since chapter 1, does the rest:
 
 <!--@include: ./parts/transactional-outbox.md-->
 
-A separate **relay** process moves events from the outbox to the broker. It is exactly
+A separate *relay* process moves events from the outbox to the broker. It is exactly
 the [SKIP LOCKED job-queue worker](/postgres/05-patterns/job-queue) from chapter 5, pointed at
 the `outbox` table.
 
@@ -38,14 +38,13 @@ committing the `DELETE` — so the event is delivered *twice*. That is
 at-least-once delivery — and repeats are exactly what chapter 5's
 [idempotency keys](/postgres/05-patterns/idempotency) already handle on the consumer side.
 
-## Key takeaways
-
-- The order and its event commit or vanish **together**; there is no window where one
-  exists without the other.
-- The relay is a SKIP LOCKED worker: crash-safe, parallelizable, five lines of SQL.
-  Consumers must be idempotent — delivery is at-least-once by construction.
-- Polling the outbox adds latency; the [next lesson](/postgres/06-distributed/listen-notify)
-  replaces the polling with a transactional wake-up call.
+The shape to remember: the order and its event commit or vanish together, with no window
+where one exists without the other, and a relay that is nothing more than a SKIP LOCKED
+worker — crash-safe, parallelizable, five lines of SQL — carries them onward. The price
+of that simplicity is at-least-once delivery, so consumers have to be idempotent. Polling
+the outbox also adds latency, which the
+[next lesson](/postgres/06-distributed/listen-notify) trades away with a transactional
+wake-up call.
 
 ## Further reading
 

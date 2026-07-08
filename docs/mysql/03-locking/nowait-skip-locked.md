@@ -11,8 +11,8 @@ instantly, give up after a deadline, or pretend locked rows don't exist.
 
 Every InnoDB lock wait is already bounded by `innodb_lock_wait_timeout` — 50 seconds by
 default, settable per session (whole seconds only). When it fires you get errno `1205`, and —
-easy to miss — **only the statement is rolled back; the transaction stays open**, keeping
-every lock it already holds:
+easy to miss — it rolls back only the statement, not the transaction, which stays open and
+keeps every lock it already holds:
 
 <!--@include: ./parts/lock-timeout.md-->
 
@@ -28,15 +28,15 @@ the whole transaction.)
 
 <!--@include: ./parts/skip-locked.md-->
 
-## Key takeaways
-
-- `FOR UPDATE NOWAIT` → errno `3572` immediately; `FOR UPDATE SKIP LOCKED` → locked rows
-  vanish from the result; `innodb_lock_wait_timeout` → errno `1205` after the deadline.
-- `SKIP LOCKED` reads an *inconsistent* view by design — perfect for "grab any free job",
-  wrong for anything that must see all rows.
-- PostgreSQL's equivalents: same `NOWAIT`/`SKIP LOCKED` syntax, but a millisecond-granular
-  `lock_timeout` and SQLSTATE `55P03`
-  ([compare](/postgres/03-locking/nowait-skip-locked)).
+Three exits from the queue, three shapes: `FOR UPDATE NOWAIT` fails instantly with errno
+`3572`, `innodb_lock_wait_timeout` gives up after its deadline with `1205`, and
+`FOR UPDATE SKIP LOCKED` pretends the locked rows aren't there. That last one reads a
+deliberately inconsistent view — perfect for grabbing any free job, wrong for anything that
+must see every row. PostgreSQL offers the same `NOWAIT` and `SKIP LOCKED` syntax but a
+millisecond-granular `lock_timeout` and SQLSTATE `55P03`
+([compare](/postgres/03-locking/nowait-skip-locked)). Row locks have been the whole story so
+far; the lock that takes down migrations is a
+[table-level one](/mysql/03-locking/table-locks-and-ddl).
 
 ## Further reading
 

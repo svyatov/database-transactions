@@ -4,7 +4,7 @@ description: A non-repeatable read is reading the same row twice inside one tran
 
 # Non-repeatable read
 
-A **non-repeatable read** is reading the same row twice inside one transaction and getting
+A *non-repeatable read* is reading the same row twice inside one transaction and getting
 different data, because another transaction committed a change in between. Nothing you read
 was uncommitted — every value was real — yet your transaction can no longer trust its own
 earlier reads.
@@ -18,13 +18,13 @@ Session A: SELECT balance → 200 ← same query, different answer
 Session A: COMMIT
 ```
 
-Formally Adya's **P2**. It is the flagship anomaly of READ COMMITTED, where every statement
+Formally Adya's *P2*. It is the flagship anomaly of READ COMMITTED, where every statement
 gets a fresh snapshot: each statement is internally consistent, but two statements may
 disagree with each other.
 
 ## Read skew
 
-Non-repeatable reads have a nastier multi-row cousin — **read skew** (formally Adya's
+Non-repeatable reads have a nastier multi-row cousin — *read skew* (formally Adya's
 G-single): read row 1, let someone move money to row 2, read row 2. Every row you saw was
 committed and correct, yet the combination existed at no point in time:
 

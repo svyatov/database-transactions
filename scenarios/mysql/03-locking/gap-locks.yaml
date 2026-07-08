@@ -15,18 +15,22 @@ steps:
   - A: BEGIN
   - A: SELECT slot FROM bookings WHERE slot BETWEEN 10 AND 20 FOR UPDATE
     expect: [{ slot: 10 }, { slot: 20 }]
+    tl: SELECT 10–20 FOR UPDATE
 
   - note: B books slot 15. No such row exists — yet the INSERT blocks.
   - B: BEGIN
   - B: INSERT INTO bookings VALUES (15, 'mallory')
     blocks: p1
+    tl: INSERT slot 15
 
   - A: SELECT lock_mode FROM performance_schema.data_locks WHERE object_name = 'bookings' AND lock_status = 'WAITING'
     expect: [{ lock_mode: "X,GAP,INSERT_INTENTION" }]
     comment: B waits for an insert-intention lock on the gap A's range scan locked
+    tl: waiting lock is X,GAP,INSERT_INTENTION
 
   - A: COMMIT
     comment: the gap opens
+    tl: COMMIT — gap opens
   - success: p1
   - B: COMMIT
 
@@ -37,9 +41,11 @@ steps:
   - A: BEGIN
   - A: SELECT slot FROM bookings WHERE slot BETWEEN 10 AND 20 FOR UPDATE
     expect: [{ slot: 10 }, { slot: 15 }, { slot: 20 }]
+    tl: same read, READ COMMITTED
 
   - B: INSERT INTO bookings VALUES (17, 'trent')
     comment: straight through — no gap lock to wait on
+    tl: INSERT slot 17 — no wait
   - A: COMMIT
 
   - A: SELECT slot FROM bookings ORDER BY slot

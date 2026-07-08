@@ -41,20 +41,18 @@ time:
 
 `UPDATE 0` is the entire mechanism: the write names the version it read, and if the row
 has moved on, it matches nothing. The lost update didn't become impossible — it became
-**detectable**, and the retry (re-read, recompute, write against the new version) lands
+detectable, and the retry (re-read, recompute, write against the new version) lands
 safely. Every ORM's "optimistic concurrency" feature is this one WHERE clause.
 
-## Key takeaways
-
-- **Prefer fix #1**: `SET balance = balance + 10` is race-free at any isolation level and
-  never waits longer than the lock itself. Use it whenever SQL can express the change.
-- **Fix #2 (`FOR UPDATE`)** when application code must compute the value inside one
-  short transaction. It trades throughput (waiting) for simplicity.
-- **Fix #3 (version column)** when the read and the write are separated by something you
-  can't hold a lock across — user think-time, an HTTP round-trip, a slow external call.
-  Be ready to handle `UPDATE 0` everywhere you write.
-- The fourth fix is [REPEATABLE READ + retry](/postgres/05-patterns/retrying-serialization-failures):
-  let PostgreSQL detect the conflict as a `40001` and rerun the transaction.
+The three fixes sort by how much of the change you can push into SQL. Prefer fix #1
+whenever SQL can express it: `SET balance = balance + 10` is race-free at any isolation
+level and never waits longer than the lock itself. Reach for `FOR UPDATE` when
+application code must compute the value inside one short transaction — it trades
+throughput for simplicity. Use a version column when the read and the write are split by
+something you can't hold a lock across, like user think-time or an HTTP round-trip, and
+handle `UPDATE 0` everywhere you write. The fourth option is the next lesson's:
+[REPEATABLE READ + retry](/postgres/05-patterns/retrying-serialization-failures), where
+PostgreSQL flags the conflict as a `40001` and you rerun the whole transaction.
 
 ## Further reading
 

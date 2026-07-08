@@ -12,18 +12,23 @@ steps:
   - R: BEGIN
   - note: R has "begun" — but hasn't read anything. A commits a change meanwhile.
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
+    tl: UPDATE balance=999 (+ commit)
 
   - R: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 999 }]
     comment: A's update is visible — the read view was created just now, by this SELECT
+    tl: first read → 999 (view opens here, not at BEGIN)
   - R: COMMIT
 
   - note: "START TRANSACTION WITH CONSISTENT SNAPSHOT moves the snapshot to the start:"
   - R: START TRANSACTION WITH CONSISTENT SNAPSHOT
+    tl: consistent snapshot — view opens now
   - A: UPDATE accounts SET balance = 111 WHERE id = 1
+    tl: UPDATE balance=111
   - R: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 999 }]
     comment: this time the read view predates A's update
+    tl: read → 999 (snapshot predates it)
 
   - note: >-
       One more thing R hasn't needed so far: a transaction ID. InnoDB hands

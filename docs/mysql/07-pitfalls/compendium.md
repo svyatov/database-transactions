@@ -62,7 +62,7 @@ UPDATE/DELETE results (current data) — the write acts on rows the reads never 
 
 ## 6. After a timeout, "retrying" corrupted the transaction
 
-**Broken:** errno `1205` rolls back only the **statement**; code that treats it like a
+**Broken:** errno `1205` rolls back only the *statement*; code that treats it like a
 deadlock and re-runs the whole function double-applies everything before the timeout.
 **Fix:** on `1205`: ROLLBACK, *then* retry the transaction. Only `1213` self-rolls-back.
 **Proof:** [lock timeouts](/mysql/03-locking/nowait-skip-locked) ·

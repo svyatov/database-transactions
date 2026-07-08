@@ -1,8 +1,8 @@
-# The check-then-insert race
+# Check-then-insert: the race you've already shipped
 
 "Check if the email exists; if not, insert it." Every codebase has this somewhere — a
 `SELECT` followed by a conditional `INSERT`, usually via an ORM's `find_or_create`. Under
-concurrency it is simply wrong, and the failure needs no exotic interleaving:
+concurrency it's wrong, and the failure needs no exotic interleaving:
 
 <!--@include: ./parts/check-then-insert-race.md-->
 
@@ -20,30 +20,29 @@ with a constraint that's checked *at* the insert:
 
 <!--@include: ./parts/on-duplicate-key.md-->
 
-Three things worth noticing:
+Three details in that transcript are worth a second look. The first is the wait: B's plain
+INSERT didn't fail immediately but parked in
+[the lock queue](/mysql/03-locking/lock-queues) until A's fate was decided. Had A rolled
+back, B's insert would have succeeded — the constraint arbitrates the race *correctly*, not
+only loudly.
 
-- **The wait.** B's plain INSERT didn't fail immediately — it parked in
-  [the lock queue](/mysql/03-locking/lock-queues) until A's fate was decided. If A had
-  rolled back, B's insert would have succeeded. The constraint arbitrates the race
-  *correctly*, not just loudly.
-- **The affected-rows convention.** Per the
-  [manual](https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html): "the
-  affected-rows value per row is 1 if the row is inserted as a new row, 2 if an existing
-  row is updated, and 0 if an existing row is set to its current values." That `2` in the
-  transcript is your "it was a duplicate" signal — and the `1`-vs-`0` distinction powers
-  the [idempotency pattern](/mysql/05-patterns/idempotency).
-- **`INSERT IGNORE` is the blunt instrument.** It absorbs the duplicate, but it converts
-  *every* error on that statement into a warning — type truncations included. Reach for
-  `ON DUPLICATE KEY UPDATE`, which handles exactly the conflict you named.
+The second is the affected-rows convention. Per the
+[manual](https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html), "the
+affected-rows value per row is 1 if the row is inserted as a new row, 2 if an existing row
+is updated, and 0 if an existing row is set to its current values." That `2` in the
+transcript is your "it was a duplicate" signal, and the same `1`-versus-`0` distinction
+powers the [idempotency pattern](/mysql/05-patterns/idempotency).
 
-## Key takeaways
+The third is `INSERT IGNORE`, the blunt instrument. It absorbs the duplicate too, but it
+downgrades *every* error on the statement to a warning — type truncations included — so
+reach for `ON DUPLICATE KEY UPDATE`, which handles exactly the conflict you named.
 
-- SELECT-then-INSERT cannot enforce uniqueness at any isolation level. The constraint
-  must live in the database.
-- `INSERT … ON DUPLICATE KEY UPDATE` = atomic insert-or-update; affected rows 1/2/0 tells
-  you which happened.
-- A concurrent duplicate *waits* for the first inserter's COMMIT/ROLLBACK before
-  succeeding or failing — correctness under race, not just an error code.
+The lesson compresses to one rule: SELECT-then-INSERT can't enforce uniqueness at any
+isolation level, so the constraint has to live in the database. `INSERT … ON DUPLICATE KEY
+UPDATE` gives you an atomic insert-or-update, and its 1/2/0 affected-rows count tells you
+which branch ran. Because the concurrent duplicate waits for the first inserter's COMMIT or
+ROLLBACK before it resolves, you get correctness under the race, not only an error code
+after the fact.
 
 ## Further reading
 

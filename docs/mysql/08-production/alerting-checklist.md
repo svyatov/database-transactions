@@ -1,4 +1,4 @@
-# The alerting checklist
+# Alerting checklist
 
 Six numbers cover most transaction incidents on this site. Every one is queryable with
 plain SQL, every mechanism behind them is proven by a scenario in the chapters above.
@@ -14,18 +14,18 @@ plain SQL, every mechanism behind them is proven by a scenario in the chapters a
 
 Reading the board:
 
-- **1, 2 and 6 fire together?** One forgotten transaction — alert 2's join names it;
-  kill or fix the code path. The other alerts drain on their own.
-- **3 spikes with 1 quiet?** Hot-row contention, not a stuck session: look at
+- 1, 2, and 6 firing together is one forgotten transaction: alert 2's join names it, so
+  kill it or fix the code path and the other alerts drain on their own.
+- 3 spiking while 1 stays quiet is hot-row contention, not a stuck session — look at
   [lock queues](/mysql/03-locking/lock-queues) and whether a
   [SKIP LOCKED](/mysql/05-patterns/job-queue) or
   [atomic-update](/mysql/05-patterns/fixing-lost-updates) shape fits.
-- **4 climbing steadily?** Check lock ordering first
+- 4 climbing steadily points at lock ordering first
   ([deadlock avoidance](/mysql/03-locking/deadlocks)), then
-  [gap locks](/mysql/03-locking/gap-locks) if the statements involve ranges or inserts —
-  and make sure every consumer has the [retry loop](/mysql/05-patterns/retrying-deadlocks).
-- **5 without 4?** Waits are long but acyclic — usually one slow writer everyone queues
-  behind; alert 3's view names it.
+  [gap locks](/mysql/03-locking/gap-locks) if the statements involve ranges or inserts,
+  and every consumer wants the [retry loop](/mysql/05-patterns/retrying-deadlocks).
+- 5 without 4 means the waits are long but acyclic — usually one slow writer everyone
+  queues behind, and alert 3's view names it.
 
 What's deliberately *not* here: anomaly detection for
 [lost updates and write skew](/mysql/02-isolation/anomaly-catalog). No counter sees them —

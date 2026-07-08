@@ -14,7 +14,7 @@ hero:
       text: Learn MySQL transactions
       link: /mysql/01-basics/what-is-a-transaction
     - theme: alt
-      text: What this is & how it works
+      text: How this site works
       link: /about/methodology
 
 features:

@@ -11,13 +11,17 @@ steps:
   - note: A rewrites both balances. B will overwrite one of them right after.
   - A: BEGIN
   - A: UPDATE accounts SET balance = 11 WHERE id = 1
+    tl: UPDATE alice = 11
   - A: UPDATE accounts SET balance = 19 WHERE id = 2
+    tl: UPDATE bob = 19
 
   - B: BEGIN
   - B: UPDATE accounts SET balance = 12 WHERE id = 1
     blocks: p1
+    tl: UPDATE alice = 12
   - A: COMMIT
     comment: A's lock released — B's overwrite of alice proceeds
+    tl: COMMIT ← lock released, B proceeds
   - success: p1
 
   - note: >-
@@ -26,13 +30,18 @@ steps:
   - C: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ id: 1, balance: 11 }, { id: 2, balance: 19 }]
     comment: A's writes appear together — 11 AND 19
+    tl: SELECT → 11, 19 ← all of A, together
 
   - B: UPDATE accounts SET balance = 18 WHERE id = 2
+    tl: UPDATE bob = 18 (uncommitted)
   - C: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ id: 1, balance: 11 }, { id: 2, balance: 19 }]
     comment: B's drafts change nothing for C
+    tl: SELECT → 11, 19 ← B's drafts don't count
 
   - B: COMMIT
+    tl: COMMIT
   - C: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ id: 1, balance: 12 }, { id: 2, balance: 18 }]
     comment: only now does C move on — to ALL of B, atomically
+    tl: SELECT → 12, 18 ← now all of B, atomically

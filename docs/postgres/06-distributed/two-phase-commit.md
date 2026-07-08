@@ -2,14 +2,30 @@
 
 Sagas gave up on atomicity across systems and engineered around it. Two-phase commit
 (2PC) is the other road: *actually* commit across multiple databases, by splitting
-COMMIT in two. Phase one, every participant **prepares** — gets its transaction to the
+COMMIT in two. Phase one, every participant prepares — gets its transaction to the
 point where commit can no longer fail, and promises to hold that pose. Phase two, a
 coordinator tells everyone to commit for real. PostgreSQL implements a participant's
-side natively, and the primitive is worth seeing even if you never deploy it —
-the manual: after `PREPARE TRANSACTION`,
+side natively, and the primitive is worth seeing even if you never deploy it. The
+manual, after `PREPARE TRANSACTION`,
 ["the transaction is no longer associated with the current session; instead, its state is fully stored on disk, and there is a very high probability that it can be committed successfully, even if a database crash occurs before the commit is requested"](https://www.postgresql.org/docs/current/sql-prepare-transaction.html).
 
-"No longer associated with the current session" is not a figure of speech:
+"No longer associated with the current session" is not a figure of speech. Three sessions
+carry the demo, so here is the whole path first: Session A is the participant that
+prepares, Session M is a monitor watching the server's state, and Session B is the
+unrelated session that later finishes the job.
+
+```timeline
+Session A: UPDATE balance = 200 → ok
+Session A: PREPARE TRANSACTION 'transfer-42' → detaches from the session
+Session A: SELECT balance → 100 ← can't see its own prepared change
+Session M: SELECT … FROM pg_prepared_xacts → transfer-42
+Session B: SELECT … FOR UPDATE NOWAIT → 55P03 ← the orphan still holds the row lock
+Session M: pg_terminate_backend(A) → true ← the coordinator crashes
+Session A: SELECT 1 → connection closed
+Session M: SELECT gid FROM pg_prepared_xacts → transfer-42 ← survived the kill
+Session B: COMMIT PREPARED 'transfer-42' → ok ← phase two, from a different session
+Session B: SELECT balance → 200
+```
 
 <!--@include: ./parts/two-phase-commit.md-->
 
@@ -23,7 +39,7 @@ it: the transaction, its locks, its promise all survive, waiting for *anyone* to
 
 ## Why that durability is also the danger
 
-The survival superpower has a flip side: **nothing expires a prepared transaction.**
+The survival superpower has a flip side: nothing expires a prepared transaction.
 Crash recovery in chapter 1 was automatic; here, a coordinator that dies *between* the
 phases leaves orphans that hold [row locks](/postgres/03-locking/row-locks) and pin the xid
 horizon [exactly like a long transaction](/postgres/04-mvcc/long-transactions) — forever, until
@@ -45,14 +61,13 @@ of orphans!), the [outbox](/postgres/06-distributed/transactional-outbox) and
 [sagas](/postgres/06-distributed/sagas) give you the guarantees you actually need with failure
 modes you can sleep through.
 
-## Key takeaways
-
-- `PREPARE TRANSACTION` detaches a transaction from its session and makes it crash-proof;
-  `COMMIT PREPARED` / `ROLLBACK PREPARED` finish it from any session, by name.
-- Between the phases it holds every lock and blocks VACUUM — with no timeout and no
-  automatic cleanup. Monitor `pg_prepared_xacts`.
-- It's a building block for external transaction managers, not an application tool.
-  Reach for the outbox and sagas first.
+So the primitive earns its keep strictly as a primitive: `PREPARE TRANSACTION` detaches a
+transaction from its session and makes it crash-proof, and `COMMIT PREPARED` or
+`ROLLBACK PREPARED` finishes it from any session, by name. Between the phases it holds
+every lock and blocks VACUUM, with no timeout and no automatic cleanup, so
+`pg_prepared_xacts` is the view you keep an eye on. It's a building block for external
+transaction managers, not an application tool — for anything you would actually ship,
+reach for the outbox and sagas first.
 
 ## Further reading
 

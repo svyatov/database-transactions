@@ -1,8 +1,8 @@
 # Row versions: xmin, xmax, ctid
 
-Chapters 2 and 3 kept saying "snapshot" and "row version" — this chapter opens the hood.
-The core trick of MVCC is that PostgreSQL **never modifies a row in place**: every UPDATE
-writes a complete new copy, every DELETE just marks the old one. That's why
+Chapters 2 and 3 kept saying "snapshot" and "row version" — this chapter opens the hood. The
+core trick of MVCC is that PostgreSQL never modifies a row in place: every UPDATE writes a
+complete new copy, every DELETE only stamps the old one. That's why
 [reading never blocks writing and writing never blocks reading](https://www.postgresql.org/docs/current/mvcc-intro.html) —
 readers and writers are literally looking at different physical tuples.
 
@@ -19,10 +19,10 @@ tell each version's story:
 
 <!--@include: ./parts/row-versions.md-->
 
-The subtle beat in the middle: after A's update, **B's row suddenly shows a non-zero
-`xmax`** — while still reading the old balance. B is looking at the *old version*, and the
-old version now carries the xid of the transaction that replaced it. The manual notes that
-a visible row version can have non-zero `xmax` —
+The subtle beat in the middle: after A's update, B's row suddenly shows a non-zero `xmax` while
+still reading the old balance. B is looking at the *old version*, and the old version now carries
+the xid of the transaction that replaced it. The manual notes that a visible row version can have
+non-zero `xmax` —
 ["that usually indicates that the deleting transaction hasn't committed yet, or that an attempted deletion was rolled back"](https://www.postgresql.org/docs/current/ddl-system-columns.html) —
 and B's case is the third flavor: the deletion committed, but B's snapshot predates it.
 
@@ -38,17 +38,15 @@ pretense: both versions sit on page 0, and the old tuple's `t_ctid` points at it
 removal is [VACUUM's](/postgres/04-mvcc/vacuum) job, and the [bloat lesson](/postgres/04-mvcc/dead-tuples-and-bloat)
 shows what piles up in the meantime.
 
-## Key takeaways
-
-- **UPDATE = write new version + stamp old version's `xmax`. DELETE = stamp `xmax`.**
-  Nothing is ever changed in place; nothing is immediately removed.
-- `xmin`/`xmax` are how PostgreSQL knows *which transaction* created and killed each
-  version — the [snapshot lesson](/postgres/04-mvcc/snapshots-under-the-hood) shows how visibility
-  is computed from them.
-- `ctid` changes on every update (and on `VACUUM FULL`) — never store it as a row
-  identifier; use a primary key.
-- This is also why [`SELECT FOR UPDATE` writes to disk](/postgres/03-locking/row-locks) (row locks
-  live in the row header) and why an update-heavy table needs VACUUM to stay small.
+So the two write verbs reduce to the same primitive: an UPDATE writes a fresh version and stamps
+the old one's `xmax`, a DELETE stamps `xmax` and stops there. Nothing is ever changed in place,
+and nothing is removed on the spot. Those `xmin`/`xmax` stamps are how PostgreSQL knows which
+transaction created and killed each version, which is the raw material the
+[snapshot lesson](/postgres/04-mvcc/snapshots-under-the-hood) turns into a visibility rule. The
+`ctid` is more slippery: it changes on every update and again on `VACUUM FULL`, so never store it
+as a row identifier — that's what a primary key is for. And this is the same mechanism behind two
+things you already met: [`SELECT FOR UPDATE` writes to disk](/postgres/03-locking/row-locks) because
+row locks live in the row header, and an update-heavy table needs VACUUM to stay small.
 
 ## Further reading
 

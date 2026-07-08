@@ -16,18 +16,23 @@ steps:
 
   - A: BEGIN
   - A: UPDATE accounts SET balance = 11 WHERE id = 1
+    tl: id1 = 11
   - A: UPDATE accounts SET balance = 19 WHERE id = 2
+    tl: id2 = 19
 
   - B: BEGIN
   - B: UPDATE accounts SET balance = 12 WHERE id = 1
     blocks: p1
+    tl: UPDATE id1 = 12
   - A: COMMIT
     comment: A is committed — its writes are 11 and 19
+    tl: COMMIT (11 and 19)
   - success: p1
 
   - C: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ id: 1, balance: 12 }, { id: 2, balance: 19 }]
     comment: "12 is B's uncommitted draft, 19 is A's commit — A's 11 already vanished"
+    tl: C reads → 12, 19 (A's 11 already gone)
 
   - note: >-
       C never saw the committed state {11, 19}. Half of A was overwritten

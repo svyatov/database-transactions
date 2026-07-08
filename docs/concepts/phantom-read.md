@@ -4,7 +4,7 @@ description: A phantom read is running the same range query twice and getting ne
 
 # Phantom read
 
-A **phantom read** is running the same *range query* twice inside one transaction and getting
+A *phantom read* is running the same *range query* twice inside one transaction and getting
 new rows. No row you already saw has changed — that would be a
 [non-repeatable read](/concepts/non-repeatable-read) — instead, rows that *match your WHERE
 clause* appear out of nowhere, inserted and committed by someone else between your two reads.
@@ -18,9 +18,9 @@ Session A: SELECT count(*) WHERE amount > 100 → 3 ← a phantom row appeared
 Session A: COMMIT
 ```
 
-The distinction matters because phantoms are about **predicates**, not rows: you can lock
+The distinction matters because phantoms are about *predicates*, not rows: you can lock
 every row you read and still get phantoms, because the new row didn't exist to be locked.
-That's why the SQL standard treats them as a separate, harder anomaly (Adya's **PMP**,
+That's why the SQL standard treats them as a separate, harder anomaly (Adya's *PMP*,
 predicate-many-preceders) — and why the standard's REPEATABLE READ is allowed to permit them.
 
 ## Who prevents it

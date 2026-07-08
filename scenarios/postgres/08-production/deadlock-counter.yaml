@@ -18,14 +18,18 @@ steps:
   - note: "The classic: A and B lock the same two rows in opposite order."
   - A: BEGIN
   - A: UPDATE accounts SET balance = balance - 10 WHERE id = 1
+    tl: holds row 1
   - B: BEGIN
   - B: UPDATE accounts SET balance = balance - 25 WHERE id = 2
+    tl: holds row 2
 
   - A: UPDATE accounts SET balance = balance + 10 WHERE id = 2
     blocks: p1
+    tl: wants row 2 (B holds it)
   - B.fails: UPDATE accounts SET balance = balance + 25 WHERE id = 1
     error: "40P01"
     comment: deadlock_detected
+    tl: wants row 1 (A holds it)
   - success: p1
   - A: COMMIT
   - B: ROLLBACK

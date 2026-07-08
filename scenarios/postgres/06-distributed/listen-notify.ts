@@ -100,7 +100,7 @@ export default scenario({
       `The listener wakes up: Asynchronous notification "orders" with payload "order 1 placed" received from server process with PID pid(A).`,
     );
 
-    t.note("A rolled-back NOTIFY simply never happened:");
+    t.note("A rolled-back NOTIFY never happened at all:");
     await A`BEGIN`;
     await A`NOTIFY orders, 'order 2 placed'`;
     await A`ROLLBACK`;

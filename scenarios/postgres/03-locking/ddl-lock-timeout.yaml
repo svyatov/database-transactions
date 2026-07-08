@@ -11,17 +11,22 @@ steps:
   - A: BEGIN
   - A: SELECT balance FROM accounts WHERE id = 1
     comment: the same long transaction as before
+    tl: SELECT (long-lived txn) → holds ACCESS SHARE
 
   - note: Same migration — but this time it gives up after 100ms instead of camping in the queue.
   - B: SET lock_timeout = '100ms'
   - B.fails: ALTER TABLE accounts ADD COLUMN note text
     error: "55P03"
+    tl: ALTER TABLE … → gives up after 100ms
 
   - note: >-
       No waiting ALTER in the queue means no outage: C's read is instant.
   - C: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
+    tl: SELECT → instant, nothing queued behind the ALTER
 
   - A: COMMIT
+    tl: COMMIT
   - note: Retry the migration when it can actually get the lock — now it sails through.
   - B: ALTER TABLE accounts ADD COLUMN note text
+    tl: ALTER TABLE … (retry sails through)

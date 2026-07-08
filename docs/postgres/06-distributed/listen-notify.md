@@ -1,8 +1,8 @@
 # LISTEN/NOTIFY: transactional wake-up calls
 
 The [outbox relay](/postgres/06-distributed/transactional-outbox) polls its table; polling
-trades latency for load. PostgreSQL ships the fix: `NOTIFY` — a pub/sub doorbell
-built into the database, and, crucially for this chapter, **wired into transactions**.
+trades latency for load. PostgreSQL ships the fix: `NOTIFY` — a pub/sub doorbell built
+into the database and, the part that matters for this chapter, wired into transactions.
 The manual:
 ["if a NOTIFY is executed inside a transaction, the notify events are not delivered until and unless the transaction is committed"](https://www.postgresql.org/docs/current/sql-notify.html).
 A notification can never announce data that isn't committed yet — or data that never
@@ -27,27 +27,25 @@ poke:
 The de-duplication is documented behavior, not an accident:
 ["If the same channel name is signaled multiple times with identical payload strings within the same transaction, only one instance of the notification event is delivered to listeners"](https://www.postgresql.org/docs/current/sql-notify.html).
 
-## The fine print
+A few caveats before you lean on it. NOTIFY is a doorbell, not a mailbox: a notification
+goes to sessions listening *right now*, so a relay that was down while the doorbell rang
+must still find the event afterwards. That's the whole reason the combo is outbox +
+NOTIFY — the outbox row is the durable fact, and the notification only says "check the
+outbox", its payload can even be empty.
 
-- **NOTIFY is a doorbell, not a mailbox.** A notification goes to sessions listening
-  *right now*; a relay that was down while the doorbell rang must still find the event
-  afterwards. That's why the combo is outbox + NOTIFY: the outbox row is the durable
-  fact, the notification just says "check the outbox" — its payload can even be empty.
-- Delivery waits for COMMIT, so notifications from a long transaction arrive late. The
-  manual's advice matches [chapter 4's](/postgres/04-mvcc/long-transactions):
-  ["applications using NOTIFY for real-time signaling should try to keep their transactions short"](https://www.postgresql.org/docs/current/sql-notify.html).
-- LISTEN and two-phase commit don't mix — a preview of the
-  [next-door lesson](/postgres/06-distributed/two-phase-commit):
-  ["A transaction that has executed LISTEN cannot be prepared for two-phase commit"](https://www.postgresql.org/docs/current/sql-listen.html).
+Two more edges are worth knowing. Delivery waits for COMMIT, so notifications from a long
+transaction arrive late; the manual's advice matches
+[chapter 4's](/postgres/04-mvcc/long-transactions), that
+["applications using NOTIFY for real-time signaling should try to keep their transactions short"](https://www.postgresql.org/docs/current/sql-notify.html).
+And LISTEN and two-phase commit don't mix, a preview of the
+[next-door lesson](/postgres/06-distributed/two-phase-commit):
+["A transaction that has executed LISTEN cannot be prepared for two-phase commit"](https://www.postgresql.org/docs/current/sql-listen.html).
 
-## Key takeaways
-
-- `NOTIFY` is transactional: delivered at COMMIT, discarded on ROLLBACK, de-duplicated
-  within a transaction. You can never be woken up for uncommitted data.
-- Use it to make the outbox relay event-driven: `NOTIFY` in the same transaction that
-  inserts the outbox row, `LISTEN` in the relay, poll only as a fallback.
-- Notifications are not durable — the doorbell rings for whoever is home. Durability
-  stays in the outbox table.
+Put together, that makes `NOTIFY` the outbox relay's wake-up call rather than its memory:
+fire it in the same transaction that writes the outbox row, `LISTEN` in the relay, and
+fall back to polling when no one is listening. The notification itself is disposable — it
+rings for whoever is home and then vanishes — so every durability guarantee stays in the
+outbox table, exactly where the previous lesson put it.
 
 ## Further reading
 

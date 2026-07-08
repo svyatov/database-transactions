@@ -1,11 +1,11 @@
 # Repeatable Read
 
-At REPEATABLE READ — MySQL's default — the **first read** of the transaction takes one
+At REPEATABLE READ — MySQL's default — the first read of the transaction takes one
 snapshot, and every later *plain SELECT* reads from that same frozen view: no non-repeatable
 reads, no phantoms.
 
-But only plain SELECTs. UPDATE, DELETE, and `SELECT … FOR UPDATE/SHARE` are **current
-reads**: they operate on the latest committed data, snapshot be damned. That asterisk is
+But only plain SELECTs. UPDATE, DELETE, and `SELECT … FOR UPDATE/SHARE` are current
+reads: they operate on the latest committed data, snapshot be damned. That asterisk is
 where MySQL's RR differs most from PostgreSQL's — and where ported assumptions break.
 
 ## One snapshot, no phantoms
@@ -37,17 +37,14 @@ variant of G-single):
 
 <!--@include: ./parts/write-predicate-skew.md-->
 
-## Key takeaways
-
-- REPEATABLE READ = one snapshot per **transaction**, taken by the first read (not by
-  `BEGIN`).
-- Plain SELECTs are phantom-free at RR — stronger than the SQL standard requires.
-- Writes and locking reads bypass the snapshot (**current reads**), and after you modify a
-  row, your own SELECTs see the new version — the snapshot is not a wall, it's a default.
-- No `40001`-style serialization errors exist at this level. The anomalies RR leaves open —
-  [lost updates](/mysql/02-isolation/lost-update) and
-  [write skew](/mysql/02-isolation/serializable) — must be handled with
-  [locking reads](/mysql/03-locking/row-locks) or constraints.
+REPEATABLE READ gives you one snapshot per transaction, taken by the first read rather than by
+`BEGIN`, and plain SELECTs stay phantom-free — stronger than the SQL standard asks for. Writes
+and locking reads bypass that snapshot as current reads, and once you modify a row your own
+SELECTs see the new version, so the snapshot is a default, not a wall. No `40001`-style
+serialization errors fire at this level, which leaves the anomalies RR can't stop —
+[lost updates](/mysql/02-isolation/lost-update) and
+[write skew](/mysql/02-isolation/serializable) — to be handled with
+[locking reads](/mysql/03-locking/row-locks) or constraints.
 
 ## Further reading
 

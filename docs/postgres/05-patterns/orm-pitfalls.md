@@ -10,7 +10,7 @@ this site has already proven, wearing a nicer API.
 The classic: transaction-per-request middleware (or an explicit `transaction { ... }`
 block) opens a transaction, and the handler then calls a payment API, renders a
 template, `await`s something slow. The database sees a session that is
-**idle in transaction** — holding [row locks](/postgres/03-locking/row-locks), blocking
+*idle in transaction* — holding [row locks](/postgres/03-locking/row-locks), blocking
 [DDL](/postgres/03-locking/table-locks-and-ddl), and pinning
 [VACUUM's horizon](/postgres/04-mvcc/long-transactions) — while your code isn't talking to it at
 all. Here is that story end to end, including the guardrail that ends it:
@@ -23,7 +23,7 @@ The timeout is
 Note *terminate*, not "cancel a query" — there is no query. The server logs a `FATAL`
 with SQLSTATE [`25P03`](https://www.postgresql.org/docs/current/errcodes-appendix.html)
 (`idle_in_transaction_session_timeout`) and hangs up; the client, as the transcript
-shows, just finds a dead connection on its next statement, and the uncommitted UPDATE
+shows, finds a dead connection on its next statement, and the uncommitted UPDATE
 is gone. That rollback is the point: better a failed request than a database-wide
 pileup. Keep transactions free of network I/O, and set this timeout as a seatbelt —
 alongside `transaction_timeout` and `statement_timeout`,
@@ -50,15 +50,13 @@ serious ORM lets you set the isolation level per transaction) — and then you o
 [`40001` retry loop](/postgres/05-patterns/retrying-serialization-failures), because the ORM
 won't rerun your business logic for you.
 
-## Key takeaways
-
-- An ORM transaction is open from its first statement until your code returns —
-  **every** `await` inside it holds locks and pins VACUUM. No network I/O inside
-  transactions; `idle_in_transaction_session_timeout` as the backstop.
-- Object-style read-modify-write is a lost update by default. Enable your ORM's
-  version-column support or lock the row at the read.
-- Isolation level and retry-on-`40001` are your job, not the ORM's. It will happily run
-  write-skewed logic at READ COMMITTED forever.
+The through-line across all three is the same: an ORM transaction is open from its first
+statement until your code returns, so every `await` inside it holds locks and pins
+VACUUM — keep network I/O out, and set `idle_in_transaction_session_timeout` as the
+backstop. Object-style read-modify-write is a lost update by default, so turn on your
+ORM's version-column support or lock the row at the read. And the isolation level and the
+`40001` retry are your job, not the ORM's; left alone, it will happily run write-skewed
+logic at READ COMMITTED forever.
 
 ## Further reading
 

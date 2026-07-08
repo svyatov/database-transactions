@@ -4,7 +4,7 @@ Retries are everywhere you didn't put them: clients re-send timed-out requests, 
 balancers replay, job queues redeliver, [your own retry loop](/postgres/05-patterns/retrying-serialization-failures)
 reruns transactions. The network can only promise *at least once*. If the operation is
 "charge $30", at-least-once is a lawsuit — so the receiver must make duplicates
-harmless: **idempotency**.
+harmless: *idempotency*.
 
 The entire pattern is the [previous lesson's](/postgres/05-patterns/check-then-insert) unique
 constraint pointed at a new target: not the data, but the *request identity*. The client
@@ -25,21 +25,20 @@ running — no committed row exists to conflict with yet.
 
 The unique index parks the retry until the original commits (the wait-on-transactionid
 mechanics from the [previous lesson](/postgres/05-patterns/check-then-insert)), then absorbs it:
-`0 rows`, no second charge. Time-of-check races simply don't exist here — there is no
-check, only an insert with one winner.
+`0 rows`, no second charge. Time-of-check races don't exist here — there is no check,
+only an insert with one winner.
 
-## Key takeaways
+Three things make this pattern work. The gate and the side effect share one transaction,
+so they commit or vanish together. The key names the operation, not the data, which is
+why the sender must mint it — one key per logical action, reused verbatim on every retry.
+And `INSERT ... ON CONFLICT DO NOTHING RETURNING` is the entire server-side protocol: a
+row back means do the work, nothing back means it's already done, so store whatever the
+caller needs re-answered alongside the key.
 
-- **Gate and work in the same transaction.** The idempotency-key insert and the side
-  effect it guards must commit or vanish together.
-- The key names the *operation*, so it must be minted by the sender — one key per
-  logical action, reused verbatim on every retry of that action.
-- `INSERT ... ON CONFLICT DO NOTHING RETURNING` is the whole server-side protocol: a row
-  back means "do the work", nothing back means "done already — return the stored
-  result". Store whatever the caller needs re-answered alongside the key.
-- Only effects **inside** the transaction are protected. An email sent mid-transaction
-  still sends twice; anything external needs its own idempotency story — chapter 6
-  builds one: the [transactional outbox](/postgres/06-distributed/transactional-outbox).
+The boundary is the catch: only effects inside the transaction are protected. An email
+sent mid-transaction still sends twice, and anything external needs its own idempotency
+story — which is what chapter 6 builds next with the
+[transactional outbox](/postgres/06-distributed/transactional-outbox).
 
 ## Further reading
 

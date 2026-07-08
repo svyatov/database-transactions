@@ -10,10 +10,11 @@ setup: |
   CREATE PROCEDURE bump(n INT) BEGIN DECLARE i INT DEFAULT 0; WHILE i < n DO UPDATE counters SET v = v + 1 WHERE id = 1; SET i = i + 1; END WHILE; END;
 sessions: [A, R]
 steps:
-  - note: R opens a read view — and then simply does nothing.
+  - note: R opens a read view — and then does nothing.
   - R: BEGIN
   - R: SELECT v FROM counters
     expect: [{ v: 0 }]
+    tl: read view opens
 
   - note: >-
       Meanwhile the application hums along: 200 small transactions, each
@@ -21,16 +22,20 @@ steps:
       R's read view might still need any of those versions.
   - A: CALL bump(200)
     comment: 200 committed single-row updates
+    tl: 200 commits pile up undo
 
   - A: SELECT count >= 200 AS pinned_by_reader FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'
     expect: [{ pinned_by_reader: 1 }]
     comment: none of those 200 undo logs can be purged while R's read view lives
+    tl: history_len ≥ 200 — pinned
 
   - R: SELECT v FROM counters
     expect: [{ v: 0 }]
     comment: R still reads its original world — that's what all that undo buys
+    tl: R still sees v=0
 
   - R: COMMIT
+    tl: COMMIT → purge can drain it
   - note: >-
       With the read view gone, purge is free to reclaim all 200 versions in
       the background. The one number to watch in production is exactly this

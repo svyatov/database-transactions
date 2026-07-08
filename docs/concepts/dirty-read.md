@@ -4,9 +4,9 @@ description: A dirty read is reading another transaction's uncommitted data — 
 
 # Dirty read
 
-A **dirty read** is reading another transaction's *uncommitted* data. The danger is not that
+A *dirty read* is reading another transaction's *uncommitted* data. The danger is not that
 the data is fresh — it's that it may never become real: if the writer rolls back, you have
-read, and possibly acted on, a value that **never existed**.
+read, and possibly acted on, a value that never existed.
 
 ```timeline
 Session A: BEGIN
@@ -17,7 +17,7 @@ Session A: ROLLBACK
 Session B: acts on a balance that never existed
 ```
 
-Formally this is Adya's **G1a** (aborted read). Its sibling **G1b** (intermediate read) is
+Formally this is Adya's *G1a* (aborted read). Its sibling *G1b* (intermediate read) is
 subtler — reading a *draft* the writer later overwrites before committing; both live in the
 [anomaly catalog](/concepts/isolation-anomalies) with the rest of the G1 family.
 
@@ -30,7 +30,7 @@ subtler — reading a *draft* the writer later overwrites before committing; bot
 
 In PostgreSQL dirty reads are impossible at *every* level — READ UNCOMMITTED is accepted as
 syntax and silently upgraded. MySQL takes you at your word: its READ UNCOMMITTED hands out
-data that was never committed, which is why there is essentially no good reason to run at
+data that was never committed, which is why there is no good reason to run at
 that level.
 
 ## Related anomalies

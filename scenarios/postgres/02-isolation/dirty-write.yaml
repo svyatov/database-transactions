@@ -15,19 +15,26 @@ steps:
   - A: BEGIN
   - B: BEGIN
   - A: UPDATE items SET price = 11 WHERE id = 1
+    tl: UPDATE id=1 price=11
 
   - note: B wants the same row. Even at READ COMMITTED it must wait for A's lock.
   - B: UPDATE items SET price = 12 WHERE id = 1
     blocks: p1
+    tl: UPDATE id=1 price=12
 
   - A: UPDATE items SET price = 21 WHERE id = 2
+    tl: UPDATE id=2 price=21
   - A: COMMIT
     comment: releases both row locks
+    tl: COMMIT ← locks released, B wakes up
   - success: p1
 
   - B: UPDATE items SET price = 22 WHERE id = 2
+    tl: UPDATE id=2 price=22
   - B: COMMIT
+    tl: COMMIT
 
   - A: SELECT id, price FROM items ORDER BY id
     expect: [{ id: 1, price: 12 }, { id: 2, price: 22 }]
-    comment: all B — as if B simply ran after A. Never 12/21 or 11/22.
+    comment: all B — as if B had run after A. Never 12/21 or 11/22.
+    tl: SELECT → 12, 22 ← all B, never a mix

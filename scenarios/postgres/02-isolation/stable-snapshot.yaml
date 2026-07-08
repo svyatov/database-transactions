@@ -13,16 +13,22 @@ steps:
   - note: The snapshot is taken by the FIRST query, not by BEGIN.
   - A: SELECT id, balance FROM accounts ORDER BY id
     expect: [{}, {}]
+    tl: SELECT → alice 100, bob 50 (snapshot frozen here)
 
   - note: B changes an existing row AND inserts a new one — both committed instantly.
   - B: UPDATE accounts SET balance = 999 WHERE id = 1
+    tl: UPDATE alice = 999 (committed)
   - B: INSERT INTO accounts VALUES (3, 'carol', 300)
+    tl: INSERT carol (committed)
   - A: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ id: 1, balance: 100 }, { id: 2, balance: 50 }]
     comment: not 999 — no non-repeatable read; and no carol — no phantom
+    tl: SELECT → 100, 50 ← no 999, no carol
 
   - A: COMMIT
+    tl: COMMIT
 
   - note: Only a NEW transaction gets a new snapshot.
   - A: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ balance: 999 }, {}, {}]
+    tl: SELECT → 999 and carol ← new txn, new snapshot

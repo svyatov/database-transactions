@@ -2,7 +2,7 @@
 
 PostgreSQL's [VACUUM](/postgres/04-mvcc/vacuum) needs a whole lesson about when to run it,
 what it can and can't reclaim, and how to tell whether autovacuum is keeping up. InnoDB's
-equivalent is **purge**, and the headline is how little of that lesson transfers: purge is
+equivalent is *purge*, and the headline is how little of that lesson transfers: purge is
 a set of background threads, always on, with no command to invoke and no per-table
 scheduling to tune.
 
@@ -40,14 +40,14 @@ long-running transaction holding the oldest read view, or a write burst purge wi
 on its own. Check
 [`trx_rseg_history_len`](/mysql/04-mvcc/history-list-length) before tuning anything.
 
-## Key takeaways
-
-- Purge = automatic, background, always-on garbage collection of undo history and
-  delete-marked rows. There is no `VACUUM` command to run, schedule, or forget.
-- Purge can only remove history older than the **oldest open read view** — the lever you
-  control is transaction length, not purge settings.
-- Undo lives in undo tablespaces, so "bloat" here inflates those files rather than your
-  tables — table scans don't slow down the way PostgreSQL's do under dead-tuple bloat.
+Purge is automatic, background, always-on garbage collection of undo history and delete-marked
+rows; there's no `VACUUM` command to run, schedule, or forget. It can only reclaim history
+older than the oldest open read view, so the lever you actually control is transaction length,
+not purge settings. And because undo lives in undo tablespaces rather than in the tables, its
+bloat inflates those files instead of slowing table scans the way PostgreSQL's dead tuples do —
+which closes the loop on how InnoDB keeps concurrent readers and writers out of each other's
+way, ready to put to work in the [real-world patterns](/mysql/05-patterns/fixing-lost-updates)
+that follow.
 
 ## Further reading
 

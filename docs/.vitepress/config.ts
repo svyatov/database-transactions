@@ -3,8 +3,18 @@ import { type DefaultTheme, defineConfig } from "vitepress";
 const about: DefaultTheme.SidebarItem = {
   text: "About",
   items: [
-    { text: "What this is", link: "/about/methodology" },
+    { text: "How this site works", link: "/about/methodology" },
     { text: "Run it locally", link: "/about/run-locally" },
+  ],
+};
+
+// Entry links into the two lesson tracks, for the neutral (concepts/about) pages
+// whose sidebar otherwise has no path into the actual lessons.
+const tracks: DefaultTheme.SidebarItem = {
+  text: "Pick a database",
+  items: [
+    { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },
+    { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
   ],
 };
 
@@ -38,6 +48,10 @@ const concepts = (collapsed: boolean): DefaultTheme.SidebarItem => ({
     },
   ],
 });
+
+// Shared sidebar for every engine-neutral page (concepts + about): the same
+// About and Concepts groups as the track sidebars, then links into both tracks.
+const neutral: DefaultTheme.SidebarItem[] = [about, concepts(false), tracks];
 
 const postgres: DefaultTheme.SidebarItem[] = [
   about,
@@ -108,7 +122,7 @@ const postgres: DefaultTheme.SidebarItem[] = [
         link: "/postgres/04-mvcc/snapshots-under-the-hood",
       },
       {
-        text: "Dead tuples & bloat",
+        text: "Dead tuples and bloat",
         link: "/postgres/04-mvcc/dead-tuples-and-bloat",
       },
       { text: "VACUUM", link: "/postgres/04-mvcc/vacuum" },
@@ -186,7 +200,7 @@ const postgres: DefaultTheme.SidebarItem[] = [
         link: "/postgres/08-production/long-and-idle-transactions",
       },
       {
-        text: "Logs & counters",
+        text: "Logs and counters",
         link: "/postgres/08-production/logs-and-counters",
       },
       {
@@ -274,7 +288,7 @@ const mysql: DefaultTheme.SidebarItem[] = [
         link: "/mysql/05-patterns/retrying-deadlocks",
       },
       {
-        text: "A job queue on SKIP LOCKED",
+        text: "A SKIP LOCKED job queue",
         link: "/mysql/05-patterns/job-queue",
       },
       { text: "Advisory locks", link: "/mysql/05-patterns/advisory-locks" },
@@ -290,7 +304,7 @@ const mysql: DefaultTheme.SidebarItem[] = [
     text: "6. Transactions across services",
     items: [
       {
-        text: "The outbox pattern",
+        text: "Dual writes & the outbox",
         link: "/mysql/06-distributed/transactional-outbox",
       },
       { text: "Sagas", link: "/mysql/06-distributed/sagas" },
@@ -325,7 +339,7 @@ const mysql: DefaultTheme.SidebarItem[] = [
         link: "/mysql/08-production/history-list-health",
       },
       {
-        text: "The alerting checklist",
+        text: "Alerting checklist",
         link: "/mysql/08-production/alerting-checklist",
       },
     ],
@@ -480,13 +494,13 @@ export default defineConfig({
       { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },
       { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
       { text: "Concepts", link: "/concepts/" },
-      { text: "Methodology", link: "/about/methodology" },
+      { text: "How it works", link: "/about/methodology" },
     ],
     sidebar: {
       "/postgres/": postgres,
       "/mysql/": mysql,
-      "/concepts/": [concepts(false), about],
-      "/about/": postgres,
+      "/concepts/": neutral,
+      "/about/": neutral,
     },
     socialLinks: [
       {

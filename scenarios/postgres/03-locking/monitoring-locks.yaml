@@ -10,6 +10,7 @@ sessions: [A, B, M]
 steps:
   - A: BEGIN
   - A: UPDATE accounts SET balance = 200 WHERE id = 1
+    tl: UPDATE (takes the row lock)
 
   - note: >-
       One innocent UPDATE = four locks: table, index, its own xid, its own virtual xid.
@@ -26,6 +27,7 @@ steps:
 
   - B: UPDATE accounts SET balance = 300 WHERE id = 1
     blocks: p1
+    tl: UPDATE → waits on A
 
   - note: >-
       The waiter's tell: a lock row with granted = f — it wants A's transaction id.
@@ -45,4 +47,5 @@ steps:
     expect: [{ waiter: B, blocker: A }]
 
   - A: COMMIT
+    tl: COMMIT
   - success: p1

@@ -11,23 +11,31 @@ steps:
   - note: Two FOR SHARE locks on the same row coexist happily…
   - A: BEGIN
   - A: SELECT id FROM accounts WHERE id = 1 FOR SHARE
+    tl: SELECT … FOR SHARE (A)
   - B: BEGIN
   - B: SELECT id FROM accounts WHERE id = 1 FOR SHARE
+    tl: SELECT … FOR SHARE (B) → coexists
   - B: COMMIT
 
   - note: …but FOR SHARE still blocks a plain UPDATE (which takes FOR NO KEY UPDATE).
   - B: UPDATE accounts SET balance = 200 WHERE id = 1
     blocks: p1
+    tl: UPDATE → FOR NO KEY UPDATE
   - A: COMMIT
+    tl: COMMIT (releases A's FOR SHARE)
   - success: p1
 
   - note: The weakest lock, FOR KEY SHARE, even coexists with a running UPDATE…
   - A: BEGIN
   - A: UPDATE accounts SET balance = 300 WHERE id = 1
+    tl: UPDATE → FOR NO KEY UPDATE (A)
   - B: SELECT id FROM accounts WHERE id = 1 FOR KEY SHARE
+    tl: SELECT … FOR KEY SHARE → coexists with the UPDATE
 
   - note: …while the strongest, FOR UPDATE, has to wait for it.
   - B: SELECT id FROM accounts WHERE id = 1 FOR UPDATE
     blocks: p2
+    tl: SELECT … FOR UPDATE
   - A: COMMIT
+    tl: COMMIT (releases A)
   - success: p2

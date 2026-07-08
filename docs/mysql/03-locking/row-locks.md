@@ -1,7 +1,7 @@
 # Row locks
 
 MVCC keeps plain readers lock-free, but writers — and readers who intend to write — take
-**row locks**. InnoDB's are simple: a row lock is either **shared (S)** or **exclusive (X)**.
+*row locks*. InnoDB's are simple: a row lock is either *shared* (S) or *exclusive* (X).
 S coexists with S; everything else conflicts.
 
 ## FOR UPDATE blocks writers, never readers
@@ -24,20 +24,20 @@ innocent update of the parent's *other columns* has to wait:
 <!--@include: ./parts/fk-shared-lock.md-->
 
 ::: warning The silent no-op FK
-MySQL **silently ignores** the inline `REFERENCES` syntax
-(`customer_id int REFERENCES customers (id)` creates *no constraint at all*). Foreign keys
-must be declared table-level: `FOREIGN KEY (customer_id) REFERENCES customers (id)`.
+MySQL silently ignores the inline `REFERENCES` syntax:
+`customer_id int REFERENCES customers (id)` creates no constraint at all. Foreign keys
+must be declared at table level: `FOREIGN KEY (customer_id) REFERENCES customers (id)`.
 :::
 
-## Key takeaways
-
-- Two strengths only: S (shared) and X (exclusive). `FOR SHARE` takes S, `FOR UPDATE` and all
-  writes take X.
-- Plain SELECTs take no row locks at any level below SERIALIZABLE — readers never wait for
-  writers.
-- FK checks lock parent rows with S. Hot parent + busy children = a queue PostgreSQL wouldn't
-  have (its `FOR KEY SHARE` coexists with non-key updates).
-- Row locks live until COMMIT/ROLLBACK — never mid-transaction. Keep write transactions short.
+InnoDB's row-lock story fits in two strengths: S coexists with S, X conflicts with
+everything, and that's the entire compatibility matrix. `FOR SHARE` takes S; `FOR UPDATE` and
+every write take X; plain SELECTs stay out of it below SERIALIZABLE, which is why readers never
+wait for writers. The sharp edge is the foreign key — a child insert takes a full S lock on the
+parent row that even PostgreSQL's `FOR KEY SHARE` would have let slide, so a hot parent under
+busy children becomes a queue Postgres wouldn't have. All of these locks live until `COMMIT` or
+`ROLLBACK`, never released mid-transaction, so keeping write transactions short is the whole
+game. Rows are only half of InnoDB locking, though: at REPEATABLE READ it also locks the empty
+spaces between them, which is where [gap locks](/mysql/03-locking/gap-locks) come in.
 
 ## Further reading
 

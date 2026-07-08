@@ -1,6 +1,6 @@
 # Read Committed
 
-At READ COMMITTED, every statement gets a **fresh snapshot**: it sees everything committed by
+At READ COMMITTED, every statement gets a fresh snapshot: it sees everything committed by
 the time *it* starts. Within one transaction, two identical reads can disagree — because the
 world moved between them.
 
@@ -31,15 +31,12 @@ When an UPDATE waits for a row lock and finally gets it, the row may no longer m
 
 <!--@include: ./parts/update-recheck.md-->
 
-## Key takeaways
-
-- Fresh snapshot per statement: no dirty reads, but non-repeatable reads and phantoms are
-  routine. If one report must be internally consistent, run it at
-  [REPEATABLE READ](/mysql/02-isolation/repeatable-read).
-- `Query OK, 0 rows affected` after a lock wait may mean the row *escaped* — code that assumes
-  "I updated exactly the rows I saw" is wrong at this level.
-- At READ COMMITTED, InnoDB also takes fewer gap locks than at RR — one reason some heavy-write
-  shops choose it. Locking is [chapter 3](/mysql/03-locking/row-locks).
+A fresh snapshot per statement means no dirty reads, but non-repeatable reads and phantoms are
+routine — if a report has to be internally consistent, run it at
+[REPEATABLE READ](/mysql/02-isolation/repeatable-read). And `Query OK, 0 rows affected` after a
+lock wait may mean the row escaped your `WHERE`, so code that assumes it updated exactly the
+rows it saw is wrong at this level. InnoDB also takes fewer gap locks here than at RR, which is
+one reason some heavy-write shops prefer it; locking is [chapter 3](/mysql/03-locking/row-locks).
 
 ## Further reading
 

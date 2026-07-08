@@ -11,6 +11,7 @@ steps:
   - A: BEGIN
   - A: UPDATE items SET value = value * 2 WHERE id = 1
     comment: "row 1: 10 → 20, uncommitted"
+    tl: UPDATE row1 → 20 (uncommitted)
 
   - note: >-
       B targets WHERE value = 10. The latest committed version of row 1 still
@@ -19,11 +20,13 @@ steps:
   - B: BEGIN
   - B: UPDATE items SET value = 99 WHERE value = 10
     blocks: p1
+    tl: UPDATE WHERE value = 10
 
   - note: >-
       A commits. B wakes up and re-checks the row it waited for — against the
       NEW version, where value is 20.
   - A: COMMIT
+    tl: COMMIT — row1 is now 20
 
   - success: p1
     affected: 0

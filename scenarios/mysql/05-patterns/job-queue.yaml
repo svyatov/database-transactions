@@ -14,6 +14,7 @@ steps:
       SELECT id, task FROM jobs WHERE state = 'queued'
       ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1 }]
+    tl: claim → job 1
 
   - B: BEGIN
   - B: |-
@@ -21,11 +22,15 @@ steps:
       ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 2 }]
     comment: job 1 is claimed — skipped without waiting
+    tl: claim → job 2 (skips locked job 1)
 
   - note: A finishes and commits. B crashes mid-job — its claim evaporates with its transaction.
   - A: UPDATE jobs SET state = 'done' WHERE id = 1
+    tl: job 1 done
   - A: COMMIT
+    tl: COMMIT
   - B: ROLLBACK
+    tl: crash → job 2 requeued
 
   - note: A restarted worker finds job 2 right back in the queue — nothing was lost, nothing ran twice.
   - B: BEGIN
@@ -33,8 +38,12 @@ steps:
       SELECT id, task FROM jobs WHERE state = 'queued'
       ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 2 }]
+    tl: claim → job 2 (back in queue)
   - B: UPDATE jobs SET state = 'done' WHERE id = 2
+    tl: job 2 done
   - B: COMMIT
+    tl: COMMIT
 
   - A: SELECT id, state FROM jobs ORDER BY id
     expect: [{ id: 1, state: "done" }, { id: 2, state: "done" }]
+    tl: both jobs done

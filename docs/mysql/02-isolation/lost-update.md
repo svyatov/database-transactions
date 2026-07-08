@@ -17,7 +17,7 @@ with `40001`. MySQL's UPDATE is a [current read](/mysql/02-isolation/repeatable-
 applies your stale arithmetic to the newest row version and raises nothing:
 
 ::: warning The isolation knob will not fix this
-Every ORM `save()` that read, computed, and writes back has this bug at MySQL's default
+Every ORM `save()` that reads, computes, and writes back has this bug at MySQL's default
 level. The fix is structural — atomic SQL, a locking read, or a version column — not a
 `SET TRANSACTION` away.
 :::
@@ -33,14 +33,11 @@ lost updates *structurally* — atomic UPDATEs, `SELECT … FOR UPDATE`
 [the concept page](/concepts/lost-update#the-fixes) and each proven with a transcript in
 [fixing lost updates](/mysql/05-patterns/fixing-lost-updates).
 
-## Key takeaways
-
-- A lost update is silent: the transcript above ends with `110` where two +10 deposits on
-  `100` should give `120` — and nothing errored.
-- **No isolation level below SERIALIZABLE prevents it on MySQL.** If your app reads, computes,
-  and writes back, it has this bug until you apply one of the three fixes.
-- Porting note: code relying on PostgreSQL's RR conflict detection loses that protection
-  silently on MySQL.
+A lost update is silent: the transcript above ends with `110` where two +10 deposits on
+`100` should have produced `120`, and nothing errored. Nothing short of SERIALIZABLE stops it
+on MySQL — if your app reads a value, computes from it, and writes it back, the bug is there
+until you apply one of the three fixes. If you're porting from PostgreSQL, code that leaned on
+its REPEATABLE READ conflict detection loses that protection the moment it runs here.
 
 ## Further reading
 

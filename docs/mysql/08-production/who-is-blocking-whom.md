@@ -8,32 +8,27 @@ end-to-end incident — detect, identify, decide, kill:
 
 ## Reading the output
 
-The queue view (`sys.innodb_lock_waits`) answers the three incident questions in one row:
+The queue view (`sys.innodb_lock_waits`) answers the three incident questions in a single
+row. Who's stuck? That's `waiting_pid` and its exact statement, the query your users are
+watching hang. Who's responsible? That's `blocking_pid` — and the join to the processlist
+is the damning part: `command = Sleep`, no statement running. The blocker isn't *doing*
+anything; it's an open transaction someone's code forgot to close, still holding
+[row locks](/mysql/03-locking/row-locks) it acquired ages ago.
 
-- **Who's stuck?** `waiting_pid` and its exact statement — what your users are
-  experiencing.
-- **Who's responsible?** `blocking_pid` — and the join to the processlist is the
-  damning part: `command = Sleep`, no statement running. The blocker isn't *doing*
-  anything; it's an open transaction someone's code forgot to close, holding
-  [row locks](/mysql/03-locking/row-locks) it acquired ages ago.
-- **What now?** The view even generates the remediation
-  (`sql_kill_blocking_connection`). `KILL <id>` rolls the blocker's transaction back —
-  the transcript proves the waiter completes and the blocker's uncommitted work
-  vanishes.
+And what now? The view even pre-writes the remediation for you
+(`sql_kill_blocking_connection`). `KILL <id>` rolls the blocker's transaction back; the
+transcript proves the waiter completes and the blocker's uncommitted work vanishes with it.
 
 `KILL` is the incident-response tool, not the fix. The fix is whatever lets a
 transaction sit idle while holding locks —
 [the next lesson](/mysql/08-production/long-and-idle-transactions) hunts those down
 before anyone gets paged.
 
-## Key takeaways
-
-- One query — `sys.innodb_lock_waits` joined to the processlist — names waiter, blocker,
-  and the blocker's state.
-- A blocker with `command = Sleep` is idle-in-transaction: locks with nobody home. Kill
-  it; its transaction rolls back and the queue drains.
-- The waiter needs no retry logic for the kill case — its statement simply completes
-  once the lock frees.
+The shape to remember: one query names waiter, blocker, and the blocker's state, and a
+blocker parked at `command = Sleep` is idle-in-transaction, locks with nobody home. Kill it
+and its transaction rolls back, the queue drains, and the waiter's statement finishes on
+its own with no retry logic in play. That the fix is a `KILL` and not a code change is the
+whole reason the next lesson exists: to find these before the page ever fires.
 
 ## Further reading
 

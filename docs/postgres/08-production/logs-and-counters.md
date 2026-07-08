@@ -1,4 +1,4 @@
-# Logs & counters
+# Logs and counters
 
 Transient failures leave permanent traces — if you've turned the right knobs on. This
 lesson covers the two places PostgreSQL records trouble: cumulative statistics views
@@ -15,7 +15,7 @@ tracker. The database still counts it — `pg_stat_database.deadlocks`:
 
 A counter that only ever goes up is an alerting gift: graph its rate, alert on a jump.
 (The scenario snapshots the counter into a table in its setup so the transcript shows a
-clean delta; in production you'd just graph the raw value. The
+clean delta; in production you'd graph the raw value directly. The
 `pg_stat_force_next_flush()` call is also demo plumbing — statistics normally reach the
 views within moments on their own.)
 
@@ -48,14 +48,11 @@ Two logging GUCs turn the log into a lock-debugging tool *before* things deadloc
   and a statement that spent its life waiting on a lock logs that time too, so slow-query
   logs catch lock victims, not just bad plans.
 
-## Key takeaways
-
-- `pg_stat_database` counts deadlocks (and rollbacks) forever — alert on the rate, not
-  on user reports.
-- `log_lock_waits = on` is cheap and names the blocker for every wait longer than
-  `deadlock_timeout` (1s by default). It's the flight recorder for lock queues.
-- Retry wrappers make errors invisible to humans. Counters and logs are how you keep
-  seeing them.
+`pg_stat_database` counts deadlocks and rollbacks forever, so alert on the rate rather
+than on user reports. Turning on `log_lock_waits` is cheap and names the blocker for
+every wait longer than `deadlock_timeout` (one second by default) — the flight recorder
+for lock queues. Retry wrappers are what make these failures invisible to humans, and the
+counters and logs are how you keep seeing them anyway.
 
 ## Further reading
 

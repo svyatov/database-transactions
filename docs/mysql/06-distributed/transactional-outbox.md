@@ -19,14 +19,14 @@ Write-first loses events; publish-first invents them.
 
 ## The fix: only ever write to one system
 
-The application never talks to the broker at all. The event is written **to the same
-database, in the same transaction** as the order — and
+The application never talks to the broker at all. The event is written *to the same
+database, in the same transaction* as the order — and
 [atomicity](/mysql/01-basics/what-is-a-transaction), which InnoDB has guaranteed since
 chapter 1, does the rest:
 
 <!--@include: ./parts/transactional-outbox.md-->
 
-A separate **relay** process moves events from the outbox to the broker. It is exactly
+A separate *relay* process moves events from the outbox to the broker. It is exactly
 the [SKIP LOCKED job-queue worker](/mysql/05-patterns/job-queue) from chapter 5, pointed at
 the `outbox` table.
 
@@ -41,23 +41,21 @@ at-least-once delivery — and repeats are exactly what chapter 5's
 ## No LISTEN/NOTIFY: the relay polls
 
 PostgreSQL pairs its outbox with
-[LISTEN/NOTIFY](/postgres/06-distributed/listen-notify) — a transactional wake-up call
-that removes the polling latency. **MySQL has no equivalent**: there is no server-push
-channel a commit can signal. The MySQL relay polls, and that's fine — a `SELECT … FOR
-UPDATE SKIP LOCKED` against an indexed, near-empty outbox every 100–500 ms is cheap, and
-the polling interval is your worst-case delivery latency. If that latency matters, the
-usual escalation is reading the binlog (Debezium-style change data capture), which turns
-the database's own replication stream into the wake-up call — same outbox table, no
-polling, considerably more moving parts.
+[LISTEN/NOTIFY](/postgres/06-distributed/listen-notify), a transactional wake-up call that
+removes the polling latency. MySQL has no equivalent: there's no server-push channel a
+commit can signal, so the MySQL relay polls. And that's fine. A `SELECT … FOR UPDATE SKIP
+LOCKED` against an indexed, near-empty outbox every 100–500 ms is cheap, and the polling
+interval is your worst-case delivery latency.
 
-## Key takeaways
+If that latency matters, the usual escalation is reading the binlog (Debezium-style change
+data capture), which turns the database's own replication stream into the wake-up call —
+same outbox table, no polling, considerably more moving parts.
 
-- The order and its event commit or vanish **together**; there is no window where one
-  exists without the other.
-- The relay is a SKIP LOCKED worker: crash-safe, parallelizable, five lines of SQL.
-  Consumers must be idempotent — delivery is at-least-once by construction.
-- No LISTEN/NOTIFY on MySQL: poll (simple, bounded latency) or tail the binlog with CDC
-  (fast, heavier).
+The order and its event commit or vanish together, with no window where one exists without
+the other. The relay is a SKIP LOCKED worker — crash-safe, parallelizable, five lines of
+SQL — so its consumers have to be idempotent, because delivery is at-least-once by
+construction. And with no LISTEN/NOTIFY on MySQL, you either poll for bounded latency or
+tail the binlog with CDC for speed at the cost of more moving parts.
 
 ## Further reading
 

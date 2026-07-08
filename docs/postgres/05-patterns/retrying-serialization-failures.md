@@ -21,7 +21,7 @@ and proves the second attempt succeeds:
 
 Attempt 1 computed `100 + 5` and died; attempt 2 read the world as it actually was —
 `110` — and wrote `115`. Nothing was lost: A's `+10` and B's `+5` both applied. The
-error was never a failure, just PostgreSQL saying *"not in this order — try again."*
+error was never a failure, only PostgreSQL saying *"not in this order — try again."*
 
 ## Retry the transaction, not the statement
 
@@ -32,17 +32,14 @@ just prevented. That's also why
 ["PostgreSQL does not offer an automatic retry facility, since it cannot do so with any guarantee of correctness"](https://www.postgresql.org/docs/current/mvcc-serialization-failure-handling.html):
 only the application knows where its transaction's logic begins.
 
-## Key takeaways
-
-- `40001` is **transient by design** — the same transaction, re-run against the new
-  state, succeeds. Treat it as control flow, not as an error to page anyone about.
-- Retry from the top: new `BEGIN`, fresh reads, recomputed values. Cap the attempts and
-  fail loudly when the cap is hit.
-- [Deadlocks (`40P01`)](/postgres/03-locking/deadlocks) deserve the same treatment — one of the
-  two transactions is rolled back precisely so it can be retried.
-- Anything non-transactional inside the loop (an email, an HTTP call) will run once per
-  attempt — move it out, or make it idempotent
-  ([idempotency keys](/postgres/05-patterns/idempotency)).
+The shape of the fix is small. Treat `40001` as transient by design, not as an error to
+page anyone about — the same transaction, re-run against the new state, succeeds. Retry
+from the top with a fresh `BEGIN`, fresh reads, and recomputed values, and cap the
+attempts so a genuinely stuck transaction fails loudly rather than spinning forever.
+[Deadlocks (`40P01`)](/postgres/03-locking/deadlocks) earn the same reflex: one of the two
+transactions is rolled back precisely so it can be retried. One caveat lives in the loop
+body: anything non-transactional inside it, an email or an HTTP call, runs once per
+attempt, so move it out or make it [idempotent](/postgres/05-patterns/idempotency).
 
 ## Further reading
 

@@ -12,15 +12,19 @@ steps:
   - A: BEGIN
   - A: INSERT INTO orders VALUES (1, 1)
     comment: FK check locks customers row 1 FOR KEY SHARE
+    tl: INSERT child → FK locks parent FOR KEY SHARE
 
   - note: FOR KEY SHARE doesn't mind non-key updates — B can change the balance.
   - B: UPDATE customers SET balance = 50 WHERE id = 1
+    tl: UPDATE parent balance → allowed (non-key)
 
   - note: But DELETE needs the strongest row lock (FOR UPDATE) — B has to wait.
   - B: DELETE FROM customers WHERE id = 1
     blocks: p1
+    tl: DELETE parent → needs FOR UPDATE
 
   - A: COMMIT
+    tl: COMMIT
 
   - note: A's order is now committed, so B's DELETE resumes — straight into the FK.
   - failure: p1

@@ -12,19 +12,22 @@ lesson; thresholds are starting points to tune, not laws.
 | 5 | Dead tuples dominate a hot table, or autovacuum hasn't touched it lately | `n_dead_tup / greatest(n_live_tup, 1)`, `now() - last_autovacuum` | [Bloat & vacuum health](/postgres/08-production/bloat-and-vacuum-health) |
 | 6 | Wraparound margin is half spent | `age(datfrozenxid) > autovacuum_freeze_max_age / 2` | [Bloat & vacuum health](/postgres/08-production/bloat-and-vacuum-health), [Wraparound](/postgres/04-mvcc/wraparound) |
 
-Three notes on using the list:
+Three of these alerts are really one story. Alerts 1 through 3 are the same incident
+caught at different ages: one forgotten transaction becomes a lock queue becomes a full
+pool, so alert 1 fires first and you treat it as the root rather than three separate
+pages.
 
-- **Alerts 1–3 are the same incident at different ages.** One forgotten transaction
-  becomes a lock queue becomes a full pool. Alert 1 fires first; treat it as the root.
-- **Alert 4 is a rate, not a level.** The counter
-  [never resets on its own](/postgres/08-production/logs-and-counters); a steady trickle of
-  deadlocks under load can be normal for your workload — a step change isn't.
-- **Don't forget the guardrails.** Every alert here has a matching timeout or setting
-  that prevents the page instead of announcing it:
-  [`statement_timeout` / `idle_in_transaction_session_timeout` / `transaction_timeout`](/postgres/08-production/long-and-idle-transactions),
-  [`lock_timeout` for DDL](/postgres/03-locking/table-locks-and-ddl),
-  [`log_lock_waits`](/postgres/08-production/logs-and-counters). An alert that fires often is a
-  setting waiting to be set.
+Alert 4 is different in kind — it's a rate, not a level. The deadlock counter
+[never resets on its own](/postgres/08-production/logs-and-counters), so a steady trickle
+under load can be normal for your workload while a step change is the thing worth paging
+on.
+
+Every alert here also has a matching guardrail that prevents the page instead of
+announcing it:
+[`statement_timeout` / `idle_in_transaction_session_timeout` / `transaction_timeout`](/postgres/08-production/long-and-idle-transactions),
+[`lock_timeout` for DDL](/postgres/03-locking/table-locks-and-ddl), and
+[`log_lock_waits`](/postgres/08-production/logs-and-counters). An alert that fires often is
+a setting waiting to be set.
 
 ## Further reading
 

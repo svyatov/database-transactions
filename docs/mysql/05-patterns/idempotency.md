@@ -1,4 +1,4 @@
-# Idempotency keys: exactly-once from at-least-once
+# Idempotency keys: exactly-once, built from at-least-once
 
 Networks deliver requests *at least* once: a response lost between the server and the
 client means the client retries — and the server does the work again. For "send email"
@@ -16,31 +16,36 @@ values" ("skip; return the stored result"):
 
 ## Why this survives every race
 
-- **Retry after commit** — the ordinary case. The second INSERT affects 0 rows; the
-  handler skips the charge and replays the recorded response.
-- **Retry racing the original** — the case that kills naive check-then-act
-  implementations. The duplicate-key check parks the retry on the
-  original's uncommitted row (the same wait as
-  [check-then-insert](/mysql/05-patterns/check-then-insert)); when the original commits,
-  the retry resolves to 0 affected rows. Had the original *rolled back*, the retry would
-  get 1 — and correctly do the work itself.
-- **The key and the work commit together.** The INSERT and the balance UPDATE share a
-  transaction, so there's no window where the charge happened but the key is missing (or
-  vice versa). This is the same discipline as the
-  [transactional outbox](/mysql/06-distributed/transactional-outbox) — state and evidence
-  in one atomic unit.
+The ordinary case is a retry that arrives after the original already committed. The second
+INSERT affects 0 rows, so the handler skips the charge and replays the recorded response.
+
+The case that kills naive check-then-act code is the retry that races the original while
+it's still in flight. The duplicate-key check parks the retry on the original's
+uncommitted row, the same wait you saw in
+[check-then-insert](/mysql/05-patterns/check-then-insert); when the original commits, the
+retry resolves to 0 affected rows and declines to charge. Had the original *rolled back*
+instead, the retry would have seen 1 affected row and correctly done the work itself.
+
+What holds both cases together is that the key and the work commit as a unit. The INSERT
+and the balance UPDATE share one transaction, so there's no window where the charge
+happened but the key is missing, or the reverse — the same discipline as the
+[transactional outbox](/mysql/06-distributed/transactional-outbox), state and its evidence
+in one atomic write.
 
 One design note: store the *result* (or enough to reconstruct the response) in the
-idempotency row, as the `amount` column sketches here — a retry must answer the client,
-not just decline to charge.
+idempotency row, as the `amount` column sketches here — a retry has to answer the client,
+not only decline to charge.
 
-## Key takeaways
+The 0-versus-1 probe leans on one driver assumption. The affected-rows count reports 0 for
+a no-op upsert only when the connection was opened *without* `CLIENT_FOUND_ROWS`; set that
+flag and an unchanged row reports 1 instead, which leaves the probe unable to tell a first
+charge from a replay. Check your driver before you trust the count.
 
-- Idempotency = a client-named key + a PRIMARY KEY, checked by the INSERT itself; 1
-  affected row means "first time, do the work", 0 means "done before, replay the answer".
-- The key row and the side effect must commit in the same transaction.
-- In-flight duplicates are handled by the unique index's own locking — no advisory locks,
-  no SELECTs, no isolation-level tricks.
+The shape stays small: a client-named key, a PRIMARY KEY that turns the second attempt
+into a visible duplicate, and an INSERT whose affected-rows count decides whether to do the
+work or replay the stored answer. Commit the key and the side effect in the same
+transaction, and the unique index's own locking handles the in-flight duplicate for you —
+no advisory locks, no pre-flight SELECT, no isolation-level tricks required.
 
 ## Further reading
 

@@ -12,7 +12,7 @@ Kafka.
 ## The dual-write problem
 
 Write to the database and publish to the broker — two writes, two systems, and a process
-that can die between them. It doesn't matter which write goes first; each order just picks
+that can die between them. It doesn't matter which write goes first; each order picks
 which lie you end up with:
 
 ```timeline
@@ -23,12 +23,12 @@ Broker: downstream never learns about the order
 
 Write-first loses events (downstream never learns about the order); publish-first invents
 them (downstream processes an order that was never placed). Retries don't fix this — they
-just change the odds. The two systems need to agree, and nothing makes them.
+only change the odds. The two systems need to agree, and nothing makes them.
 
 ## The fix: only ever write to one system
 
 The outbox pattern's insight is that the application never talks to the broker at all. The
-event is written **to the same database, in the same transaction** as the order — and
+event is written to the same database, in the same transaction as the order — and
 [atomicity](/concepts/what-is-a-transaction), which the database has guaranteed all along,
 does the rest:
 
@@ -41,7 +41,7 @@ Relay: SELECT … FROM outbox FOR UPDATE SKIP LOCKED
 Relay: publish to broker, DELETE FROM outbox, COMMIT
 ```
 
-A separate **relay** process moves events from the outbox table to the broker — typically a
+A separate *relay* process moves events from the outbox table to the broker — typically a
 `SKIP LOCKED` job-queue worker pointed at the outbox: crash-safe, parallelizable, five lines
 of SQL.
 
@@ -51,7 +51,7 @@ The relay itself still performs two writes to two systems: "publish to the broke
 "delete from the outbox". If it dies between them, the event is delivered *twice*. That is
 not a bug to fix but the deal you signed: the dual-write problem never disappears; the outbox
 shrinks it from "events can be lost or invented" down to "events can repeat" — and repeats
-are handled with **idempotent consumers**. Exactly-once is not on the menu; idempotent
+are handled with *idempotent consumers*. Exactly-once is not on the menu; idempotent
 at-least-once is how grown-ups spell it.
 
 ## See it happen

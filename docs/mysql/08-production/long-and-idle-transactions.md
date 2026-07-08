@@ -21,7 +21,8 @@ between:
 
 <!--@include: ./parts/timeout-guardrails.md-->
 
-The gap matters: **there is no `idle_in_transaction_session_timeout` equivalent.** The
+The gap matters, and it's a real one: MySQL has no `idle_in_transaction_session_timeout`
+equivalent. The
 session that opens a transaction and then waits on a slow API for 90 seconds is invisible
 to `max_execution_time` (no statement running) and untouched by any sane `wait_timeout`
 (that would also kill healthy idle pool connections). Your options are the detectors
@@ -29,18 +30,16 @@ above on a schedule, an application-side transaction deadline, or a proxy that e
 one. This is why [ORM pitfall #2](/mysql/05-patterns/orm-pitfalls) has to be fixed in
 code — the server won't save you.
 
-## Key takeaways
-
-- `information_schema.innodb_trx` (`trx_started`) finds long transactions; joining the
-  processlist (`command = Sleep`) finds the idle ones — the worst kind.
-- Read-only transactions pin purge too. Age-alert on the oldest `trx_started`
-  regardless of writes.
-- `max_execution_time` caps SELECT runtime; `wait_timeout` reaps dead-quiet sessions and
-  rolls back what they held. Neither covers idle-*in-transaction* — detect it, or
-  prevent it in code.
-- `innodb_lock_wait_timeout` ([chapter 3](/mysql/03-locking/nowait-skip-locked)) rolls
-  back the statement, not the transaction — a half-done transaction plus a naive retry
-  is a data bug.
+The detection kit and the guardrails split the work between them. `innodb_trx` finds the
+long transactions by `trx_started` and, joined to a `command = Sleep` processlist row, the
+idle ones that are worse; it flags the read-only offenders too, since those pin purge all
+the same, so age-alert on the oldest `trx_started` whether or not it ever wrote a row. The
+guardrails then cap what they can — `max_execution_time` for a runaway SELECT,
+`wait_timeout` for a dead-quiet session (rolling back whatever it held), and
+`innodb_lock_wait_timeout` ([chapter 3](/mysql/03-locking/nowait-skip-locked)) for a lock
+wait, though that last one rolls back only the statement, so a half-done transaction plus a
+naive retry is a data bug. None of the three closes the idle-in-transaction gap; that one
+you close in code.
 
 ## Further reading
 

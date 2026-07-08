@@ -13,14 +13,18 @@ steps:
   - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: SELECT count(*)::int AS n FROM orders WHERE amount >= 100
     expect: [{ n: 2 }]
+    tl: SELECT count → 2
 
   - note: >-
       Between A's two statements, B commits a new order that matches A's WHERE
       clause.
   - B: INSERT INTO orders VALUES (3, 700)
+    tl: INSERT order 3 (700), committed
   - A: SELECT count(*)::int AS n, sum(amount)::int AS total FROM orders WHERE amount >= 100
     expect: [{ n: 3, total: 1500 }]
     comment: a third row appeared out of nowhere — a phantom
+    tl: SELECT count → 3, total 1500 ← a phantom row
 
   - A: COMMIT
+    tl: COMMIT
   - note: A's report now says '2 orders' in one place and '3 orders, total 1500' in another.

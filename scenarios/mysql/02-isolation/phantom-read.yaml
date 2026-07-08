@@ -15,13 +15,16 @@ steps:
 
   - A: SELECT count(*) AS n FROM orders WHERE amount >= 100
     expect: [{ n: 2 }]
+    tl: count(amount ≥ 100) → 2
 
   - note: Between A's two statements, B commits a new order that matches A's WHERE clause.
   - B: INSERT INTO orders VALUES (3, 700)
+    tl: INSERT order 3 (autocommit)
 
   - A: SELECT count(*) AS n, CAST(sum(amount) AS SIGNED) AS total FROM orders WHERE amount >= 100
     expect: [{ n: 3, total: 1500 }]
     comment: a third row appeared out of nowhere — a phantom
+    tl: recount → 3, total 1500 — a phantom
 
   - A: COMMIT
   - note: A's report now says '2 orders' in one place and '3 orders, total 1500' in another.

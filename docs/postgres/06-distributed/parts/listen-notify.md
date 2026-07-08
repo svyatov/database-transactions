@@ -28,7 +28,7 @@ COMMIT
 
 *The listener wakes up: Asynchronous notification "orders" with payload "order 1 placed" received from server process with PID pid(A).*
 
-*A rolled-back NOTIFY simply never happened:*
+*A rolled-back NOTIFY never happened at all:*
 
 ```transcript
 A> BEGIN;

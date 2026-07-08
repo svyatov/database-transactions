@@ -23,7 +23,7 @@ Hermitage tests.
 | G2-item / G2 | [Write skew](/concepts/write-skew) | two transactions jointly break an invariant each one checked |
 | — | [Read-only anomaly](#the-read-only-anomaly) | even a pure report can observe an impossible state |
 
-Which isolation level stops which anomaly is an **engine** answer, not a standard answer.
+Which isolation level stops which anomaly is an *engine* answer, not a *standard* answer.
 The per-engine answer sheets — one cell per anomaly per level, each with its proof:
 [PostgreSQL's answers](/postgres/02-isolation/anomaly-catalog) ·
 [MySQL's answers](/mysql/02-isolation/anomaly-catalog).
@@ -44,7 +44,7 @@ Fekete et al., [*Making Snapshot Isolation Serializable*](https://doi.org/10.114
 ## The obscure ones
 
 The five anomalies below rarely make it into blog posts, because on most databases at most
-levels they simply can't happen. They're worth knowing precisely because *where* they can
+levels they can't happen. They're worth knowing precisely because *where* they can
 happen tells you what a level is really made of.
 
 ### Dirty write (G0)

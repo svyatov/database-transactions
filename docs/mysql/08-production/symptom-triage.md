@@ -14,15 +14,15 @@ is the index you paste into the incident channel.
 | Disk grows, queries don't slow | [history list health](/mysql/08-production/history-list-health) | [an old read view pins purge](/mysql/04-mvcc/history-list-length) | end the long transaction |
 | DDL hangs and takes the app with it | processlist: `Waiting for table metadata lock` | [metadata locks](/mysql/03-locking/table-locks-and-ddl) | `lock_wait_timeout` on the DDL session |
 
-Two MySQL-specific reflexes worth building:
+Two MySQL-specific reflexes are worth building on top of that table. Start with this one:
+errors that look alike often aren't. `1205` rolls back a single *statement* and leaves the
+transaction open, still holding its locks, while `1213` rolls back the whole *transaction*.
+Handling the two identically is [pitfall material](/mysql/07-pitfalls/compendium).
 
-- **Errors that look alike aren't.** `1205` rolls back a *statement* (transaction still
-  open, still holding locks); `1213` rolls back the *transaction*. Handling them
-  identically is [pitfall material](/mysql/07-pitfalls/compendium).
-- **Silence isn't health.** The costliest failures on this table — lost updates, write
-  skew, purge lag — produce no errors at all. They're found by
-  [counters](/mysql/08-production/logs-and-counters) and
-  [invariant checks](/mysql/02-isolation/serializable), not by grepping logs.
+The second reflex: silence isn't health. The costliest failures on this table — lost
+updates, write skew, purge lag — throw no error at all, so you catch them with
+[counters](/mysql/08-production/logs-and-counters) and
+[invariant checks](/mysql/02-isolation/serializable), never by grepping logs.
 
 ## Further reading
 

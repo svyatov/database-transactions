@@ -12,7 +12,7 @@ await db.query("UPDATE accounts SET balance = $1 WHERE id = $2", [balance + 10, 
 ```
 
 Read, modify in application code, write back. Run two of these concurrently and one deposit
-simply **vanishes** — no error, no log line, nothing:
+vanishes — no error, no log line, nothing:
 
 ```timeline
 Session A: SELECT balance → 100
@@ -24,7 +24,7 @@ Session B: COMMIT
 Session B: final balance 110, not 120 — one deposit is gone
 ```
 
-The SQL standard doesn't even list this anomaly (the literature calls it **P4**); production
+The SQL standard doesn't even list this anomaly (the literature calls it *P4*); production
 incident reports list it constantly. The write itself is perfectly legal — B updates through
 a value that was true when it read it. The loss comes from the *gap* between B's read and B's
 write.
@@ -40,7 +40,7 @@ write.
 This table holds the sharpest PostgreSQL/MySQL divergence on the whole site. PostgreSQL's
 REPEATABLE READ refuses to write through a stale snapshot; MySQL's UPDATE is a *current read*
 that applies your stale arithmetic to the newest row version and raises nothing. Code that
-relies on PostgreSQL's `40001` to catch this loses that protection **silently** when ported.
+relies on PostgreSQL's `40001` to catch this loses that protection silently when ported.
 
 ## The fixes
 

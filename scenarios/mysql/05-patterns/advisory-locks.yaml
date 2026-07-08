@@ -13,14 +13,17 @@ steps:
       the name 'migration' means "migration in progress".
   - A: SELECT GET_LOCK('migration', 0) AS got_it
     expect: [{ got_it: 1 }]
+    tl: GET_LOCK → held
   - B: SELECT GET_LOCK('migration', 0) AS got_it
     expect: [{ got_it: 0 }]
     comment: timeout 0 — an instant answer, no waiting
+    tl: GET_LOCK(0) → 0 (no wait)
 
   - note: "A positive timeout waits, but only that long. B gives it one second:"
   - B: SELECT GET_LOCK('migration', 1) AS got_it
     expect: [{ got_it: 0 }]
     comment: A still holds it — B gets 0 after the deadline instead of an error
+    tl: GET_LOCK(1s) → 0 (waited)
 
   - B: SELECT IS_FREE_LOCK('migration') AS free
     expect: [{ free: 0 }]
@@ -29,15 +32,19 @@ steps:
   - note: Advisory locks ignore transaction boundaries entirely — COMMIT releases nothing.
   - A: BEGIN
   - A: COMMIT
+    tl: COMMIT — releases nothing
   - B: SELECT GET_LOCK('migration', 0) AS got_it
     expect: [{ got_it: 0 }]
     comment: A's COMMIT changed nothing — the lock belongs to A's SESSION
+    tl: GET_LOCK → 0 (still A's)
 
   - A: SELECT RELEASE_LOCK('migration') AS released
     expect: [{ released: 1 }]
+    tl: RELEASE_LOCK
   - B: SELECT GET_LOCK('migration', 0) AS got_it
     expect: [{ got_it: 1 }]
     comment: now B is the migration runner
+    tl: GET_LOCK → held
 
   - note: >-
       One session can hold many named locks; RELEASE_ALL_LOCKS drops the lot.

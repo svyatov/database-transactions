@@ -9,21 +9,27 @@ sessions: [A, B]
 steps:
   - note: No BEGIN — the UPDATE is its own transaction, committed the instant it finishes.
   - A: UPDATE accounts SET balance = 150 WHERE id = 1
+    tl: UPDATE balance = 150 (autocommit)
 
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 150 }]
     comment: B sees it immediately
+    tl: SELECT balance → 150 (visible at once)
 
   - note: Inside an explicit transaction, A's change is invisible to B…
   - A: BEGIN
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
+    tl: UPDATE balance = 999 (uncommitted)
 
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 150 }]
     comment: still the old value
+    tl: SELECT balance → 150 (A's change hidden)
 
   - note: …until A commits.
   - A: COMMIT
+    tl: COMMIT
 
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 999 }]
+    tl: SELECT balance → 999 (now visible)

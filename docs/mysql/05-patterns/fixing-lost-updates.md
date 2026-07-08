@@ -48,14 +48,12 @@ lock across an edit form. The difference is the stakes: on PostgreSQL, REPEATABL
 a safety net that turns the missed case into a `40001`; on MySQL
 [there is no net](/mysql/02-isolation/anomaly-catalog).
 
-## Key takeaways
-
-- No MySQL isolation level below SERIALIZABLE prevents lost updates — the fix is atomic
-  SQL, a locking read, or a version column.
-- `FOR UPDATE` reads the latest committed data even at REPEATABLE READ (current read) —
-  the snapshot-piercing that's a trap elsewhere is the feature here.
-- Version-column writes signal "lost the race" via 0 affected rows; that signal is the
-  retry trigger.
+The through-line: no MySQL isolation level below SERIALIZABLE prevents a lost update, which
+leaves you three tools — compute atomically in SQL, take a locking read, or carry a version
+column. A `FOR UPDATE` read returns the latest committed data even at REPEATABLE READ, so
+the snapshot-piercing that's a trap elsewhere becomes the feature you want here. And a
+version-column write that matches 0 rows is handing you the retry signal, not a failure to
+swallow.
 
 ## Further reading
 

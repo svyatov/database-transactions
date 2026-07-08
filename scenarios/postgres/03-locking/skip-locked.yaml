@@ -12,24 +12,30 @@ steps:
   - A: BEGIN
   - A: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1 }]
+    tl: SKIP LOCKED → job 1
 
   - B: BEGIN
   - B: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 2 }]
     comment: job 1 is locked by A — skipped, no waiting
+    tl: SKIP LOCKED → job 2 (skips 1)
 
   - C: BEGIN
   - C: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 3 }]
+    tl: SKIP LOCKED → job 3 (skips 1, 2)
 
   - note: Worker D finds the queue empty — an instant answer, not a wait.
   - D: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: []
+    tl: SKIP LOCKED → nothing free
 
   - note: A worker crash (rollback) puts its job straight back on the queue.
   - A: ROLLBACK
+    tl: ROLLBACK → job 1 back on the queue
   - D: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1 }]
+    tl: SKIP LOCKED → job 1
 
   - B: COMMIT
   - C: COMMIT

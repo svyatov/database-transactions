@@ -1,9 +1,9 @@
 # Row locks
 
-MVCC means readers and writers never block each other — so who *does* block? Writers
-competing for the **same rows**. Every UPDATE and DELETE takes a row lock; you can take them
-explicitly with `SELECT ... FOR UPDATE` and friends. This page shows what those locks do,
-which ones coexist, and the row locks you're taking without knowing it.
+MVCC means readers and writers never block each other — so who *does* block? Writers competing
+for the same rows. Every UPDATE and DELETE takes a row lock, and you can take one explicitly
+with `SELECT ... FOR UPDATE` and friends. This page shows what those locks do, which ones
+coexist, and the row locks you're taking without knowing it.
 
 ## FOR UPDATE blocks writers — and only writers
 
@@ -22,39 +22,37 @@ is the same conflict matrix):
 | **FOR NO KEY UPDATE** | ✅ | ⛔ | ⛔ | ⛔ |
 | **FOR UPDATE** | ⛔ | ⛔ | ⛔ | ⛔ |
 
-You rarely type the middle two — but PostgreSQL uses them constantly
-([Row-Level Locks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)):
-
-- an **UPDATE that doesn't touch key columns** takes `FOR NO KEY UPDATE` ("this lock mode is
-  also acquired by any UPDATE that does not acquire a FOR UPDATE lock");
-- an **UPDATE that changes a key, and every DELETE**, takes `FOR UPDATE`;
-- a **foreign-key check** takes `FOR KEY SHARE` on the referenced row. The manual never quite
-  says so — but the scenario below proves it: the conflict signature you'll see (non-key
-  UPDATE passes, DELETE blocks) matches `FOR KEY SHARE` and nothing else in the matrix.
+You rarely type the middle two by hand, yet PostgreSQL reaches for them constantly
+([Row-Level Locks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)).
+An UPDATE that doesn't touch key columns takes `FOR NO KEY UPDATE` — the manual: "This lock mode
+is also acquired by any UPDATE that does not acquire a FOR UPDATE lock." An UPDATE that changes a
+key, and every DELETE, takes the full `FOR UPDATE`. A foreign-key check takes the weakest mode,
+`FOR KEY SHARE`, on the referenced row; the manual never quite says so, but the scenario below
+proves it — the conflict signature you'll see, a non-key UPDATE passing while a DELETE blocks,
+matches `FOR KEY SHARE` and nothing else in the matrix.
 
 <!--@include: ./parts/lock-mode-matrix.md-->
 
 ## The row locks you didn't know you were taking
 
-Insert a child row, and PostgreSQL locks the parent row for you — with `FOR KEY SHARE`, the
-weakest mode, so the parent can still be updated, just not deleted or re-keyed. That's not a
-courtesy: without the lock, the parent could vanish between the FK check and the commit.
+Insert a child row, and PostgreSQL locks the parent row for you — with `FOR KEY SHARE`, so the
+parent can still be updated, but not deleted or re-keyed. That's not a courtesy: without the
+lock, the parent could vanish between the FK check and the commit.
 
 <!--@include: ./parts/fk-key-share.md-->
 
-## Key takeaways
+Once you know the implicit locks, most "why is this blocked?" mysteries explain themselves. A
+plain `SELECT` takes no row locks, ever — row locks are a writers-only affair. `UPDATE` takes
+`FOR NO KEY UPDATE`, `DELETE` (or a key-changing `UPDATE`) takes `FOR UPDATE`, and an FK insert
+takes `FOR KEY SHARE` on the parent. Two share-mode locks coexist, which is what keeps hot
+parent rows survivable under foreign-key churn.
 
-- Plain `SELECT` takes **no row locks, ever**. Row locks are a writers-only affair.
-- `UPDATE` = `FOR NO KEY UPDATE`, `DELETE` (or key-changing `UPDATE`) = `FOR UPDATE`,
-  FK insert = `FOR KEY SHARE` on the parent. Know the implicit locks and the matrix above
-  explains most "why is this blocked?" mysteries.
-- Two share-mode locks coexist; that's what makes hot parent rows under FK churn survivable.
-- Row locks live until the transaction ends — there is no unlock statement. Long transaction =
-  long locks.
-- Row locks are written **into the row on disk** (`SELECT FOR UPDATE` causes writes!), which
-  is why there's
-  [no limit on how many rows you can lock](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS) —
-  and why they're invisible in `pg_locks` ([monitoring lesson](/postgres/03-locking/monitoring-locks)).
+Two properties of row locks carry over into the next chapters. They live until the transaction
+ends — there's no unlock statement, so a long transaction means long-held locks. And they're
+written into the row on disk: `SELECT FOR UPDATE` causes writes, which is why there's
+[no limit on how many rows you can lock](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)
+and why they're invisible in `pg_locks`. The [monitoring lesson](/postgres/03-locking/monitoring-locks)
+shows what you see instead, and the MVCC chapter shows the `xmax` stamp that does the work.
 
 ## Further reading
 

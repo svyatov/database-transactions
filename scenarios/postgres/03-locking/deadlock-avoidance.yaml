@@ -11,16 +11,19 @@ steps:
   - note: Both transfers grab *all* their row locks up front, ordered by id.
   - A: BEGIN
   - A: SELECT id FROM accounts WHERE id IN (1, 2) ORDER BY id FOR UPDATE
+    tl: SELECT id IN (1,2) … FOR UPDATE → locks both, in id order
 
   - B: BEGIN
   - B: SELECT id FROM accounts WHERE id IN (1, 2) ORDER BY id FOR UPDATE
     blocks: p1
+    tl: SELECT id IN (1,2) … FOR UPDATE
 
   - note: >-
       No cycle is possible: B parks at the first row and holds nothing A needs.
   - A: UPDATE accounts SET balance = balance - 10 WHERE id = 1
   - A: UPDATE accounts SET balance = balance + 10 WHERE id = 2
   - A: COMMIT
+    tl: COMMIT → releases both
 
   - success: p1
   - B: UPDATE accounts SET balance = balance - 25 WHERE id = 2

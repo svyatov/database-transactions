@@ -1,7 +1,7 @@
 # NOWAIT, lock_timeout, SKIP LOCKED
 
-Waiting in the [lock queue](/postgres/03-locking/lock-queues) is the default, not the law. PostgreSQL
-gives you three ways out, and they answer three different questions:
+Waiting in the [lock queue](/postgres/03-locking/lock-queues) is the default, not the law.
+PostgreSQL gives you three ways out, and they answer three different questions:
 
 | Escape hatch | The question it answers |
 |---|---|
@@ -21,19 +21,23 @@ gives you three ways out, and they answer three different questions:
 
 <!--@include: ./parts/skip-locked.md-->
 
-## Key takeaways
+All three of these speak the same SQLSTATE, `55P03` (`lock_not_available`) — `NOWAIT` raises it
+the instant the row is taken, `lock_timeout` raises it once your patience runs out. Handle it the
+way you'd handle a `40001` serialization failure: back off and retry. `lock_timeout` in
+particular applies
+[separately to each lock the statement tries to acquire](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT),
+which is what makes it the seatbelt every [migration](/postgres/03-locking/table-locks-and-ddl)
+should wear.
 
-- All three failures speak **SQLSTATE `55P03`** (`lock_not_available`) — `NOWAIT`
-  immediately, `lock_timeout` after the timeout. Handle it like `40001`: back off, retry.
-- `lock_timeout` applies
-  [separately to each lock the statement tries to acquire](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT),
-  and it's the seatbelt every [migration](/postgres/03-locking/table-locks-and-ddl) should wear.
-- `SKIP LOCKED` deliberately returns an inconsistent view — the manual:
-  ["skipping locked rows provides an inconsistent view of the data, so this is not suitable for
-  general purpose work, but can be used to avoid lock contention with multiple consumers
-  accessing a queue-like table"](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE).
-  The patterns chapter builds a [full worker queue](/postgres/05-patterns/job-queue) on it.
-- A rolled-back worker's row simply reappears for the next taker — crash safety for free.
+`SKIP LOCKED` is the odd one out, because it doesn't fail at all — it lies by omission. The
+manual is upfront that this is deliberate: "Skipping locked rows provides an inconsistent view of
+the data, so this is not suitable for general purpose work, but can be used to avoid lock
+contention with multiple consumers accessing a queue-like table."
+([SELECT — The Locking Clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE).)
+That inconsistency is exactly what a job queue wants: each worker grabs a different free row and
+never blocks, and a worker that rolls back puts its row straight back for the next taker, so you
+get crash safety for free. The patterns chapter builds a [full worker queue](/postgres/05-patterns/job-queue)
+on precisely this.
 
 ## Further reading
 

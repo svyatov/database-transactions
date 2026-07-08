@@ -9,31 +9,30 @@ growing" from a mystery into a name:
 
 ## Turning it into monitoring
 
-- **The metric**: `trx_rseg_history_len` from `information_schema.INNODB_METRICS` — the
-  queryable form of `History list length` in `SHOW ENGINE INNODB STATUS`. The
-  [manual's baseline](https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html):
-  "typically a low value, usually less than a few thousand". Graph it; alert on
-  *sustained growth*, not on any absolute number — write bursts spike it harmlessly,
-  and purge absorbs those on its own.
-- **The attribution**: when it grows and stays grown, the second query names the oldest
-  read view. The `ORDER BY trx_started LIMIT 1` row is purge's whole blocker — end that
-  transaction and the backlog drains without any further action from you.
-- **What NOT to do**: don't reach for purge tuning
-  ([`innodb_purge_threads` and friends](/mysql/04-mvcc/purge)) while the oldest
-  transaction is hours old. Purge isn't slow; it's *forbidden*.
+The metric to graph is `trx_rseg_history_len` from
+`information_schema.INNODB_METRICS`, the queryable form of the `History list length` you'd
+otherwise read off `SHOW ENGINE INNODB STATUS`. The
+[manual's baseline](https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html)
+is "typically a low value, usually less than a few thousand", so what you alert on is
+*sustained* growth, never an absolute number. A write burst spikes the value and purge
+absorbs the spike on its own; a line that climbs and stays climbed is the signal you care
+about.
+
+Once it does stay grown, the second query names the culprit. The oldest read view — the
+`ORDER BY trx_started LIMIT 1` row — is purge's entire blocker, so ending that one
+transaction drains the backlog with no further action from you. What you shouldn't do is
+reach for purge tuning ([`innodb_purge_threads` and friends](/mysql/04-mvcc/purge)) while
+the oldest transaction is hours old. Purge isn't slow here; it's *forbidden*, and no
+amount of tuning lifts a ban.
 
 Unlike PostgreSQL there's no table-level bloat to inspect and no
 [VACUUM scheduling to audit](/postgres/08-production/bloat-and-vacuum-health) — undo
 lives centrally, so this one metric plus one attribution query is the whole checkup.
 
-## Key takeaways
-
-- Alert on sustained `trx_rseg_history_len` growth; spikes that drain are normal
-  operation.
-- The culprit query (oldest `trx_started` in `innodb_trx`) turns the alert into a
-  session name — the fix is ending a transaction, not tuning purge.
-- Undo growth is invisible in query latency until it isn't (bigger version chains, fuller
-  undo tablespaces) — catch it on the graph, not in the incident.
+Undo growth stays invisible in query latency right up until it doesn't: version chains
+lengthen, the undo tablespace fills, and by then you're already in the incident. Catch it
+on the graph instead, where a slow climb in `trx_rseg_history_len` buys you days of warning
+and hands you a single transaction to go end.
 
 ## Further reading
 

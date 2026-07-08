@@ -9,14 +9,18 @@ sessions: [A, B]
 steps:
   - note: Two deploy runners must not migrate the same database at once. They agree lock 42 means 'migration in progress'.
   - A: SELECT pg_advisory_lock(42)
+    tl: lock(42) → held
   - B: SELECT pg_try_advisory_lock(42) AS got_it
     expect: [{ got_it: false }]
     comment: an instant answer — no waiting
+    tl: try-lock(42) → false (no wait)
 
   - note: "try-lock says no without waiting. A runner can also queue up for the lock:"
   - B: SELECT pg_advisory_lock(42)
     blocks: p1
+    tl: lock(42)
   - A: SELECT pg_advisory_unlock(42) AS released
+    tl: unlock(42)
   - success: p1
 
   - note: Session-level locks ignore transaction boundaries entirely — COMMIT releases nothing.

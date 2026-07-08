@@ -10,15 +10,14 @@ however, counts:
 
 <!--@include: ./parts/deadlock-counter.md-->
 
-Two companions to the counter:
-
-- `SHOW ENGINE INNODB STATUS` keeps the *full story of the most recent deadlock* — both
-  transactions, both statements, both lock chains — under `LATEST DETECTED DEADLOCK`.
-  Invaluable for diagnosing [which two queries](/mysql/03-locking/deadlocks) are fighting;
-  useless for counting, since each deadlock overwrites the last.
-- `innodb_print_all_deadlocks = ON` writes that same report for *every* deadlock into
-  the error log — turn it on when the counter starts climbing and you need the full
-  population, not the latest sample.
+Two companions round out the counter. `SHOW ENGINE INNODB STATUS` keeps the full story of
+the most recent deadlock — both transactions, both statements, both lock chains — under
+its `LATEST DETECTED DEADLOCK` section, which makes it invaluable for diagnosing
+[which two queries](/mysql/03-locking/deadlocks) are fighting and useless for counting,
+since each new deadlock overwrites the last. When the counter starts climbing and you want
+the full population rather than the latest sample, set `innodb_print_all_deadlocks = ON`
+and MySQL writes that same report into the error log for every deadlock, not only the one
+you happened to catch.
 
 ## The counters worth graphing
 
@@ -34,22 +33,20 @@ all proven meaningful by scenarios on this site:
 
 ## The logs worth having
 
-- **The slow query log** (`slow_query_log`, `long_query_time`) — the classic. One
-  under-appreciated transaction use: a query that spent its time in a
-  [lock wait](/mysql/03-locking/lock-queues) shows a long wall-clock time with trivial
-  examine counts — that shape means "victim of a blocker", not "needs an index".
-- **The error log** gets deadlock reports only with `innodb_print_all_deadlocks = ON`;
-  aborted connections and `wait_timeout` reaps land there too
-  ([timeout guardrails](/mysql/08-production/long-and-idle-transactions)).
+Two logs earn their keep for transaction work. The slow query log (`slow_query_log`,
+`long_query_time`) is the classic, and it has one under-appreciated use: a query that spent
+its time in a [lock wait](/mysql/03-locking/lock-queues) shows a long wall-clock time with
+trivial examine counts, and that shape means "victim of a blocker", not "needs an index".
+The error log is where deadlock reports land once `innodb_print_all_deadlocks = ON`, next
+to the aborted connections and `wait_timeout` reaps from
+[timeout guardrails](/mysql/08-production/long-and-idle-transactions).
 
-## Key takeaways
-
-- `lock_deadlocks` is monotonic: alert on its rate. `LATEST DETECTED DEADLOCK` explains
-  the most recent one; `innodb_print_all_deadlocks` logs them all.
-- Four INNODB_METRICS counters cover the transaction failure modes: deadlocks, lock
-  timeouts, purge backlog, lock waiting.
-- Slow-log entries with big time and tiny row counts are lock victims — triage the
-  blocker, not the query plan.
+What no counter here catches is the silent failure: a lost update or a write skew commits
+cleanly and leaves every metric untouched, which is why those get caught in code rather
+than on a graph. For everything loud, the counters suffice — alert on the rate of
+`lock_deadlocks`, keep `LATEST DETECTED DEADLOCK` for the last one and
+`innodb_print_all_deadlocks` for the full population, and read a slow-log row with big time
+and tiny examine counts as a lock victim rather than a missing index.
 
 ## Further reading
 

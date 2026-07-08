@@ -19,7 +19,7 @@ decorative. The
 
 A migration that inserts data, alters a table, then fails leaves the database in a state
 *no version of your code describes* — half-migrated, permanently. Write MySQL migrations
-to be **re-runnable** (idempotent steps, one DDL per migration) instead of assuming
+to be *re-runnable* (idempotent steps, one DDL per migration) instead of assuming
 atomicity the engine doesn't offer.
 
 ## Pitfall #2: the transaction that outlives the query
@@ -54,15 +54,13 @@ lost updates [pass silently](/mysql/02-isolation/lost-update), and there's no
 so per-transaction — and then own the [`1213` retry loop](/mysql/05-patterns/retrying-deadlocks),
 because the ORM won't rerun your business logic for you.
 
-## Key takeaways
-
-- MySQL has **no transactional DDL**: every migration step that touches schema commits
-  everything before it. Design migrations to re-run, not to roll back.
-- An ORM transaction is open from its first statement until your code returns — and MySQL
-  has no idle-in-transaction timeout to save you. Keep I/O out.
-- Object-style read-modify-write is a lost update by default; enable version columns or
-  locking reads.
-- Isolation level and retry-on-`1213` are your job, not the ORM's.
+Four habits keep these from biting. MySQL has no transactional DDL, so every migration step
+that touches the schema commits everything before it — design migrations to re-run, never
+to roll back. An ORM transaction stays open from its first statement until your code
+returns, and with no idle-in-transaction timeout to save you, keeping network I/O out of it
+falls to you. Object-style read-modify-write is a lost update by default until you turn on
+a version column or a locking read, and the isolation level and the `1213` retry loop are
+your job, not the ORM's.
 
 ## Further reading
 

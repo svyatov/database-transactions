@@ -41,5 +41,5 @@ steps:
     comment: A's transfer survived; B's evaporated — retry it
 
   - note: >-
-      Note: unlike a lock timeout, a deadlock rolls back B's ENTIRE transaction
-      — there is nothing left to ROLLBACK.
+      Unlike a lock timeout, a deadlock rolls back B's entire transaction —
+      there is nothing left to ROLLBACK.

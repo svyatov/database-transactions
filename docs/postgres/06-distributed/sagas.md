@@ -1,9 +1,9 @@
 # Sagas: transactions that can't ROLLBACK
 
 Book a flight with one provider, a hotel with another, charge a card with a third.
-Three services, three databases — and no transaction that spans them. A **saga** is
+Three services, three databases — and no transaction that spans them. A *saga* is
 the honest answer: a chain of *local* transactions, where every completed step has a
-prepared apology — a **compensating transaction** that semantically undoes it if a
+prepared apology — a *compensating transaction* that semantically undoes it if a
 later step fails.
 
 ## Watch a saga fail forward
@@ -16,29 +16,29 @@ real*, so when step 2 fails, the only way back is a new forward transaction:
 
 ## What the transcript just proved
 
-- **Each step commits immediately.** There is no long-lived transaction holding
-  [locks](/postgres/03-locking/row-locks) or [pinning VACUUM](/postgres/04-mvcc/long-transactions)
-  across service calls — that's the whole reason sagas exist.
-- **A saga has no isolation.** `Reader` saw the booked seat *between* steps — a state
-  the saga later revoked. Every anomaly chapter 2 catalogued between statements can now
-  happen between *steps*, and no isolation level can help, because there is no
-  enclosing transaction. If another traveler grabs a seat based on what they saw
-  mid-saga, that's yours to design for.
-- **Compensation is not ROLLBACK.** `seats = seats + 1` is ordinary committed history —
-  the anomaly window really happened and stays visible in the log. Compensations must be
-  written per step, must tolerate being retried (make them
-  [idempotent](/postgres/05-patterns/idempotency)), and some steps — an email sent, cash
-  dispensed — simply have none. Order the saga so irreversible steps come last.
+Three things in that transcript are worth naming. Each step commits immediately, so
+there's no long-lived transaction holding [locks](/postgres/03-locking/row-locks) or
+[pinning VACUUM](/postgres/04-mvcc/long-transactions) across service calls — which is the
+whole reason sagas exist. A saga also has no isolation: `Reader` saw the booked seat
+*between* steps, a state the saga later revoked, so every anomaly chapter 2 catalogued
+between statements can now happen between *steps*, and no isolation level can help,
+because there's no enclosing transaction to reach for. If another traveler grabs a seat
+based on what they saw mid-saga, that's yours to design for.
 
-## Key takeaways
+And compensation is not ROLLBACK. `seats = seats + 1` is ordinary committed history — the
+anomaly window really happened and stays visible in the log. Compensations have to be
+written per step and have to tolerate being retried, so make them
+[idempotent](/postgres/05-patterns/idempotency); some steps, an email sent or cash
+dispensed, have none at all, which is why you order the saga to put irreversible steps
+last.
 
-- A saga trades one impossible distributed transaction for N possible local ones plus
-  N compensations. You write — and test — the compensations.
-- Isolation is gone between steps. Name the intermediate states, decide who may see
-  them, and put irreversible steps at the end.
-- Steps and compensations travel between services as messages, so the
-  [outbox](/postgres/06-distributed/transactional-outbox) is the saga's transport: each step's
-  "done" event commits atomically with the step itself.
+Underneath it all, a saga trades one impossible distributed transaction for N possible
+local ones plus N compensations you write and test yourself. Isolation is gone between
+the steps, so name the intermediate states, decide who is allowed to see them, and push
+irreversible steps to the end. And because steps and their compensations travel between
+services as messages, the [outbox](/postgres/06-distributed/transactional-outbox) is the
+saga's transport: each step's "done" event commits atomically with the step that produced
+it.
 
 ## Further reading
 

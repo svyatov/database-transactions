@@ -15,8 +15,8 @@ successfully, `0` if the attempt timed out".
 
 ## Session-level only — and that's the sharp edge
 
-The transcript's middle section is the part that bites people: **transactions are
-irrelevant to these locks.** The manual, verbatim: "Locks obtained with `GET_LOCK()` are
+The transcript's middle section is the part that bites people: transactions are
+irrelevant to these locks. The manual, verbatim: "Locks obtained with `GET_LOCK()` are
 not released when transactions commit or roll back." There is no transaction-scoped
 variant — PostgreSQL has both
 ([`pg_advisory_lock` and `pg_advisory_xact_lock`](/postgres/05-patterns/advisory-locks));
@@ -31,15 +31,13 @@ the connection to the pool, and the lock lives on in a healthy idle session that
 remembers owning. With a pool, always release in a `finally`, or pin the lock to a
 dedicated connection.
 
-## Key takeaways
-
-- `GET_LOCK(name, 0)` = try-lock; positive timeout = bounded wait returning `0`, not an
-  error; `-1` = wait forever.
-- Locks are **session**-scoped: COMMIT/ROLLBACK don't touch them; disconnect (or crash)
-  releases them. With pooled connections, that means *nothing* auto-releases — use
-  `finally`.
-- `IS_FREE_LOCK` peeks without taking; `RELEASE_ALL_LOCKS()` returns how many it dropped.
-- Names are server-global — prefix them (`myapp:migration`) if the server is shared.
+A few operational notes worth keeping. `GET_LOCK(name, 0)` is a try-lock, a positive
+timeout is a bounded wait that returns `0` rather than erroring when it expires, and `-1`
+waits forever. The locks are session-scoped, so COMMIT and ROLLBACK never touch them and
+only a disconnect or crash releases them — which, with pooled connections, means nothing
+auto-releases, so reach for `finally`. `IS_FREE_LOCK` peeks without taking,
+`RELEASE_ALL_LOCKS()` returns how many locks it dropped, and because names are
+server-global you'll want to prefix them (`myapp:migration`) on a shared server.
 
 ## Further reading
 

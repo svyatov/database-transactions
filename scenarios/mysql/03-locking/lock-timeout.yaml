@@ -10,15 +10,19 @@ sessions: [A, B]
 steps:
   - A: BEGIN
   - A: UPDATE accounts SET balance = 200 WHERE id = 1
+    tl: UPDATE (holds row lock)
 
   - B: SET SESSION innodb_lock_wait_timeout = 1
   - note: B queues for the row lock like anyone else — but gives up after a second.
   - B.fails: UPDATE accounts SET balance = 300 WHERE id = 1
     error: "1205"
     comment: ER_LOCK_WAIT_TIMEOUT, raised after the timeout
+    tl: UPDATE — waits 1s
 
   - note: The failure canceled only B's statement — a retry after A commits works.
   - A: COMMIT
+    tl: COMMIT
   - B: UPDATE accounts SET balance = 300 WHERE id = 1
+    tl: retry UPDATE → 300
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 300 }]

@@ -12,12 +12,15 @@ steps:
   - R: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ id: 1, balance: 100 }, { id: 2, balance: 200 }, { id: 3, balance: 300 }]
     comment: the read view opens here
+    tl: reads 3 rows — snapshot opens
 
   - note: A deletes every row — and commits. This is not a trick; the data is gone.
   - A: DELETE FROM accounts
     affected: 3
+    tl: DELETE all 3 (+ commit)
   - A: SELECT count(*) AS remaining FROM accounts
     expect: [{ remaining: 0 }]
+    tl: table now empty
 
   - note: >-
       R's SELECT finds three rows anyway. InnoDB follows each deleted record's
@@ -26,8 +29,11 @@ steps:
   - R: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ id: 1, balance: 100 }, { id: 2, balance: 200 }, { id: 3, balance: 300 }]
     comment: reconstructed from undo, not read from the table
+    tl: still sees 3 rows (from undo)
 
   - R: COMMIT
+    tl: COMMIT — snapshot released
   - R: SELECT count(*) AS remaining FROM accounts
     expect: [{ remaining: 0 }]
     comment: the read view is gone — and with it, R's claim on that history
+    tl: now sees 0 too

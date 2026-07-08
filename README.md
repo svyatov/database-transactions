@@ -3,7 +3,7 @@
 **Learn database transactions from verified, runnable examples.**
 
 An interactive tutorial covering isolation levels, anomalies, locking, MVCC, and real-world
-concurrency patterns — where **every single claim is proven by executable code** running against
+concurrency patterns, where **every single claim is proven by executable code** running against
 a real database.
 
 📖 **Read online:** https://svyatov.github.io/database-transactions/
@@ -12,10 +12,10 @@ a real database.
 
 Learning transactions usually means piecing things together from scattered articles with the
 official manual open in another tab. This project puts the whole picture in one place and
-holds it to one rule — nothing is claimed, everything is demonstrated:
+holds it to one rule, nothing is claimed and everything is demonstrated:
 
 - Every session transcript you see in the docs is **generated from a real run** against
-  the database — never hand-written, so it can never drift from actual behavior.
+  the database, never hand-written, so it can never drift from actual behavior.
 - Every lesson ships with a **scenario**: an executable definition that orchestrates
   concurrent sessions and **asserts** the outcome (`bun test` runs them all).
 - CI regenerates every transcript on every push and fails if anything changed.
@@ -35,36 +35,36 @@ bun run gen                   # regenerate all transcripts from real runs
 bun run docs:dev              # browse the site locally
 ```
 
-Requirements: [Bun](https://bun.com) and [Docker](https://www.docker.com/). That's it —
-the database client is built into Bun.
+Requirements: [Bun](https://bun.com) and [Docker](https://www.docker.com/). That's it.
+The database client is built into Bun.
 
 ## Curriculum
 
 | Chapter | PostgreSQL | MySQL |
 |---|---|---|
-| 1. Transactions 101 — ACID, BEGIN/COMMIT/ROLLBACK, savepoints | ✅ | ✅ |
-| 2. Isolation levels & anomalies — dirty reads, non-repeatable reads, phantoms, lost updates, write skew | ✅ | ✅ |
-| 3. Locking — row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | ✅ | ✅ |
-| 4. MVCC internals — snapshots, bloat, VACUUM / undo logs, history length | ✅ | ✅ |
-| 5. Real-world patterns — optimistic/pessimistic locking, retries, job queues, idempotency | ✅ | ✅ |
-| 6. Transactions across services — outbox, sagas, two-phase commit | ✅ | ✅ |
-| 7. Pitfalls compendium — symptom → broken pattern → fix | ✅ | ✅ |
-| 8. Production — spotting, debugging, and monitoring transaction bugs live | ✅ | ✅ |
+| 1. Transactions 101: ACID, BEGIN/COMMIT/ROLLBACK, savepoints | ✅ | ✅ |
+| 2. Isolation levels & anomalies: dirty reads, non-repeatable reads, phantoms, lost updates, write skew | ✅ | ✅ |
+| 3. Locking: row locks, lock queues, NOWAIT/SKIP LOCKED, deadlocks, monitoring | ✅ | ✅ |
+| 4. MVCC internals: snapshots, bloat, VACUUM / undo logs, history length | ✅ | ✅ |
+| 5. Real-world patterns: optimistic/pessimistic locking, retries, job queues, idempotency | ✅ | ✅ |
+| 6. Transactions across services: outbox, sagas, two-phase commit | ✅ | ✅ |
+| 7. Pitfalls compendium: symptom → broken pattern → fix | ✅ | ✅ |
+| 8. Production: spotting, debugging, and monitoring transaction bugs live | ✅ | ✅ |
 
 Every scenario is also re-verified in CI through a **second, independent pair of drivers**
 (psycopg + PyMySQL, via a thin Python harness). Two drivers agreeing on every assertion is
-the proof that a claim is database behavior, not a driver artifact — where they genuinely
+the proof that a claim is database behavior, not a driver artifact. Where they genuinely
 differ (e.g. on server-side connection kills), the scenario says so explicitly.
 
 ```sh
 uv sync --directory python && uv run --directory python pytest   # the same claims, second drivers
 ```
 
-## How it works
+## Repository layout
 
 - `scenarios/<db>/` — one **YAML file per demo**: named sessions (dedicated database
   connections), an ordered list of SQL steps interleaving them, and the expected outcome
-  of each step — including "this query MUST block now", verified via live lock-wait
+  of each step, including "this query MUST block now", verified via live lock-wait
   monitoring. A handful of scenarios whose *client code* is the lesson (retry loops,
   LISTEN/NOTIFY) stay as TypeScript.
 - `harness/` — ~800 lines that make the above work: `loader.ts` interprets the YAML,
@@ -72,13 +72,20 @@ uv sync --directory python && uv run --directory python pytest   # the same clai
   small and readable; it's part of the learning material.
 - `python/` — the cross-driver check: a second thin harness (psycopg + PyMySQL) that
   pytest runs in CI against the *same* YAML scenarios. Transcripts come only from the
-  TypeScript harness — this one exists purely to re-verify the claims.
+  TypeScript harness; this one exists purely to re-verify the claims.
 - `docs/<db>/` — the VitePress site, one track per database. Lesson pages show plain SQL:
-  the *generated transcripts* (color-coded per session) — nothing is duplicated by hand.
+  the *generated transcripts* (color-coded per session), nothing is duplicated by hand.
+
+## Questions and feedback
+
+Something in the docs unclear, hard to follow, or missing? Have a suggestion, an idea for a
+lesson, or just a question? [Open an issue](https://github.com/svyatov/database-transactions/issues).
+Questions and "this page didn't click for me" are as welcome as bug reports. If an explanation
+lost you somewhere, telling us where is genuinely useful.
 
 ## Contributing
 
-Found a wrong or unproven claim? That's a bug. See [CONTRIBUTING.md](CONTRIBUTING.md) —
+Found a wrong or unproven claim? That's a bug. See [CONTRIBUTING.md](CONTRIBUTING.md);
 the golden rule is *no claim without a proving scenario*.
 
 ## License

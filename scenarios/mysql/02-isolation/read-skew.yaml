@@ -15,16 +15,21 @@ steps:
   - A: BEGIN
   - A: SELECT balance FROM accounts WHERE owner = 'alice'
     expect: [{ balance: 50 }]
+    tl: read alice → 50
 
   - B: BEGIN
   - B: UPDATE accounts SET balance = balance - 25 WHERE owner = 'alice'
+    tl: alice −25
   - B: UPDATE accounts SET balance = balance + 25 WHERE owner = 'bob'
+    tl: bob +25
   - B: COMMIT
     comment: a perfectly correct transfer — atomic, invariant preserved
+    tl: COMMIT (transfer done)
 
   - A: SELECT balance FROM accounts WHERE owner = 'bob'
     expect: [{ balance: 75 }]
     comment: "50 + 75 = 125. The auditor found 25 that never existed."
+    tl: read bob → 75 (50 + 75 = 125!)
   - A: COMMIT
 
   - note: >-

@@ -27,21 +27,21 @@ KILL QUERY <processlist_id>;   KILL <processlist_id>;
 ::: warning Don't poll information_schema.innodb_trx
 `information_schema.innodb_trx` (and the older lock views) are served from a cache that
 refreshes only after it has been idle for 100 ms — a monitoring loop that queries it faster
-than that reads **the same stale snapshot forever**. `performance_schema.data_locks` reads
-live engine state. (This site's own test harness learned that the hard way.)
+than that keeps reading one stale snapshot and never sees it change.
+`performance_schema.data_locks` reads live engine state. (This site's own test harness learned
+that the hard way.)
 :::
 
-## Key takeaways
-
-- `data_locks` shows locks (`GRANTED` and `WAITING`); `sys.innodb_lock_waits` pre-joins the
-  waiter→blocker graph with the offending queries and thread ids.
-- An ordinary UPDATE holds an intention-exclusive (IX) lock on the table plus an X record
-  lock per modified row — intention locks are how row and
-  [table locks](/mysql/03-locking/table-locks-and-ddl) coexist.
-- MDL waits don't appear in `data_locks` at all — check `processlist` state for
-  `Waiting for table metadata lock`.
-- PostgreSQL's equivalents are `pg_locks` and `pg_blocking_pids()`
-  ([compare](/postgres/03-locking/monitoring-locks)).
+Two tables answer the question: `performance_schema.data_locks` lists every lock, `GRANTED` and
+`WAITING`, while `sys.innodb_lock_waits` pre-joins the waiter→blocker graph with the offending
+queries and thread ids. An ordinary UPDATE, seen through them, holds an intention-exclusive (IX)
+lock on the table plus one X record lock per row it changed, and the intention lock is how row
+and [table locks](/mysql/03-locking/table-locks-and-ddl) coexist without checking each other row
+by row. One blind spot: MDL waits never show up in `data_locks`, so a stuck migration is visible
+only in `processlist` as `Waiting for table metadata lock`. PostgreSQL asks the same questions
+of `pg_locks` and `pg_blocking_pids()` ([compare](/postgres/03-locking/monitoring-locks)); with
+the locking picture complete, the next chapter turns to the machinery that lets readers avoid
+all of it — [MVCC and the undo log](/mysql/04-mvcc/undo-logs).
 
 ## Further reading
 

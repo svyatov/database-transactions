@@ -10,10 +10,11 @@ sure they can't live long.
 
 <!--@include: ./parts/find-long-transactions.md-->
 
-Note what detector 3 proved: the report **wrote nothing** (`backend_xid` is null — no
-transaction id was ever [assigned](/postgres/04-mvcc/row-versions)) and *still* pins the vacuum
-horizon through its snapshot (`backend_xmin`). Read-only is not harmless — and age is
-what matters: the session with the oldest `xact_start` is almost always the story.
+Note what detector 3 proved: the report never wrote a thing (`backend_xid` is null,
+because no transaction id was ever [assigned](/postgres/04-mvcc/row-versions)) and *still*
+pins the vacuum horizon through its snapshot (`backend_xmin`). Read-only is not harmless,
+and age is what matters: the session with the oldest `xact_start` is almost always the
+story.
 
 ## Guardrails: make the database enforce it
 
@@ -36,15 +37,13 @@ from narrowest to widest:
   [chapter 6](/postgres/06-distributed/two-phase-commit):
   ["Prepared transactions are not subject to this timeout"](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT).
 
-## Key takeaways
-
-- Watch three columns of `pg_stat_activity`: `xact_start` (age), `state`
-  (`idle in transaction`), `backend_xmin` (vacuum horizon). The scenario's three
-  detectors are copy-paste ready.
-- Read-only transactions pin VACUUM too. Age matters, not write activity.
-- Set `statement_timeout` and `idle_in_transaction_session_timeout` for every
-  application role, sized to the app's real needs; add `transaction_timeout` on 17+ as
-  the backstop. Kill switches beat pager duty.
+Three columns of `pg_stat_activity` carry the whole story: `xact_start` for age, `state`
+for the idle-in-transaction pattern, and `backend_xmin` for the vacuum horizon — the
+scenario's three detectors are copy-paste ready. Remember that a read-only transaction
+pins VACUUM just as hard as a writer, so age is what you sort on, not write activity. Set
+`statement_timeout` and `idle_in_transaction_session_timeout` on every application role,
+sized to what the app actually needs, and add `transaction_timeout` on 17+ as the
+backstop, because a kill switch beats pager duty.
 
 ## Further reading
 

@@ -4,8 +4,8 @@ description: Write skew — two transactions each check an invariant, each write
 
 # Write skew
 
-**Write skew** is the anomaly with no smoking gun: two transactions each *read* an invariant,
-each *write* to a **different** row, and both commit. No write-write conflict ever happens —
+*Write skew* is the anomaly with no smoking gun: two transactions each *read* an invariant,
+each *write* to a *different* row, and both commit. No write-write conflict ever happens —
 the rows they touched don't overlap — and the invariant both of them checked is broken
 anyway.
 
@@ -24,7 +24,7 @@ Alice: COMMIT
 Bob: COMMIT ← both committed; nobody is on call
 ```
 
-Formally Adya's **G2** (predicate) and **G2-item**. Snapshot-based REPEATABLE READ can't
+Formally Adya's *G2* (predicate) and *G2-item*. Snapshot-based REPEATABLE READ can't
 catch it: each transaction's snapshot really did contain another doctor, each UPDATE touched
 a different row, so there is nothing for a write-conflict check to object to. The decision
 each transaction made was invalidated by the *other's write* — a read-write dependency, not a

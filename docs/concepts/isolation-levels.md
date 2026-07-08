@@ -5,7 +5,7 @@ description: The four SQL-standard transaction isolation levels — READ UNCOMMI
 # Isolation levels
 
 Isolation — the I in [ACID](/concepts/what-is-a-transaction#acid) — answers one question:
-**what do concurrent transactions see of each other's work?** Perfect isolation (every
+what do concurrent transactions see of each other's work? Perfect isolation (every
 transaction behaves as if it ran alone) costs performance, so SQL lets you trade correctness
 for speed by choosing an *isolation level*.
 
@@ -36,15 +36,15 @@ stop it — per engine, with proof.
 
 ## How MVCC engines implement the ladder: snapshots
 
-Both PostgreSQL and InnoDB (MySQL's default engine) use **MVCC** — multi-version concurrency
+Both PostgreSQL and InnoDB (MySQL's default engine) use *MVCC* — multi-version concurrency
 control: writers create new row *versions* instead of overwriting in place, and plain reads
-look at a **snapshot**, a frozen view of which transactions' work is visible. Readers don't
+look at a *snapshot*, a frozen view of which transactions' work is visible. Readers don't
 block writers; writers don't block readers. On this architecture the levels differ mainly in
 *when the snapshot is taken*:
 
-- **READ COMMITTED** — a fresh snapshot **per statement**. Each statement sees everything
+- **READ COMMITTED** — a fresh snapshot for every statement. Each statement sees everything
   committed before *it* began; two statements in one transaction may disagree.
-- **REPEATABLE READ** — one snapshot **per transaction**. What you saw once, you'll see
+- **REPEATABLE READ** — one snapshot for the whole transaction. What you saw once, you'll see
   again.
 - **SERIALIZABLE** — the per-transaction snapshot, plus a mechanism for the interleavings a
   snapshot alone can't catch — and here the two engines part ways completely.

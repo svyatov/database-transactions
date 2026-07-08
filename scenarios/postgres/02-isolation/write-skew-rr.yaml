@@ -17,21 +17,28 @@ steps:
   - A: SELECT count(*)::int AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 2 }]
     comment: '"two of us — safe for me to leave"'
+    tl: SELECT on_call → 2 ← "safe for me to leave"
   - B: SELECT count(*)::int AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 2 }]
     comment: '"two of us — safe for me to leave"'
+    tl: SELECT on_call → 2 ← "safe for me to leave"
 
   - note: Each updates a DIFFERENT row, so there is no write-write conflict to detect.
   - A: UPDATE doctors SET on_call = false WHERE name = 'alice'
+    tl: UPDATE alice off-call
   - B: UPDATE doctors SET on_call = false WHERE name = 'bob'
+    tl: UPDATE bob off-call (a different row)
 
   - A: COMMIT
+    tl: COMMIT
   - B: COMMIT
     comment: both succeed!
+    tl: COMMIT ← both succeed, no conflict to detect
 
   - A: SELECT count(*)::int AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 0 }]
     comment: nobody is on call — the invariant is broken
+    tl: SELECT on_call → 0 ← invariant broken
 
   - note: >-
       Each transaction was internally consistent; together they broke the

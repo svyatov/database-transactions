@@ -14,20 +14,25 @@ steps:
   - note: A transfers 150 from alice to bob. Crediting bob works fine…
   - A: BEGIN
   - A: UPDATE accounts SET balance = balance + 150 WHERE owner = 'bob'
+    tl: credit bob +150 (uncommitted)
 
   - B: SELECT balance FROM accounts WHERE owner = 'bob'
     expect: [{ balance: 50 }]
     comment: B can't see A's uncommitted credit
+    tl: read bob → 50 (credit hidden)
 
   - note: …but debiting alice violates the CHECK constraint — she only has 100.
   - A.fails: UPDATE accounts SET balance = balance - 150 WHERE owner = 'alice'
     error: "3819"
     comment: ER_CHECK_CONSTRAINT_VIOLATED
+    tl: debit alice −150
 
   - note: Roll the transaction back. Bob's credit — which had succeeded — evaporates with it.
   - A: ROLLBACK
+    tl: ROLLBACK — bob's credit gone too
 
   - B: SELECT owner, balance FROM accounts ORDER BY id
     expect:
       - { owner: alice, balance: 100 }
       - { owner: bob, balance: 50 }
+    tl: read → alice 100, bob 50 (untouched)

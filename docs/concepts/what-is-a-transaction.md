@@ -4,8 +4,8 @@ description: What a database transaction is, and what ACID — atomicity, consis
 
 # What is a transaction?
 
-A transaction groups several statements into one unit of work that either **fully happens or
-fully doesn't**. The classic example: moving money between two accounts takes two UPDATEs, and
+A transaction groups several statements into one unit of work that either fully happens or
+fully doesn't. The classic example: moving money between two accounts takes two UPDATEs, and
 the world must never see — or keep — only one of them.
 
 That single sentence hides four distinct promises, named by the most durable acronym in
@@ -20,10 +20,10 @@ databases.
 | **Isolation** | Concurrent transactions don't trample each other — *to a configurable degree* | [PostgreSQL](/postgres/02-isolation/snapshots-and-the-four-levels) · [MySQL](/mysql/02-isolation/snapshots-and-the-four-levels) |
 | **Durability** | Once COMMIT returns, the data survives a crash | prose only — crash tests don't fit in a transcript |
 
-Two of the letters carry the weight in day-to-day work. **Atomicity** is what lets you write
+Two of the letters carry the weight in day-to-day work. *Atomicity* is what lets you write
 the two UPDATEs without a plan for "the first succeeded and the second didn't": statements
-that succeeded *inside* a rolled-back transaction leave **no trace** — there is no "partial
-commit". **Isolation** is the interesting one, because it is *configurable*: its dial is the
+that succeeded *inside* a rolled-back transaction leave no trace, since there is no "partial
+commit". *Isolation* is the interesting one, because it is *configurable*: its dial is the
 [isolation level](/concepts/isolation-levels), and most of this site is about what each
 setting silently gives away.
 

@@ -4,7 +4,7 @@ description: The engine-neutral theory of database transactions — ACID, isolat
 
 # Transaction concepts
 
-The theory in this section doesn't change when you switch databases: what a transaction
+The theory here doesn't change when you switch databases: what a transaction
 promises, what the isolation levels trade away, and the full vocabulary of things that go
 wrong. What *does* change — sometimes drastically — is what each engine actually does about
 them, so every claim here links to a transcript from a real PostgreSQL or MySQL run that

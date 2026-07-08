@@ -8,14 +8,13 @@ answer sheet, covering every case [Hermitage](https://github.com/ept/hermitage) 
 READ UNCOMMITTED is omitted: in PostgreSQL it
 [behaves exactly like READ COMMITTED](/postgres/02-isolation/read-committed#no-dirty-reads-even-if-you-ask-for-them).
 
-**TL;DR:**
-
-- Staying on the default (READ COMMITTED)? The whole G1 family is already impossible — but
-  [lost updates are on you](/postgres/02-isolation/lost-update#watch-a-deposit-disappear).
-- REPEATABLE READ gives a stable snapshot and refuses stale writes — plan to
-  [retry on `40001`](#how-to-use-this-table).
-- Invariants that span rows (write skew) are only automatic at SERIALIZABLE —
-  [proof](/postgres/02-isolation/serializable#the-same-interleaving-serializable).
+The short version, before the table spells out every cell: on the default READ COMMITTED the
+whole G1 family is already impossible, but
+[lost updates are on you](/postgres/02-isolation/lost-update#watch-a-deposit-disappear).
+REPEATABLE READ adds a stable snapshot and refuses stale writes, as long as you
+[retry on `40001`](#how-to-use-this-table). And invariants that span rows — write skew — only
+become automatic at SERIALIZABLE
+([proof](/postgres/02-isolation/serializable#the-same-interleaving-serializable)).
 
 | Code | Anomaly | READ COMMITTED *(default)* | REPEATABLE READ | SERIALIZABLE |
 |---|---|---|---|---|
@@ -38,16 +37,14 @@ strictly-stronger level).
 
 ## How to use this table
 
-- Staying on the default? Then **know that lost updates are on you**: fix read-modify-write
-  code with atomic updates, `FOR UPDATE`, or version columns
-  ([fixing lost updates](/postgres/05-patterns/fixing-lost-updates)).
-- Invariants that span multiple rows ("at least one on call", "sum must stay positive",
-  "unique-ish under concurrency") are only automatic at **SERIALIZABLE** — anything less needs
-  explicit locking.
-- Anything running at REPEATABLE READ or SERIALIZABLE **must retry on
-  [SQLSTATE `40001`](https://www.postgresql.org/docs/current/errcodes-appendix.html)**
-  (`serialization_failure`). If you see that error in your logs being swallowed, you've found
-  a bug.
+Staying on the default? Then treat lost updates as your problem to solve, fixing
+read-modify-write code with atomic updates, `FOR UPDATE`, or version columns
+([fixing lost updates](/postgres/05-patterns/fixing-lost-updates)). Invariants that span multiple
+rows ("at least one on call", "the sum must stay positive", "unique-ish under concurrency") are
+only automatic at SERIALIZABLE; anything weaker needs explicit locking. And anything running at
+REPEATABLE READ or SERIALIZABLE has to retry on
+[SQLSTATE `40001`](https://www.postgresql.org/docs/current/errcodes-appendix.html)
+(`serialization_failure`); spot that error being swallowed in your logs and you've found a bug.
 
 ## The guarantees you get for free
 

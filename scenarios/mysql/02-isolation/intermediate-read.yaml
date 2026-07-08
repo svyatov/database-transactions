@@ -15,17 +15,22 @@ steps:
   - A: BEGIN
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
     comment: a working draft — A isn't done yet
+    tl: UPDATE balance = 999 (a draft)
 
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 999 }]
     comment: B just read a draft
+    tl: SELECT balance → 999 (reads the draft)
 
   - A: UPDATE accounts SET balance = 110 WHERE id = 1
     comment: A settles on the final value…
+    tl: UPDATE balance = 110 (final value)
   - A: COMMIT
+    tl: COMMIT
 
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 110 }]
+    tl: SELECT balance → 110 (999 was never real)
   - B: COMMIT
 
   - note: >-

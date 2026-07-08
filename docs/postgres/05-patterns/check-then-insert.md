@@ -1,9 +1,9 @@
 # Check-then-insert: the race you've already shipped
 
 Somewhere in most codebases there is an "is this email taken?" query followed by an
-INSERT. It reads as obviously correct — and it's a race. Between your check and your
-insert, another transaction can do both. No isolation level shy of SERIALIZABLE saves
-you, because each transaction's check honestly saw a world without the row.
+INSERT. It looks correct — and it's a race. Between your check and your insert, another
+transaction can do both. No isolation level shy of SERIALIZABLE saves you, because each
+transaction's check honestly saw a world without the row.
 
 ## Watch the duplicate land
 
@@ -26,7 +26,7 @@ and `ON CONFLICT` turns even that error into a plan:
 
 <!--@include: ./parts/on-conflict.md-->
 
-The middle beat deserves a pause: B's insert **waited**. A unique index can't accept or
+The middle beat deserves a pause: B's insert had to wait. A unique index can't accept or
 reject the duplicate until the first insert's fate is known, so B queues on A's
 transaction — the same
 [transactionid wait you saw in lock queues](/postgres/03-locking/lock-queues) — and fails only
@@ -36,15 +36,13 @@ once A commits. Then the manual's escape hatch:
 guarantee:
 ["ON CONFLICT DO UPDATE guarantees an atomic INSERT or UPDATE outcome; provided there is no independent error, one of those two outcomes is guaranteed, even under high concurrency."](https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT)
 
-## Key takeaways
-
-- A SELECT can never enforce uniqueness — by the time you act on its answer, it's old.
-  Invariants belong in the schema; the check-first query is UX (a friendlier error
-  message), not integrity.
-- `UNIQUE` turns the silent duplicate into `23505`, and `ON CONFLICT DO NOTHING /
-  DO UPDATE` turns `23505` into control flow — atomically, no retry loop needed.
-- This one constraint + `RETURNING` is the backbone of the next lesson:
-  [idempotency keys](/postgres/05-patterns/idempotency).
+The lesson under all three beats: a SELECT can't enforce uniqueness, because by the time
+you act on its answer it's already stale. Invariants belong in the schema, where `UNIQUE`
+turns the silent duplicate into a loud `23505` and `ON CONFLICT` turns that `23505` into
+control flow — atomically, no retry loop required. Keep the check-first query if you like
+the friendlier error message, but treat it as UX, not integrity. That same constraint,
+paired with `RETURNING`, is the backbone of the next lesson:
+[idempotency keys](/postgres/05-patterns/idempotency).
 
 ## Further reading
 

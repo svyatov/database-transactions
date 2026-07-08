@@ -2,8 +2,8 @@
 
 PostgreSQL keeps old row versions *in the table* — every UPDATE leaves a dead tuple behind
 ([row versions](/postgres/04-mvcc/row-versions)). InnoDB does the opposite: the table holds
-only the **newest** version of each row, and history lives in a separate structure, the
-**undo log**. When an older transaction needs an older version, InnoDB rebuilds it on the
+only the newest version of each row, and history lives in a separate structure, the
+*undo log*. When an older transaction needs an older version, InnoDB rebuilds it on the
 fly by walking that row's undo chain backwards.
 
 Every InnoDB row carries the machinery for this, invisible to your queries. Per the
@@ -32,16 +32,14 @@ That's the whole MVCC contract in one sentence each: writers publish a new versi
 file the old one in undo; readers follow roll pointers back to the version their snapshot
 is entitled to; [purge](/mysql/04-mvcc/purge) throws history away once nobody can need it.
 
-## Key takeaways
-
-- The table stores only the current version; history is rebuilt from the **undo log** via
-  each row's roll pointer. (PostgreSQL: history stays in the heap; cleanup = VACUUM.)
-- Readers never block writers and writers never block readers — reads reconstruct, they
-  don't lock.
-- DELETE just delete-marks; the row physically disappears only when purge discards its
-  undo record.
-- Corollary: undo retention is bounded by your **oldest read view** — the subject of
-  [the history list](/mysql/04-mvcc/history-list-length).
+The shape of InnoDB MVCC comes down to this: the table holds only the current version of each
+row, history is rebuilt from the undo log by following roll pointers, and a DELETE merely sets a
+delete-mark until purge discards its undo record. Reads reconstruct rather than lock, which is
+why readers never block writers and writers never block readers — the same promise PostgreSQL
+makes with the opposite layout, where history stays in the heap and cleanup means VACUUM. The
+catch is that undo can't be thrown away while any snapshot might still need it, so retention is
+bounded by your oldest open read view, which makes [what a read view is, and when it's
+taken](/mysql/04-mvcc/read-views) the next question.
 
 ## Further reading
 

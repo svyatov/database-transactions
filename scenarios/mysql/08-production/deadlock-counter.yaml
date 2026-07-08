@@ -14,13 +14,17 @@ steps:
   - note: The same two opposite-order transfers as chapter 3 — one will be the victim.
   - A: BEGIN
   - A: UPDATE accounts SET balance = balance - 10 WHERE id = 1
+    tl: debit id=1
   - B: BEGIN
   - B: UPDATE accounts SET balance = balance - 25 WHERE id = 2
+    tl: debit id=2
 
   - A: UPDATE accounts SET balance = balance + 10 WHERE id = 2
     blocks: p1
+    tl: credit id=2
   - B.fails: UPDATE accounts SET balance = balance + 25 WHERE id = 1
     error: "1213"
+    tl: credit id=1
   - success: p1
   - A: COMMIT
 

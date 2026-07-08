@@ -6,14 +6,14 @@ themselves (definitions, diagrams, and where the G-codes come from) live in
 sheet, covering every case [Hermitage](https://github.com/ept/hermitage) tests — including
 the rows where MySQL's answer differs from PostgreSQL's.
 
-**TL;DR:**
-
-- On MySQL, [isolation levels protect reads, not read-modify-write](#the-mysql-specific-pattern) —
-  the ⚠️ in the bottom half of this table are fixed with locks or SQL arithmetic, not the
-  isolation knob.
-- The REPEATABLE READ default [still loses updates](/mysql/02-isolation/lost-update#repeatable-read-does-not-save-you),
-  and [current reads see phantoms](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot).
-- SERIALIZABLE closes the rest with locks — plan to [retry on `1213`](#error-codes-to-retry-on).
+The short version: on MySQL,
+[isolation levels protect reads, not read-modify-write cycles](#the-mysql-specific-pattern),
+so the ⚠️ cells in the bottom half of this table get fixed with locks or SQL arithmetic rather
+than the isolation knob. The REPEATABLE READ default
+[still loses updates](/mysql/02-isolation/lost-update#repeatable-read-does-not-save-you) and
+[current reads see phantoms](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot),
+while SERIALIZABLE closes the rest with locks — so plan to
+[retry on `1213`](#error-codes-to-retry-on).
 
 | Code | Anomaly | READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ *(default)* | SERIALIZABLE |
 |---|---|---|---|---|---|
@@ -30,8 +30,8 @@ the rows where MySQL's answer differs from PostgreSQL's.
 
 ## The MySQL-specific pattern
 
-Reading this table column by column, one theme emerges: on MySQL, **isolation levels protect
-reads, not read-modify-write cycles**. REPEATABLE READ gives your SELECTs a perfectly stable
+Reading this table column by column, one theme emerges: on MySQL, isolation levels protect
+reads, not read-modify-write cycles. REPEATABLE READ gives your SELECTs a perfectly stable
 world — and your UPDATEs a completely different, current one. Everything in the bottom half
 of the table is fixed with explicit locking or SQL-side arithmetic, not with the isolation
 knob.
@@ -56,7 +56,7 @@ so interleaved writes can't produce a state no serial order could:
 
 ### Intermediate reads (G1b)
 
-At READ UNCOMMITTED you don't just read uncommitted data — you read *drafts* the writer
+At READ UNCOMMITTED you don't only read uncommitted data — you read *drafts* the writer
 later overwrites, values that are never part of any committed history:
 
 <!--@include: ./parts/intermediate-read.md-->

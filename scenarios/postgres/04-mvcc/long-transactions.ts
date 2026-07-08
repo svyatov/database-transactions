@@ -13,7 +13,7 @@ export default scenario({
 
   async run({ A, B }, t) {
     // #region demo
-    t.note("A opens a long report transaction — one query, then it just sits there.");
+    t.note("A opens a long report transaction — one query, then it sits there idle.");
     await A`BEGIN ISOLATION LEVEL REPEATABLE READ`;
     const [j0] = await A`SELECT xmin, id, status FROM jobs`;
 

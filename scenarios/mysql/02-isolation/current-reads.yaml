@@ -12,23 +12,29 @@ steps:
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
     comment: snapshot taken
+    tl: SELECT balance → 100 (snapshot)
 
   - note: B commits a change. A keeps READING its stale snapshot…
   - B: UPDATE accounts SET balance = 150 WHERE id = 1
+    tl: UPDATE balance = 150 (committed)
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
+    tl: SELECT balance → 100 (snapshot holds)
 
   - note: >-
       …but A's UPDATE is a current read: it computes from B's committed 150,
       not from the snapshot's 100.
   - A: UPDATE accounts SET balance = balance + 50 WHERE id = 1
+    tl: UPDATE +50 (current read of 150)
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 200 }]
     comment: "150 + 50 — and now A sees it: the snapshot has a hole"
+    tl: SELECT balance → 200 (150 + 50 — the hole)
 
   - A: COMMIT
+    tl: COMMIT
   - note: PostgreSQL would have aborted A's UPDATE with 40001 instead. MySQL quietly switches world views.
 
   - note: If the competing write is NOT yet committed, A first waits on the row lock…

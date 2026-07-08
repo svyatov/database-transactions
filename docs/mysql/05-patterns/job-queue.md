@@ -1,4 +1,4 @@
-# A job queue on FOR UPDATE SKIP LOCKED
+# A job queue on `FOR UPDATE SKIP LOCKED`
 
 The pattern that used to require Redis: a correct, crash-safe job queue in plain SQL.
 MySQL 8.0 added the missing keyword —
@@ -6,24 +6,25 @@ MySQL 8.0 added the missing keyword —
 locking read that uses `SKIP LOCKED` never waits to acquire a row lock. The query executes
 immediately, removing locked rows from the result set."
 
-That's the whole trick: a claimed job is a *locked row*, and competing workers simply
-don't see it. No `claimed_by` column to reset after crashes, no heartbeat table — the row
-lock **is** the claim, and it lives exactly as long as the worker's transaction:
+That's the whole trick: a claimed job is a *locked row*, and competing workers don't see
+it. No `claimed_by` column to reset after crashes, no heartbeat table — the row lock is
+the claim, and it lives exactly as long as the worker's transaction:
 
 <!--@include: ./parts/job-queue.md-->
 
 ## Why each piece matters
 
-- **`FOR UPDATE`** — the claim. The row stays visible to plain SELECTs (readers use
-  [the snapshot](/mysql/04-mvcc/read-views)), but any competing *locking* read must deal
-  with the lock.
-- **`SKIP LOCKED`** — the "don't wait" part. Without it, worker B queues behind worker A
-  [in the lock queue](/mysql/03-locking/lock-queues) instead of taking the next job —
-  your queue serializes to one effective worker.
-- **`ORDER BY id LIMIT 1`** — fairness and determinism; oldest job first.
-- **Crash safety for free** — B's "crash" in the transcript is just ROLLBACK: the claim
-  was a lock, so it evaporated with the transaction and the job returned to the queue.
-  Compare the same guarantee [on PostgreSQL](/postgres/05-patterns/job-queue).
+Every keyword in that claim query is load-bearing. `FOR UPDATE` is the claim itself: the
+row stays visible to plain SELECTs, since readers work off
+[the snapshot](/mysql/04-mvcc/read-views), but any competing *locking* read has to reckon
+with the lock. `SKIP LOCKED` is the part that refuses to wait — drop it and worker B
+queues up behind worker A [in the lock queue](/mysql/03-locking/lock-queues) instead of
+grabbing the next job, and your queue serializes down to one effective worker. The
+`ORDER BY id LIMIT 1` is fairness and determinism: oldest job first.
+
+Crash safety comes for free. B's "crash" in the transcript is nothing more than a
+ROLLBACK, and because the claim was a lock, it evaporated with the transaction and the job
+dropped straight back into the queue — [the same guarantee PostgreSQL gives you](/postgres/05-patterns/job-queue).
 
 The manual's warning — "Queries that skip locked rows return an inconsistent view of the
 data. `SKIP LOCKED` is therefore not suitable for general transactional work. However, it
@@ -36,13 +37,12 @@ claimers — at REPEATABLE READ the locking read can take
 [gap locks](/mysql/03-locking/gap-locks) on the index ranges it scans, and two workers'
 ranges can overlap.
 
-## Key takeaways
-
-- Claim = `SELECT … WHERE state = 'queued' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED`,
-  work, `UPDATE … SET state = 'done'`, `COMMIT` — all in one transaction.
-- A crashed worker's job re-queues itself: the claim is a lock, and locks die with the
-  transaction.
-- Keep job transactions short; the claim holds a row lock for its whole duration.
+The whole worker fits in one transaction: claim with
+`SELECT … WHERE state = 'queued' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED`, do the work,
+`UPDATE … SET state = 'done'`, and `COMMIT`. Keep that transaction short, because the claim
+holds a row lock for its entire life, and a worker that wanders off mid-job is a job nobody
+else can touch until it commits or dies. Crash safety is the payoff for that discipline: a
+dead worker's claim was only ever a lock, and locks don't outlive their transaction.
 
 ## Further reading
 

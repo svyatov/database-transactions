@@ -1,7 +1,7 @@
 # What is a transaction?
 
-A transaction groups several statements into one unit of work that either **fully happens or
-fully doesn't** — the engine-neutral theory, ACID and what each letter promises, lives in
+A transaction groups several statements into one unit of work that either happens completely
+or not at all — the engine-neutral theory, ACID and what each letter promises, lives in
 [Concepts: what is a transaction?](/concepts/what-is-a-transaction). This page is MySQL
 keeping the promise — with one caveat PostgreSQL doesn't have.
 
@@ -11,7 +11,7 @@ color-coded per session (`A`, `B`, … are separate MySQL connections). How the 
 are produced and verified is explained in [What this is](/about/methodology)
 :::
 
-The caveat: all of this applies to **InnoDB**, MySQL's default storage engine. Tables on
+The caveat: all of this applies to InnoDB, MySQL's default storage engine. Tables on
 other engines (e.g. `MyISAM`) are not transactional at all — their writes commit instantly,
 always.
 
@@ -23,13 +23,11 @@ already-successful credit:
 
 <!--@include: ./parts/atomicity.md-->
 
-## Key takeaways
-
-- Unlike PostgreSQL, a failed statement does **not** doom a MySQL transaction — you may roll
-  back, but you don't have to. The next lesson [proves it](/mysql/01-basics/begin-commit-rollback).
-- Other sessions never see intermediate states: B read bob's balance mid-transfer and got the
-  old value. What exactly other sessions see, and when, is the subject of
-  [isolation levels](/mysql/02-isolation/snapshots-and-the-four-levels).
+Two things to carry forward. Unlike PostgreSQL, a failed statement doesn't doom a MySQL
+transaction — you may roll back, but you're not forced to, as the next lesson
+[proves](/mysql/01-basics/begin-commit-rollback). And other sessions never saw an intermediate
+state: B read bob's balance mid-transfer and got the old value, which is exactly what
+[isolation levels](/mysql/02-isolation/snapshots-and-the-four-levels) govern.
 
 ## Further reading
 

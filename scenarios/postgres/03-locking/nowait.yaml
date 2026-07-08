@@ -9,12 +9,16 @@ sessions: [A, B]
 steps:
   - A: BEGIN
   - A: SELECT id FROM accounts WHERE id = 1 FOR UPDATE
+    tl: SELECT … FOR UPDATE (locks row 1)
 
   - B.fails: SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
     error: "55P03"
     comment: lock_not_available — instantly, no waiting
+    tl: … FOR UPDATE NOWAIT
 
   - note: Once A is done, the same statement succeeds.
   - A: COMMIT
+    tl: COMMIT (releases the lock)
   - B: SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
     expect: [{ id: 1 }]
+    tl: … NOWAIT → row 1

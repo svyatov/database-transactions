@@ -10,31 +10,35 @@ your monitoring should already be scraping.
 
 ## Reading the dashboard
 
-- `n_dead_tup` —
-  ["Estimated number of dead rows"](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW).
-  *Estimated* because it comes from the statistics system, not a table scan — cheap
-  enough to poll every minute. Watch the **ratio** to `n_live_tup`: a queue table that's
-  99% dead tuples explains its own slow scans. (When you need exact numbers, the
-  [pgstattuple](https://www.postgresql.org/docs/current/pgstattuple.html) extension
-  scans for real.)
-- `last_vacuum` / `last_autovacuum` — when cleanup last ran, manually or via the
-  daemon. A hot table whose `last_autovacuum` is days old is either configured wrong or
-  — more often — blocked by [something holding the horizon](/postgres/04-mvcc/long-transactions).
-  Cross-check with [detector 3](/postgres/08-production/long-and-idle-transactions).
-- `age(datfrozenxid)` vs `autovacuum_freeze_max_age` — the
-  [wraparound](/postgres/04-mvcc/wraparound) margin. The scenario renders it as a boolean on
-  purpose: that's what your alert should be. When age crosses the threshold (200
-  million by default), autovacuum goes into emergency mode whether you like it or not;
-  alert at half that and you'll never meet the emergency.
+Start with `n_dead_tup`, the
+["Estimated number of dead rows"](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW).
+It's estimated because it comes from the statistics system rather than a table scan,
+which is what keeps it cheap enough to poll every minute. Watch its ratio to `n_live_tup`
+rather than the raw count: a queue table that's 99% dead tuples explains its own slow
+scans. When you need exact numbers, the
+[pgstattuple](https://www.postgresql.org/docs/current/pgstattuple.html) extension scans
+for real.
 
-## Key takeaways
+`last_vacuum` and `last_autovacuum` tell you when cleanup last ran, manually or via the
+daemon. A hot table whose `last_autovacuum` is days old is either configured wrong or,
+more often, blocked by [something holding the
+horizon](/postgres/04-mvcc/long-transactions) — cross-check with
+[detector 3](/postgres/08-production/long-and-idle-transactions).
 
-- Poll `pg_stat_user_tables` for `n_dead_tup`/`n_live_tup` and `last_autovacuum` age on
-  your busiest tables — bloat announces itself long before disk-full does.
-- Vacuum that "stopped working" is almost never vacuum's fault: find the oldest
-  transaction or an orphaned [prepared transaction](/postgres/06-distributed/two-phase-commit).
-- Wraparound is a boolean alert, not a graph to admire:
-  `age(datfrozenxid) < autovacuum_freeze_max_age / 2` or a human gets paged.
+`age(datfrozenxid)` against `autovacuum_freeze_max_age` is the
+[wraparound](/postgres/04-mvcc/wraparound) margin, and the scenario renders it as a
+boolean on purpose because that's what your alert should be. Once the age reaches the
+threshold (200 million transactions by default), PostgreSQL forces an anti-wraparound
+autovacuum on the table, and it does so even if you've turned autovacuum off. Alert at
+half that margin and you'll never meet the forced pass.
+
+Poll `pg_stat_user_tables` for the dead-to-live ratio and the age of `last_autovacuum`
+on your busiest tables, and bloat announces itself long before disk-full does. When
+vacuum looks like it "stopped working," the fault is almost never vacuum's — it's the
+oldest open transaction or an orphaned [prepared
+transaction](/postgres/06-distributed/two-phase-commit) pinning the horizon. Wraparound
+stays a boolean rather than a graph to admire: `age(datfrozenxid) <
+autovacuum_freeze_max_age / 2`, or a human gets paged.
 
 ## Further reading
 

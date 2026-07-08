@@ -14,11 +14,14 @@ steps:
   - note: Same double-click as the previous lesson, but now the table has UNIQUE (email).
   - A: BEGIN
   - A: INSERT INTO signups (email) VALUES ('bob@example.com')
+    tl: INSERT bob
 
   - note: B's insert can't decide yet — the winner hasn't committed. It waits on A's transaction.
   - B: INSERT INTO signups (email) VALUES ('bob@example.com')
     blocks: p1
+    tl: INSERT bob (duplicate)
   - A: COMMIT
+    tl: COMMIT
   - failure: p1
     error: "1062"
   - note: ER_DUP_ENTRY — the race is now loud instead of silent.
