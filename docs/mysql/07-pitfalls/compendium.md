@@ -139,3 +139,7 @@ back (`1213`) so the other could finish.
 **Proof:** [deadlocks](/mysql/03-locking/deadlocks) ·
 [deadlock avoidance](/mysql/03-locking/deadlocks) ·
 [count them in production](/mysql/08-production/logs-and-counters)
+
+---
+
+PostgreSQL has different sharp edges — [its own compendium](/postgres/07-pitfalls/compendium) covers the traps MySQL does not have.

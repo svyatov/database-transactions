@@ -27,3 +27,4 @@ disappears on `COMMIT` or a full `ROLLBACK`.
 ## Further reading
 
 - [MySQL docs: SAVEPOINT, ROLLBACK TO SAVEPOINT, and RELEASE SAVEPOINT](https://dev.mysql.com/doc/refman/8.4/en/savepoint.html)
+- [The same lesson on PostgreSQL](/postgres/01-basics/savepoints)

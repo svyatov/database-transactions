@@ -44,3 +44,4 @@ spaces between them, which is where [gap locks](/mysql/03-locking/gap-locks) com
 - [MySQL docs: InnoDB Locking](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html)
 - [MySQL docs: Locks Set by Different SQL Statements](https://dev.mysql.com/doc/refman/8.4/en/innodb-locks-set.html)
 - [Gap locks](/mysql/03-locking/gap-locks) — the other half of InnoDB locking: locking the spaces between rows
+- [The same lesson on PostgreSQL](/postgres/03-locking/row-locks)

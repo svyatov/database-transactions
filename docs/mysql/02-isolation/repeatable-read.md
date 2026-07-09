@@ -50,3 +50,4 @@ serialization errors fire at this level, which leaves the anomalies RR can't sto
 
 - [MySQL docs: REPEATABLE READ](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html#isolevel_repeatable-read)
 - [MySQL docs: Locking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+- [The same lesson on PostgreSQL](/postgres/02-isolation/repeatable-read)

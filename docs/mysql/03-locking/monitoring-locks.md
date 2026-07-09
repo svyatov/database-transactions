@@ -47,3 +47,4 @@ all of it — [MVCC and the undo log](/mysql/04-mvcc/undo-logs).
 
 - [MySQL docs: The data_locks Table](https://dev.mysql.com/doc/refman/8.4/en/performance-schema-data-locks-table.html)
 - [MySQL docs: The innodb_lock_waits View](https://dev.mysql.com/doc/refman/8.4/en/sys-innodb-lock-waits.html)
+- [The same lesson on PostgreSQL](/postgres/03-locking/monitoring-locks)

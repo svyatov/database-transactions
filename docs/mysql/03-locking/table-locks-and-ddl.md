@@ -40,3 +40,4 @@ other needs, which is where [deadlocks](/mysql/03-locking/deadlocks) come in.
 
 - [MySQL docs: Metadata Locking](https://dev.mysql.com/doc/refman/8.4/en/metadata-locking.html)
 - [MySQL docs: lock_wait_timeout](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_lock_wait_timeout)
+- [The same lesson on PostgreSQL](/postgres/03-locking/table-locks-and-ddl)

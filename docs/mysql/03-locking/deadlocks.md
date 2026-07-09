@@ -32,3 +32,4 @@ not to be a deadlock, you'll want to
 
 - [MySQL docs: Deadlocks in InnoDB](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks.html)
 - [MySQL docs: How to Minimize and Handle Deadlocks](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks-handling.html)
+- [The same lesson on PostgreSQL](/postgres/03-locking/deadlocks)

@@ -42,3 +42,4 @@ decision depends on ([locking reads](/mysql/03-locking/row-locks)).
 
 - [MySQL docs: SERIALIZABLE](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html#isolevel_serializable)
 - [MySQL docs: Deadlock Detection](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlock-detection.html)
+- [The same lesson on PostgreSQL](/postgres/02-isolation/serializable)

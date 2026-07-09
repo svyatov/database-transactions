@@ -46,3 +46,4 @@ the expensive thing a reader does is stay open, which is
 
 - [MySQL docs: Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html)
 - [MySQL docs: Optimizing InnoDB Read-Only Transactions](https://dev.mysql.com/doc/refman/8.4/en/innodb-performance-ro-txn.html)
+- [The PostgreSQL counterpart: snapshots under the hood](/postgres/04-mvcc/snapshots-under-the-hood)

@@ -42,3 +42,4 @@ far; the lock that takes down migrations is a
 
 - [MySQL docs: Locking Reads (NOWAIT, SKIP LOCKED)](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
 - [MySQL docs: innodb_lock_wait_timeout](https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_lock_wait_timeout)
+- [The same lesson on PostgreSQL](/postgres/03-locking/nowait-skip-locked)

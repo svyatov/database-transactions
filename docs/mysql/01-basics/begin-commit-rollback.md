@@ -34,3 +34,4 @@ proves the opposite behavior. And watch for statements that
 
 - [MySQL docs: autocommit, Commit, and Rollback](https://dev.mysql.com/doc/refman/8.4/en/innodb-autocommit-commit-rollback.html)
 - [MySQL docs: Statements That Cause an Implicit Commit](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html)
+- [The same lesson on PostgreSQL](/postgres/01-basics/begin-commit-rollback)

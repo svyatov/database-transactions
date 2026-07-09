@@ -33,3 +33,4 @@ state: B read bob's balance mid-transfer and got the old value, which is exactly
 
 - [MySQL docs: START TRANSACTION, COMMIT, and ROLLBACK Statements](https://dev.mysql.com/doc/refman/8.4/en/commit.html)
 - [MySQL docs: InnoDB and the ACID Model](https://dev.mysql.com/doc/refman/8.4/en/mysql-acid.html)
+- [The same lesson on PostgreSQL](/postgres/01-basics/what-is-a-transaction)

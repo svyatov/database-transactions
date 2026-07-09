@@ -29,3 +29,4 @@ shorter transactions, or refusing to wait at all with
 
 - [MySQL docs: Transaction Scheduling (CATS)](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-scheduling.html)
 - [MySQL docs: The innodb_lock_waits and x$innodb_lock_waits Views](https://dev.mysql.com/doc/refman/8.4/en/sys-innodb-lock-waits.html)
+- [The same lesson on PostgreSQL](/postgres/03-locking/lock-queues)

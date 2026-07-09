@@ -41,3 +41,4 @@ one reason some heavy-write shops prefer it; locking is [chapter 3](/mysql/03-lo
 ## Further reading
 
 - [MySQL docs: READ COMMITTED](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html#isolevel_read-committed)
+- [The same lesson on PostgreSQL](/postgres/02-isolation/read-committed)

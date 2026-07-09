@@ -42,3 +42,4 @@ its REPEATABLE READ conflict detection loses that protection the moment it runs 
 ## Further reading
 
 - [MySQL docs: Locking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+- [The same lesson on PostgreSQL](/postgres/02-isolation/lost-update)

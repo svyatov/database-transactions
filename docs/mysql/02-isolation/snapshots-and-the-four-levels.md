@@ -45,3 +45,4 @@ From here the chapter walks up the ladder — [READ COMMITTED](/mysql/02-isolati
 
 - [MySQL docs: Transaction Isolation Levels](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html)
 - [MySQL docs: Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html)
+- [The same lesson on PostgreSQL](/postgres/02-isolation/snapshots-and-the-four-levels)
