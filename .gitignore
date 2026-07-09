@@ -1,6 +1,12 @@
 node_modules/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+docs/plans/
+docs/ideation/
+docs/solutions/
+docs/brainstorms/
+.compound-engineering/
+CONCEPTS.md
 *.log
 .DS_Store
 __pycache__/
