@@ -19,6 +19,7 @@ it. If you're staring at a live incident, start with the
 10. [Events reach the broker for data that doesn't exist (or never reach it)](#_10-events-reach-the-broker-for-data-that-doesn-t-exist-or-never-reach-it)
 11. [Locks are held, VACUUM is stuck — and no session owns any of it](#_11-locks-are-held-vacuum-is-stuck-—-and-no-session-owns-any-of-it)
 12. [A deadlock — and both transactions looked innocent](#_12-a-deadlock-—-and-both-transactions-looked-innocent)
+13. [A job queue balloons on disk while autovacuum runs clean](#_13-a-job-queue-balloons-on-disk-while-autovacuum-runs-clean)
 
 ## 1. Increments vanish under load
 
@@ -103,6 +104,22 @@ died between the phases. Nothing expires it.
 **Fix:** consistent lock ordering; retry `40P01` like `40001`; watch the counter.
 **Proof:** [deadlocks](/postgres/03-locking/deadlocks) ·
 [the permanent trace](/postgres/08-production/logs-and-counters)
+
+## 13. A job queue balloons on disk while autovacuum runs clean
+
+**Broken:** the [job queue](/postgres/05-patterns/job-queue) loop is correct, but one worker hangs
+mid-transaction and never commits. Its snapshot pins the vacuum horizon, so every job the queue
+drains during the hang leaves a dead version VACUUM can't reclaim — the table grows with throughput
+while autovacuum runs on schedule and cleans nothing.
+**Fix:** switch to claim-by-state with a short transaction and a reaper
+([job queue](/postgres/05-patterns/job-queue)); watch the
+[bloat & vacuum dashboard](/postgres/08-production/bloat-and-vacuum-health) so the slope shows up
+before the disk does.
+**Proof:** [queue bloat from a hung worker](/postgres/07-pitfalls/queue-bloat)
+
+This is entries [7](#_7-a-table-keeps-growing-though-rows-are-deleted) and
+[9](#_9-two-workers-process-the-same-job) composed: the queue's SKIP LOCKED loop meets the frozen
+horizon, and the bill is a rate neither half predicts on its own.
 
 ---
 

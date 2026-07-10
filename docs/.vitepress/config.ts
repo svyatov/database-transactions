@@ -243,6 +243,10 @@ const postgres: DefaultTheme.SidebarItem[] = [
         text: "Symptom → cause → fix",
         link: "/postgres/07-pitfalls/compendium",
       },
+      {
+        text: "Queue bloat from a hung worker",
+        link: "/postgres/07-pitfalls/queue-bloat",
+      },
     ],
   },
   {

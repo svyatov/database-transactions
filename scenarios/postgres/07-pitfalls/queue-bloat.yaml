@@ -1,0 +1,118 @@
+title: A hung worker turns queue throughput into disk
+claim: >-
+  A stuck worker's open transaction pins the vacuum horizon, so every claim/complete
+  cycle the queue drains during the hang leaves a dead row version VACUUM cannot
+  reclaim — the queue table grows with its throughput, not its backlog, and the
+  identical VACUUM frees all of it the moment the worker's transaction ends.
+setup: |
+  CREATE EXTENSION pageinspect;
+  CREATE TABLE jobs (id int PRIMARY KEY, task text NOT NULL, state text NOT NULL DEFAULT 'queued');
+  INSERT INTO jobs (id, task) SELECT g, 'send welcome email' FROM generate_series(1, 1200) g;
+  CREATE PROCEDURE drain(n int) LANGUAGE plpgsql AS $$
+  DECLARE j int;
+  BEGIN
+    FOR i IN 1..n LOOP
+      SELECT id INTO j FROM jobs WHERE state = 'queued'
+        ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
+      EXIT WHEN j IS NULL;
+      UPDATE jobs SET state = 'done' WHERE id = j;
+      COMMIT;
+    END LOOP;
+  END $$;
+sessions: [A, B]
+steps:
+  - note: >-
+      A is a worker that claims a job and then hangs: the connection stays open and the
+      transaction never commits. This is the queue's own flavor of "idle in transaction."
+  - A: BEGIN
+  - A: |-
+      SELECT id, task FROM jobs WHERE state = 'queued'
+      ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+    expect: [{ id: 1 }]
+    tl: A claims job 1, then hangs
+
+  - note: >-
+      The queue is 1200 rows in 9 pages, and it keeps humming while A sits there. B is a
+      healthy worker running the exact chapter 5 loop. Watch one cycle produce one dead
+      version: B skips A's locked job 1 and claims job 2.
+  - B: SELECT (pg_relation_size('jobs') / 8192)::int AS pages
+    expect: [{ pages: 9 }]
+    tl: 9 pages
+  - B: BEGIN
+  - B: |-
+      SELECT id, task FROM jobs WHERE state = 'queued'
+      ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+    expect: [{ id: 2 }]
+    comment: job 1 is claimed by A, skipped without waiting
+    tl: B claims job 2 (skips A's job 1)
+  - B: UPDATE jobs SET state = 'done' WHERE id = 2
+    tl: job 2 done, one dead version
+  - B: COMMIT
+    tl: COMMIT
+
+  - note: >-
+      That cycle left exactly one dead version: the old 'queued' tuple of job 2. Now B
+      runs the same body a thousand more times. drain(n) is that cycle in a procedure —
+      claim, mark done, COMMIT, repeat — so the per-job COMMIT is why CALL runs outside a
+      transaction block. The SQL a reader trusts is the SQL they just watched.
+  - B: CALL drain(250)
+    comment: 250 more claim/complete cycles
+    tl: drain 250
+  - B: SELECT (pg_relation_size('jobs') / 8192)::int AS pages
+    expect: [{ pages: 11 }]
+    tl: 9 → 11 pages
+  - B: CALL drain(750)
+    comment: 750 more
+    tl: drain 750
+  - B: SELECT (pg_relation_size('jobs') / 8192)::int AS pages
+    expect: [{ pages: 17 }]
+    tl: 11 → 17 pages
+
+  - note: >-
+      The table is still 1200 live rows and has nearly doubled on disk. Count the line
+      pointers across every page: 1200 live plus 1001 dead, none of the dead ones
+      removable while A's snapshot might still need the 'queued' versions they replaced.
+  - B: |-
+      SELECT count(*)::int AS occupied
+      FROM generate_series(0, (pg_relation_size('jobs') / 8192)::int - 1) AS p,
+           heap_page_items(get_raw_page('jobs', p::int))
+      WHERE lp_flags = 1
+    expect: [{ occupied: 2201 }]
+    tl: 2201 line pointers (1200 live + 1001 dead)
+
+  - B: VACUUM jobs
+    tl: VACUUM, while A still hangs
+  - note: >-
+      VACUUM ran, reported success, and reclaimed nothing. Same silent no-op as the long
+      transactions lesson, now with a price tag: the line-pointer count has not moved.
+  - B: |-
+      SELECT count(*)::int AS occupied
+      FROM generate_series(0, (pg_relation_size('jobs') / 8192)::int - 1) AS p,
+           heap_page_items(get_raw_page('jobs', p::int))
+      WHERE lp_flags = 1
+    expect: [{ occupied: 2201 }]
+    tl: still 2201, nothing reclaimed
+
+  - A: COMMIT
+    tl: A finally commits, the hang ends
+  - note: >-
+      The instant A's snapshot is gone, the identical VACUUM can remove all 1001 dead
+      versions. The occupied count falls to the 1200 live rows.
+  - B: VACUUM jobs
+    tl: same VACUUM, a moment later
+  - B: |-
+      SELECT count(*)::int AS occupied
+      FROM generate_series(0, (pg_relation_size('jobs') / 8192)::int - 1) AS p,
+           heap_page_items(get_raw_page('jobs', p::int))
+      WHERE lp_flags = 1
+    expect: [{ occupied: 1200 }]
+    tl: 2201 → 1200, reclaimed
+
+  - note: >-
+      But the file never shrank. VACUUM freed the space inside the 17 pages for the
+      queue to reuse; it did not hand it back to the OS, and only VACUUM FULL would, under
+      a table lock. Page count is why you can't measure this bug with pg_relation_size
+      alone: the disk you bought during the hang stays bought.
+  - B: SELECT (pg_relation_size('jobs') / 8192)::int AS pages
+    expect: [{ pages: 17 }]
+    tl: still 17 pages, space is free inside, not returned
