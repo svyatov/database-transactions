@@ -10,5 +10,5 @@ Golden rule: **no claim without a proving scenario** ([CONTRIBUTING.md](../CONTR
 - [ ] `bun test` is green (both PostgreSQL and MySQL)
 - [ ] `bun run gen` produced no drift — `git diff --exit-code docs` is clean
 - [ ] `bunx tsc --noEmit` and `bunx biome ci .` pass
-- [ ] Docs build with no dead links — `bun run docs:build`
+- [ ] Docs build clean — `bun run docs:build` (pages) and `bun run docs:anchors` (heading anchors)
 - [ ] Both database tracks kept in parity where the lesson applies
