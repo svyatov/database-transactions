@@ -86,3 +86,15 @@ test("a comment in a code scenario cannot satisfy the isolation check", async ()
   );
   await expect(promise).rejects.toThrow(/no level/);
 });
+
+// The prose that can fake a claim is whatever the narrowing lets through, not whatever
+// prose looked like the day it was written. Each of these once satisfied the check.
+test.each([
+  ["a backticked line comment", "// `BEGIN ISOLATION LEVEL SERIALIZABLE`\n await A`BEGIN`;"],
+  ["a trailing backticked comment", "await A`BEGIN`; // see `SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`\n"],
+  ["a backticked block comment", "/* `BEGIN ISOLATION LEVEL SERIALIZABLE` */\n await A`BEGIN`;"],
+  ["a narrator note", "t.note(`we could BEGIN ISOLATION LEVEL SERIALIZABLE here`);\n await A`BEGIN`;"],
+])("%s cannot satisfy the isolation check", async (name, body) => {
+  const promise = loadTs(name.replace(/\W+/g, "-"), tsScenario('isolation: "SERIALIZABLE",', body));
+  await expect(promise).rejects.toThrow(/no level/);
+});

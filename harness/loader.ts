@@ -62,7 +62,9 @@ export async function loadScenario(absPath: string): Promise<Scenario> {
   }
   const s: Scenario = (await import(absPath)).default;
   // Only re-read the source when there is a declaration to check against it.
-  if (s.anomaly || s.isolation) checkMeta(s, sqlOfTs(await Bun.file(absPath).text()), absPath);
+  if (s.anomaly || s.isolation) {
+    checkMeta(s, sqlOfTs(await Bun.file(absPath).text(), s.setup, s.sessions), absPath);
+  }
   return s;
 }
 
@@ -97,12 +99,19 @@ function sqlOf(doc: Doc): string {
 }
 
 /**
- * The same, for a code scenario: its SQL lives in tagged templates and its `setup` string,
- * so scan the backticks only. A comment or a `t.note("…")` must not satisfy the check, and
- * a template this misparses can only drop text — which fails the check loudly, never quietly.
+ * The same, for a code scenario: `setup`, plus the templates tagged with a session name —
+ * `A`…``, `A.fails`…``, `A.blocked`…``. Scanning every backtick instead would let a
+ * `t.note(`…`)` or a commented-out statement satisfy the check, which is the whole failure
+ * this guard exists to prevent. Comments go first, so a session name inside one can't tag
+ * anything. Text this misparses is text it drops, and dropping text can only make the check
+ * reject a valid declaration — loudly — never accept an invalid one.
  */
-function sqlOfTs(source: string): string {
-  return (source.match(/`[^`]*`/g) ?? []).join("\n");
+function sqlOfTs(source: string, setup: string, sessions: readonly string[]): string {
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  const names = sessions.map((n) => n.replace(/[^\w$]/g, "")).filter(Boolean);
+  if (!names.length) return setup;
+  const tagged = new RegExp(`(?<![\\w$.])(?:${names.join("|")})(?:\\.\\w+)?\`([^\`]*)\``, "g");
+  return [setup, ...[...code.matchAll(tagged)].map((m) => m[1]!)].join("\n");
 }
 
 export function fromYaml(doc: Doc, path: string): Scenario {
