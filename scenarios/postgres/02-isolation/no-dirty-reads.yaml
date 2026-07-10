@@ -2,6 +2,8 @@ title: PostgreSQL has no dirty reads — not even at READ UNCOMMITTED
 claim: >-
   PostgreSQL accepts READ UNCOMMITTED syntax but behaves as READ COMMITTED:
   uncommitted changes from other transactions are never visible.
+anomaly: G1a
+isolation: READ UNCOMMITTED
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

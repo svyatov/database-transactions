@@ -3,6 +3,7 @@ claim: >-
   Once a transaction commits, every reader sees ALL of its writes or none
   (Adya's OTV, "observed transaction vanishes"): a later overwrite of one row
   cannot make the rest of the committed transaction disappear.
+anomaly: OTV
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);

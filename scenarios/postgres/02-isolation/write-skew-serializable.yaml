@@ -3,6 +3,8 @@ claim: >-
   The exact interleaving that breaks the invariant under REPEATABLE READ fails
   with SQLSTATE 40001 under SERIALIZABLE — one transaction commits, the other
   must retry.
+anomaly: G2
+isolation: SERIALIZABLE
 setup: |
   CREATE TABLE doctors (name text PRIMARY KEY, on_call boolean NOT NULL);
   INSERT INTO doctors VALUES ('alice', true), ('bob', true);

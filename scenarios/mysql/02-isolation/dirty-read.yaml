@@ -2,6 +2,8 @@ title: READ UNCOMMITTED really reads uncommitted data
 claim: >-
   At READ UNCOMMITTED, MySQL serves other transactions' uncommitted changes —
   including values that are later rolled back and thus never existed.
+anomaly: G1a
+isolation: READ UNCOMMITTED
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

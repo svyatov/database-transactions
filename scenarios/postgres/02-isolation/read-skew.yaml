@@ -3,6 +3,8 @@ claim: >-
   At READ COMMITTED, a transaction reading two rows around a concurrent
   transfer observes money that never existed (Adya's G-single, "read skew");
   REPEATABLE READ's single snapshot makes the same interleaving consistent.
+anomaly: G-single
+isolation: REPEATABLE READ
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 50), (2, 'bob', 50);

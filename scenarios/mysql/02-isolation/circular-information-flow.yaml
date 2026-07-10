@@ -3,6 +3,7 @@ claim: >-
   At READ UNCOMMITTED two concurrent transactions can each read the other's
   uncommitted write (Adya's G1c, "circular information flow") — an exchange no
   serial order can explain. READ COMMITTED makes it impossible.
+anomaly: G1c
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);

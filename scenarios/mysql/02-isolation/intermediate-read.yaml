@@ -3,6 +3,7 @@ claim: >-
   At READ UNCOMMITTED a reader can observe an intermediate value the writer
   later overwrites before committing (Adya's G1b, "intermediate read") — a
   number that is never part of any committed state. READ COMMITTED stops this.
+anomaly: G1b
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

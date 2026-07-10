@@ -3,6 +3,8 @@ claim: >-
   The interleaving that silently loses an update at READ COMMITTED fails
   loudly with SQLSTATE 40001 at REPEATABLE READ — no data is lost, the loser
   just retries.
+anomaly: P4
+isolation: REPEATABLE READ
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

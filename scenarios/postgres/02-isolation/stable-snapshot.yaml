@@ -3,6 +3,8 @@ claim: >-
   At REPEATABLE READ, PostgreSQL uses a single snapshot for the entire
   transaction — no non-repeatable reads AND no phantoms (stronger than the SQL
   standard requires).
+anomaly: P2
+isolation: REPEATABLE READ
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 50);

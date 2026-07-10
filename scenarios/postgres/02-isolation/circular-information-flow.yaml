@@ -3,6 +3,7 @@ claim: >-
   Two concurrent transactions cannot read each other's uncommitted writes
   (Adya's G1c, "circular information flow"): each sees the pre-existing value,
   as one serial order or the other would dictate.
+anomaly: G1c
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);

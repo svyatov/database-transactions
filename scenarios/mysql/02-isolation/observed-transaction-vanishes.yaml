@@ -5,6 +5,7 @@ claim: >-
   row (Adya's OTV, "observed transaction vanishes") — the committed
   transaction is visible only in pieces. READ COMMITTED restores atomic
   visibility.
+anomaly: OTV
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
