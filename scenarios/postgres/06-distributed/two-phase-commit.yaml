@@ -1,11 +1,15 @@
 title: PREPARE TRANSACTION survives its session
 claim: >-
   PREPARE TRANSACTION detaches a transaction from its session: it survives
-  the session's death, keeps holding its locks, and any later session can
-  finish it by name with COMMIT PREPARED.
+  the session's death, keeps holding its locks, holds the xid horizon back so
+  VACUUM reclaims nothing in any table, and any later session can finish it by
+  name with COMMIT PREPARED.
 setup: |
+  CREATE EXTENSION pageinspect;
   CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 100);
+  CREATE TABLE ledger (id int PRIMARY KEY, n int NOT NULL);
+  INSERT INTO ledger VALUES (1, 0);
 sessions: [A, B, M]
 steps:
   - note: A is one participant in a distributed transfer. It does its work, then PREPARES — phase one.
@@ -45,7 +49,36 @@ steps:
   - B.fails: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
     error: "55P03"
 
+  - note: >-
+      The locks are the visible damage. The quiet damage is the xid horizon: the
+      orphan still counts as a running transaction, so no snapshot taken since it
+      prepared can be ruled out. Watch it freeze VACUUM in `ledger` — a table the
+      prepared transaction never touched.
+  - B: UPDATE ledger SET n = 1 WHERE id = 1
+  - B: UPDATE ledger SET n = 2 WHERE id = 1
+  - B: UPDATE ledger SET n = 3 WHERE id = 1
+
+  - note: Four versions of one row on the page — three of them dead.
+  - B: |-
+      SELECT count(*)::int AS versions_on_page
+      FROM heap_page_items(get_raw_page('ledger', 0)) WHERE lp_flags = 1
+    expect: [{ versions_on_page: 4 }]
+
+  - B: VACUUM ledger
+  - note: VACUUM ran, reported success, and reclaimed nothing. The orphan's horizon still covers every one of those versions.
+  - B: |-
+      SELECT count(*)::int AS versions_on_page
+      FROM heap_page_items(get_raw_page('ledger', 0)) WHERE lp_flags = 1
+    expect: [{ versions_on_page: 4 }]
+
   - note: Phase two — any session can finish the job by name. B commits the orphan.
   - B: COMMIT PREPARED 'transfer-42'
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 200 }]
+
+  - note: And the horizon moves. The same VACUUM, a moment later, finally collects the three dead versions.
+  - B: VACUUM ledger
+  - B: |-
+      SELECT count(*)::int AS versions_on_page
+      FROM heap_page_items(get_raw_page('ledger', 0)) WHERE lp_flags = 1
+    expect: [{ versions_on_page: 1 }]

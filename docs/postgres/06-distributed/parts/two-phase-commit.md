@@ -63,6 +63,44 @@ B> SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
 ERROR:  55P03: could not obtain lock on row in relation "accounts"
 ```
 
+*The locks are the visible damage. The quiet damage is the xid horizon: the orphan still counts as a running transaction, so no snapshot taken since it prepared can be ruled out. Watch it freeze VACUUM in `ledger` — a table the prepared transaction never touched.*
+
+```transcript
+B> UPDATE ledger SET n = 1 WHERE id = 1;
+UPDATE 1
+
+B> UPDATE ledger SET n = 2 WHERE id = 1;
+UPDATE 1
+
+B> UPDATE ledger SET n = 3 WHERE id = 1;
+UPDATE 1
+```
+
+*Four versions of one row on the page — three of them dead.*
+
+```transcript
+B> SELECT count(*)::int AS versions_on_page
+   FROM heap_page_items(get_raw_page('ledger', 0)) WHERE lp_flags = 1;
+ versions_on_page 
+------------------
+                4 
+(1 row)
+
+B> VACUUM ledger;
+VACUUM
+```
+
+*VACUUM ran, reported success, and reclaimed nothing. The orphan's horizon still covers every one of those versions.*
+
+```transcript
+B> SELECT count(*)::int AS versions_on_page
+   FROM heap_page_items(get_raw_page('ledger', 0)) WHERE lp_flags = 1;
+ versions_on_page 
+------------------
+                4 
+(1 row)
+```
+
 *Phase two — any session can finish the job by name. B commits the orphan.*
 
 ```transcript
@@ -73,6 +111,20 @@ B> SELECT balance FROM accounts WHERE id = 1;
  balance 
 ---------
      200 
+(1 row)
+```
+
+*And the horizon moves. The same VACUUM, a moment later, finally collects the three dead versions.*
+
+```transcript
+B> VACUUM ledger;
+VACUUM
+
+B> SELECT count(*)::int AS versions_on_page
+   FROM heap_page_items(get_raw_page('ledger', 0)) WHERE lp_flags = 1;
+ versions_on_page 
+------------------
+                1 
 (1 row)
 ```
 

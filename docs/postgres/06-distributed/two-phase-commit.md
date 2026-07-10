@@ -23,8 +23,11 @@ Session B: SELECT … FOR UPDATE NOWAIT → 55P03 ← the orphan still holds the
 Session M: pg_terminate_backend(A) → true ← the coordinator crashes
 Session A: SELECT 1 → connection closed
 Session M: SELECT gid FROM pg_prepared_xacts → transfer-42 ← survived the kill
+Session B: UPDATE ledger ×3 → three dead versions in an unrelated table
+Session B: VACUUM ledger → reclaims nothing ← the orphan pins the xid horizon
 Session B: COMMIT PREPARED 'transfer-42' → ok ← phase two, from a different session
 Session B: SELECT balance → 200
+Session B: VACUUM ledger → collects all three ← the horizon moved
 ```
 
 <!--@include: ./parts/two-phase-commit.md-->
@@ -42,8 +45,15 @@ it: the transaction, its locks, its promise all survive, waiting for *anyone* to
 The survival superpower has a flip side: nothing expires a prepared transaction.
 Crash recovery in chapter 1 was automatic; here, a coordinator that dies *between* the
 phases leaves orphans that hold [row locks](/postgres/03-locking/row-locks) and pin the xid
-horizon [exactly like a long transaction](/postgres/04-mvcc/long-transactions) — forever, until
-a human or a transaction manager resolves them. The manual is unusually stern:
+horizon [exactly like a long transaction](/postgres/04-mvcc/long-transactions), until a human
+or a transaction manager resolves them.
+
+The two `VACUUM ledger` calls are the part that catches teams out. `ledger` has nothing to do
+with the transfer: the orphan never read it, never wrote it, never locked it. VACUUM still
+declines to collect a single dead version there, because a prepared transaction counts as
+running and its snapshot might yet need every one of them. One forgotten `gid` freezes garbage
+collection across the whole database, and the table that bloats is rarely the table anyone was
+looking at. The manual is unusually stern:
 ["It is unwise to leave transactions in the prepared state for a long time. This will interfere with the ability of VACUUM to reclaim storage, and in extreme cases could cause the database to shut down to prevent transaction ID wraparound"](https://www.postgresql.org/docs/current/sql-prepare-transaction.html),
 and
 ["Keep in mind also that the transaction continues to hold whatever locks it held"](https://www.postgresql.org/docs/current/sql-prepare-transaction.html).
