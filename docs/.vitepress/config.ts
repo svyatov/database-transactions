@@ -353,7 +353,9 @@ export default defineConfig({
   base: "/database-transactions/",
   cleanUrls: true,
   // Generated transcript fragments are included into lesson pages, never built as pages.
-  srcExclude: ["**/parts/**"],
+  // The rest are gitignored working notes — CI never checks them out, so keep local
+  // builds matching CI rather than rendering pages that can never ship.
+  srcExclude: ["**/parts/**", "plans/**", "ideation/**", "solutions/**", "brainstorms/**"],
   // VitePress resolves sitemap <loc>s against this URL, so it must include the
   // base path WITH the trailing slash — without it the base is dropped.
   sitemap: { hostname: "https://svyatov.github.io/database-transactions/" },
