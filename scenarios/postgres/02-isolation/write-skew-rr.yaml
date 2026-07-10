@@ -3,6 +3,8 @@ claim: >-
   Two REPEATABLE READ transactions can each validate an invariant against
   their snapshots, write to different rows, and both commit — leaving the
   invariant broken. This is write skew.
+anomaly: G2-item
+isolation: REPEATABLE READ
 setup: |
   CREATE TABLE doctors (name text PRIMARY KEY, on_call boolean NOT NULL);
   INSERT INTO doctors VALUES ('alice', true), ('bob', true);

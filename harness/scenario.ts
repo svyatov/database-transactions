@@ -70,6 +70,18 @@ export interface Scenario<S extends readonly string[] = readonly string[]> {
   /** Plain SQL, run once before the sessions open. May contain multiple statements. */
   setup: string;
   sessions: S;
+  /**
+   * The anomaly this scenario is about, as an Adya G-code from
+   * /concepts/isolation-anomalies. Ledger metadata only — never read by a run.
+   * Checked against the closed enum at load time.
+   */
+  anomaly?: string;
+  /**
+   * The isolation level this scenario is about, spelled the way you'd type it after
+   * `SET TRANSACTION ISOLATION LEVEL`. Checked at load time against the level the
+   * scenario's own SQL actually sets — a label nobody proves is a label that lies.
+   */
+  isolation?: string;
   run(sessions: Record<S[number], Session>, t: Tools): Promise<void>;
 }
 

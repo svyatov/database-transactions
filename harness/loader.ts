@@ -24,6 +24,8 @@ interface Doc {
   setup: string;
   sessions: string[];
   steps: Step[];
+  anomaly?: string;
+  isolation?: string;
 }
 
 const RESERVED = new Set([
@@ -42,10 +44,49 @@ const RESERVED = new Set([
 ]);
 const REQUIRED = ["title", "claim", "setup", "sessions", "steps"] as const;
 
+/** The Adya codes of /concepts/isolation-anomalies — the rows of the cross-engine matrix. */
+const ANOMALIES = ["G0", "G1a", "G1b", "G1c", "OTV", "P2", "G-single", "PMP", "P4", "G2-item", "G2"];
+const LEVELS = /ISOLATION LEVEL (READ UNCOMMITTED|READ COMMITTED|REPEATABLE READ|SERIALIZABLE)/gi;
+
 /** Load any scenario file — `.ts` via its default export, `.yaml` via the interpreter. */
 export async function loadScenario(absPath: string): Promise<Scenario> {
-  if (absPath.endsWith(".ts")) return (await import(absPath)).default;
-  return fromYaml(Bun.YAML.parse(await Bun.file(absPath).text()) as Doc, absPath);
+  const text = await Bun.file(absPath).text();
+  if (!absPath.endsWith(".ts")) return fromYaml(Bun.YAML.parse(text) as Doc, absPath);
+  const s: Scenario = (await import(absPath)).default;
+  checkMeta(s, text, absPath);
+  return s;
+}
+
+/**
+ * `anomaly` and `isolation` are the only fields nobody proves by running the scenario, so
+ * they are checked against the scenario's own SQL instead of taken on the author's word.
+ * A scenario that declares neither is untouched.
+ */
+function checkMeta(s: Pick<Scenario, "anomaly" | "isolation">, sql: string, path: string) {
+  const fail = (msg: string): never => {
+    throw new Error(`${path}: ${msg}`);
+  };
+  if (s.anomaly && !ANOMALIES.includes(s.anomaly)) {
+    fail(`unknown anomaly "${s.anomaly}" — expected one of ${ANOMALIES.join(", ")}`);
+  }
+  if (s.isolation) {
+    const set = [...sql.matchAll(LEVELS)].map((m) => m[1]!.toUpperCase());
+    if (!set.includes(s.isolation.toUpperCase())) {
+      fail(
+        `declares isolation "${s.isolation}", but its SQL sets ${set.length ? [...new Set(set)].join(", ") : "no level"}`,
+      );
+    }
+  }
+}
+
+/** Every SQL string the scenario runs — notes and comments excluded, so prose can't fake a claim. */
+function sqlOf(doc: Doc): string {
+  const steps = doc.steps.flatMap((step) =>
+    Object.entries(step)
+      .filter(([key]) => !RESERVED.has(key))
+      .map(([, value]) => String(value)),
+  );
+  return [doc.setup, ...steps].join("\n");
 }
 
 export function fromYaml(doc: Doc, path: string): Scenario {
@@ -53,12 +94,15 @@ export function fromYaml(doc: Doc, path: string): Scenario {
     throw new Error(`${path}: ${msg}`);
   };
   for (const key of REQUIRED) if (!doc[key]) fail(`missing "${key}"`);
+  checkMeta(doc, sqlOf(doc), path);
 
   return {
     title: doc.title,
     claim: doc.claim,
     setup: doc.setup,
     sessions: doc.sessions,
+    ...(doc.anomaly ? { anomaly: doc.anomaly } : {}),
+    ...(doc.isolation ? { isolation: doc.isolation } : {}),
     async run(sessions: Record<string, Session>, t: Tools) {
       const captures: Record<string, Row> = {};
       const pendings: Record<string, Pending> = {};

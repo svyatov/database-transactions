@@ -77,6 +77,21 @@ stands when both agree. Where the drivers genuinely differ (say, after a server-
 connection kill, one reports the server's FATAL error code while the other only notices the
 closed socket), the scenario must list both accepted outcomes explicitly.
 
+## The proofs are readable by machines too
+
+If you're an agent, or you're pointing one here, skip the prose:
+[`/llms.txt`](/llms.txt) indexes two files written by the same generation pass that writes
+the transcripts. [`/llms-full.txt`](/llms-full.txt) is every transcript on this site,
+concatenated, each one labelled with the scenario that produced it and the claim it proves.
+[`/ledger.jsonl`](/ledger.jsonl) is the structured form: one JSON Lines record per scenario,
+carrying the engine and the version it reported, the claim, the sessions, and every error
+code the database emitted during the run.
+
+The ledger comes with no schema-stability guarantee. Its shape grows as this site does, and
+a consumer that pins to today's keys will eventually break. That is a deliberate trade: the
+alternative is a version field, which would imply a compatibility promise this project isn't
+ready to make.
+
 ## The harness is part of the reading material
 
 The whole machinery is ~800 lines of documented TypeScript in

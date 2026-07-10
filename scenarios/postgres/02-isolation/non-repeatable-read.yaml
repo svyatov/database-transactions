@@ -2,6 +2,8 @@ title: Non-repeatable read under READ COMMITTED
 claim: >-
   At READ COMMITTED, a transaction can read two different values for the same
   row — other transactions' commits become visible between its statements.
+anomaly: P2
+isolation: READ COMMITTED
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

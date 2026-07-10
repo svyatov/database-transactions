@@ -3,6 +3,7 @@ claim: >-
   A transaction that changes a value twice exposes neither draft to other
   transactions (Adya's G1b, "intermediate read"): readers see the old value
   until commit, then only the final one.
+anomaly: G1b
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

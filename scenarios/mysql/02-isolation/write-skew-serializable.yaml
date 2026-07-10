@@ -3,6 +3,8 @@ claim: >-
   Under MySQL's SERIALIZABLE, plain SELECTs take shared locks, so the
   write-skew interleaving deadlocks: one transaction is rolled back with errno
   1213, and the invariant survives.
+anomaly: G2
+isolation: SERIALIZABLE
 setup: |
   CREATE TABLE doctors (name varchar(20) PRIMARY KEY, on_call boolean NOT NULL);
   INSERT INTO doctors VALUES ('alice', true), ('bob', true);

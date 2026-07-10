@@ -3,6 +3,7 @@ claim: >-
   The interleaving that loses an update at READ COMMITTED loses it at
   REPEATABLE READ too — MySQL raises no error, unlike PostgreSQL's 40001. The
   fix must be a locking read or an atomic UPDATE.
+anomaly: P4
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

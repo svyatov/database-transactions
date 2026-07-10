@@ -2,6 +2,7 @@ title: Lost update at READ COMMITTED
 claim: >-
   Two read-modify-write transactions at READ COMMITTED can silently overwrite
   each other: two deposits of 10 grow the balance by only 10.
+anomaly: P4
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

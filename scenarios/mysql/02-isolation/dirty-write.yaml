@@ -3,6 +3,8 @@ claim: >-
   InnoDB always takes exclusive row locks for writes, so two transactions
   repricing the same rows cannot interleave their writes (Adya's G0, "dirty
   write") at any isolation level — even the one that allows dirty reads.
+anomaly: G0
+isolation: READ UNCOMMITTED
 setup: |
   CREATE TABLE items (id int PRIMARY KEY, name varchar(20) NOT NULL, price int NOT NULL);
   INSERT INTO items VALUES (1, 'mug', 10), (2, 'cap', 20);

@@ -2,6 +2,8 @@ title: Phantom read under READ COMMITTED
 claim: >-
   At READ COMMITTED, re-running the same range query inside one transaction
   can return rows that weren't there before — phantoms.
+anomaly: PMP
+isolation: READ COMMITTED
 setup: |
   CREATE TABLE orders (id int PRIMARY KEY, amount int NOT NULL);
   INSERT INTO orders VALUES (1, 500), (2, 300);

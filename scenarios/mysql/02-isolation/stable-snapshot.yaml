@@ -2,6 +2,7 @@ title: "REPEATABLE READ: one snapshot for the whole transaction"
 claim: >-
   At REPEATABLE READ — MySQL's default — plain SELECTs use a single snapshot
   for the entire transaction: no non-repeatable reads and no phantoms.
+anomaly: P2
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 50);

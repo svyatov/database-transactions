@@ -3,6 +3,7 @@ claim: >-
   Two transactions repricing the same rows cannot interleave their writes
   (Adya's G0, "dirty write"): the second writer waits for the first to finish,
   so the final state is one transaction's prices, never a mix.
+anomaly: G0
 setup: |
   CREATE TABLE items (id int PRIMARY KEY, name text NOT NULL, price int NOT NULL);
   INSERT INTO items VALUES (1, 'mug', 10), (2, 'cap', 20);
