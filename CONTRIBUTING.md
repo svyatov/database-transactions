@@ -4,6 +4,13 @@ The rule that makes this site worth trusting: **no claim without a proving scena
 Prose may only state what a scenario asserts or what an official-docs quote (verbatim,
 linked) says. If you can't prove it, don't write it.
 
+One exception, and it has to be marked. A guarantee that's entailed by an isolation level's
+semantics but that no scenario here demonstrates may be stated if it carries a `†`, a legend
+saying no transcript proves it, and a link to the lesson that explains why it holds — see
+[the cross-engine table](docs/concepts/anomalies-by-engine.md). Demonstrated and entailed are
+different things, and the reader gets to see which one they're looking at. A claim you merely
+believe still doesn't ship.
+
 ## Setup
 
 ```sh
@@ -54,8 +61,12 @@ bunx tsc --noEmit                     # types
 bun test                              # every claim re-verified, both databases
 bun run gen                           # then `git diff` must be empty — transcripts committed & stable
 uv run --directory python pytest      # the second pair of drivers agrees
-bun run docs:build                    # site builds, all internal links resolve
+bun run docs:anchors                  # every internal `#anchor` points at a real heading
+bun run docs:build                    # site builds, every link's target page exists
 ```
+
+`docs:build` only checks that a link's *page* exists — it strips the `#fragment` first, so a
+stale heading slug sails through. `docs:anchors` is what catches that.
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org)
 (`feat(03-locking): …`, `fix(harness): …`).

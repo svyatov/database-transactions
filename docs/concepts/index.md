@@ -1,14 +1,14 @@
 ---
-description: The engine-neutral theory of database transactions — ACID, isolation levels, and the full anomaly catalog — with every claim linked to an executable proof on PostgreSQL and MySQL.
+description: The engine-neutral theory of database transactions — ACID, isolation levels, the full anomaly catalog — plus the side-by-side comparison of what PostgreSQL and MySQL each do about every anomaly, with every claim linked to an executable proof.
 ---
 
 # Transaction concepts
 
-The theory here doesn't change when you switch databases: what a transaction
-promises, what the isolation levels trade away, and the full vocabulary of things that go
-wrong. What *does* change — sometimes drastically — is what each engine actually does about
-them, so every claim here links to a transcript from a real PostgreSQL or MySQL run that
-proves it.
+Two halves. The theory doesn't change when you switch databases: what a transaction promises,
+what the isolation levels trade away, and the full vocabulary of things that go wrong. What each
+engine actually *does* about that vocabulary changes a great deal, and the comparison below puts
+PostgreSQL's and MySQL's answers in adjacent cells. Every claim on either side links to a
+transcript from a real run that proves it.
 
 ## Theory
 
@@ -28,6 +28,12 @@ practice get their own pages:
 - [Phantom read](/concepts/phantom-read) — new rows appearing between your queries
 - [Lost update](/concepts/lost-update) — the silent bug your app most likely has
 - [Write skew](/concepts/write-skew) — both transactions commit, the invariant dies
+
+## The comparison
+
+- **[Anomalies by engine](/concepts/anomalies-by-engine)** — one row per anomaly, one column per
+  engine, each cell naming the weakest isolation level at which that engine prevents it. The
+  lost-update row is two levels apart.
 
 ## Patterns
 

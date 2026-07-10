@@ -37,8 +37,8 @@ of the table is fixed with explicit locking or SQL-side arithmetic, not with the
 knob.
 
 PostgreSQL's catalog looks different: its RR turns lost updates into retryable errors, its
-SERIALIZABLE detects write skew without locks, and its weakest level is Hermitage-clean —
-[compare the two tables](/postgres/02-isolation/anomaly-catalog). The three ⚠️ cells in
+SERIALIZABLE detects write skew without locks, and its weakest level is Hermitage-clean — see
+[both engines' answers side by side](/concepts/anomalies-by-engine). The three ⚠️ cells in
 MySQL's REPEATABLE READ column are exactly where Hermitage's results for the two databases
 diverge, and all three trace back to [current reads](/mysql/02-isolation/repeatable-read).
 
@@ -87,4 +87,6 @@ overwritten by an uncommitted successor, the other still showing through:
 - [Hermitage](https://github.com/ept/hermitage) — runnable isolation tests for MySQL,
   PostgreSQL, Oracle, and more; this chapter proves every MySQL case it covers
 - [MySQL docs: Transaction Isolation Levels](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html)
-- [The same catalog for PostgreSQL](/postgres/02-isolation/anomaly-catalog)
+- [Anomalies by engine](/concepts/anomalies-by-engine) — both engines' answers collapsed to one
+  cell each, in adjacent columns
+- [The same catalog for PostgreSQL](/postgres/02-isolation/anomaly-catalog) — the full grid

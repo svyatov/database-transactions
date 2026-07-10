@@ -43,6 +43,10 @@ const concepts = (collapsed: boolean): DefaultTheme.SidebarItem => ({
       ],
     },
     {
+      text: "Anomalies by engine",
+      link: "/concepts/anomalies-by-engine",
+    },
+    {
       text: "Dual writes & the outbox",
       link: "/concepts/transactional-outbox",
     },

@@ -31,6 +31,9 @@ jobs:
         run: bunx tsc --noEmit
       - name: Lint and format check
         run: bunx biome ci .
+      # docs:build strips the #fragment before checking a link — this checks the fragment.
+      - name: Check every internal anchor link resolves
+        run: bun run docs:anchors
       # Same compose file as local dev — one source of truth for the DB versions and config.
       - run: docker compose up -d --wait
       - name: Run every scenario, assert every claim

@@ -84,5 +84,7 @@ transaction is busy overwriting half of its rows:
 
 - [Hermitage](https://github.com/ept/hermitage) — runnable isolation tests for PostgreSQL,
   MySQL, Oracle, and more; this chapter proves every PostgreSQL case it covers
+- [Anomalies by engine](/concepts/anomalies-by-engine) — this table and MySQL's, collapsed to
+  one cell each and set side by side
 - [The same catalog for MySQL](/mysql/02-isolation/anomaly-catalog) — same anomalies,
   meaningfully different answers
