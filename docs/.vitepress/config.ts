@@ -491,6 +491,7 @@ export default defineConfig({
   },
   themeConfig: {
     nav: [
+      { text: "Start here", link: "/start-here" },
       { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },
       { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
       { text: "Concepts", link: "/concepts/" },

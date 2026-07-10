@@ -8,9 +8,12 @@ hero:
   tagline: Isolation levels, anomalies, locking, MVCC, and real-world concurrency patterns — every claim on this site is proven by code that just ran against a real database.
   actions:
     - theme: brand
+      text: Start here
+      link: /start-here
+    - theme: alt
       text: Learn PostgreSQL transactions
       link: /postgres/01-basics/what-is-a-transaction
-    - theme: brand
+    - theme: alt
       text: Learn MySQL transactions
       link: /mysql/01-basics/what-is-a-transaction
     - theme: alt
