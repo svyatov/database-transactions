@@ -48,12 +48,21 @@ const REQUIRED = ["title", "claim", "setup", "sessions", "steps"] as const;
 const ANOMALIES = ["G0", "G1a", "G1b", "G1c", "OTV", "P2", "G-single", "PMP", "P4", "G2-item", "G2"];
 const LEVELS = /ISOLATION LEVEL (READ UNCOMMITTED|READ COMMITTED|REPEATABLE READ|SERIALIZABLE)/gi;
 
+/** Every error this loader raises names the file it came from. */
+const failAt =
+  (path: string) =>
+  (msg: string): never => {
+    throw new Error(`${path}: ${msg}`);
+  };
+
 /** Load any scenario file — `.ts` via its default export, `.yaml` via the interpreter. */
 export async function loadScenario(absPath: string): Promise<Scenario> {
-  const text = await Bun.file(absPath).text();
-  if (!absPath.endsWith(".ts")) return fromYaml(Bun.YAML.parse(text) as Doc, absPath);
+  if (!absPath.endsWith(".ts")) {
+    return fromYaml(Bun.YAML.parse(await Bun.file(absPath).text()) as Doc, absPath);
+  }
   const s: Scenario = (await import(absPath)).default;
-  checkMeta(s, text, absPath);
+  // Only re-read the source when there is a declaration to check against it.
+  if (s.anomaly || s.isolation) checkMeta(s, sqlOfTs(await Bun.file(absPath).text()), absPath);
   return s;
 }
 
@@ -63,9 +72,7 @@ export async function loadScenario(absPath: string): Promise<Scenario> {
  * A scenario that declares neither is untouched.
  */
 function checkMeta(s: Pick<Scenario, "anomaly" | "isolation">, sql: string, path: string) {
-  const fail = (msg: string): never => {
-    throw new Error(`${path}: ${msg}`);
-  };
+  const fail = failAt(path);
   if (s.anomaly && !ANOMALIES.includes(s.anomaly)) {
     fail(`unknown anomaly "${s.anomaly}" — expected one of ${ANOMALIES.join(", ")}`);
   }
@@ -79,7 +86,7 @@ function checkMeta(s: Pick<Scenario, "anomaly" | "isolation">, sql: string, path
   }
 }
 
-/** Every SQL string the scenario runs — notes and comments excluded, so prose can't fake a claim. */
+/** Every SQL string a YAML scenario runs — notes and comments excluded, so prose can't fake a claim. */
 function sqlOf(doc: Doc): string {
   const steps = doc.steps.flatMap((step) =>
     Object.entries(step)
@@ -89,10 +96,17 @@ function sqlOf(doc: Doc): string {
   return [doc.setup, ...steps].join("\n");
 }
 
+/**
+ * The same, for a code scenario: its SQL lives in tagged templates and its `setup` string,
+ * so scan the backticks only. A comment or a `t.note("…")` must not satisfy the check, and
+ * a template this misparses can only drop text — which fails the check loudly, never quietly.
+ */
+function sqlOfTs(source: string): string {
+  return (source.match(/`[^`]*`/g) ?? []).join("\n");
+}
+
 export function fromYaml(doc: Doc, path: string): Scenario {
-  const fail = (msg: string): never => {
-    throw new Error(`${path}: ${msg}`);
-  };
+  const fail = failAt(path);
   for (const key of REQUIRED) if (!doc[key]) fail(`missing "${key}"`);
   checkMeta(doc, sqlOf(doc), path);
 

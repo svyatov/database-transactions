@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { fromYaml } from "../harness/loader";
+import { fromYaml, loadScenario } from "../harness/loader";
 
 const base = {
   title: "t",
@@ -50,4 +50,39 @@ test("a declared level cannot be faked by prose", () => {
 
 test("a scenario that sets no level and declares none is not checked", () => {
   expect(() => fromYaml(doc({ anomaly: "G0" }), "x.yaml")).not.toThrow();
+});
+
+/** A code scenario declares through the same fields, and its SQL lives in backticks. */
+const tsScenario = (meta: string, body: string) => `
+  import { scenario } from "../harness/scenario";
+  export default scenario({
+    title: "t", claim: "c", setup: \`CREATE TABLE t (id int)\`, sessions: ["A"], ${meta}
+    async run({ A }: any) { ${body} },
+  });
+`;
+
+async function loadTs(name: string, source: string) {
+  const path = `${import.meta.dir}/.tmp-${name}.ts`;
+  await Bun.write(path, source);
+  try {
+    return await loadScenario(path);
+  } finally {
+    await Bun.file(path).unlink();
+  }
+}
+
+test("a code scenario's declared level is checked against the SQL in its backticks", async () => {
+  const s = await loadTs(
+    "ok",
+    tsScenario('anomaly: "P4", isolation: "REPEATABLE READ",', "await A`BEGIN ISOLATION LEVEL REPEATABLE READ`;"),
+  );
+  expect(s.isolation).toBe("REPEATABLE READ");
+});
+
+test("a comment in a code scenario cannot satisfy the isolation check", async () => {
+  const promise = loadTs(
+    "prose",
+    tsScenario('isolation: "SERIALIZABLE",', "// BEGIN ISOLATION LEVEL SERIALIZABLE\n await A`BEGIN`;"),
+  );
+  await expect(promise).rejects.toThrow(/no level/);
 });

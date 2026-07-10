@@ -59,13 +59,14 @@ for (const file of files) {
   const s = await loadScenario(`${root}scenarios/${file}`);
   const dialect = dialectFor(file);
   const result = await runScenario(s, dialect);
+  const version = await versionOf(dialect);
   const target = `docs/${file.replace(/\/([^/]+)\.(ts|yaml)$/, "/parts/$1.md")}`;
   const timeline = renderTimeline(result);
   const transcript = [
     ...(timeline ? [timeline, ""] : []),
     renderMarkdown(result, dialect).trimEnd(),
     "",
-    `<small>Verified against ${dialect.product} ${await versionOf(dialect)} · [Run it yourself](/about/run-locally) · [Scenario source](${REPO}/blob/main/scenarios/${file})</small>`,
+    `<small>Verified against ${dialect.product} ${version} · [Run it yourself](/about/run-locally) · [Scenario source](${REPO}/blob/main/scenarios/${file})</small>`,
     "",
   ].join("\n");
   await Bun.write(
@@ -80,7 +81,7 @@ for (const file of files) {
     scenario: file,
     engine: file.split("/")[0]!,
     product: dialect.product,
-    version: await versionOf(dialect),
+    version,
     claim: s.claim,
     sessions: [...s.sessions],
     errors: [...new Set(errors)].sort(),
