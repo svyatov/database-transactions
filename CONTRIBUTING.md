@@ -54,6 +54,30 @@ uv sync --directory python    # optional: the cross-driver check
 4. **Generate and commit the transcript**: `bun run gen` — commit the changed files
    under `docs/**/parts/` together with your scenario.
 
+### Giving a pattern a second act
+
+A chapter 5 lesson teaches a pattern as a working recipe. Its *second act* is a chapter 7
+scenario that prices what the recipe costs at scale when something goes wrong — the incident a
+team actually gets paged for. `queue-bloat.yaml` is the first: the job queue's claim/complete
+loop, run under a worker that hangs mid-transaction, turns throughput into unreclaimable disk.
+
+Three moves build one:
+
+1. Author the chapter 7 scenario so it runs the pattern's *own* SQL — copied from the chapter 5
+   scenario, not paraphrased — and measures the failure that SQL produces at volume. Copying the
+   taught statements is what makes the scenario a proof of *that* pattern rather than a lookalike.
+2. Link forward from the pattern lesson, at the sentence where it already warns about this
+   failure (job-queue's "the transaction is the lease"). Nothing else in chapter 5 changes.
+3. Add a compendium entry that composes the two halves already indexed separately — for
+   queue-bloat, entry 7 ("a table keeps growing") and entry 9 ("two workers process the same
+   job") — and links the scenario as its proof.
+
+The trap, learned the hard way building this one: the failure mode is usually already proven
+somewhere in chapters 3–4, and a scenario that restates it is a duplicate, not a second act.
+VACUUM freezing behind an old snapshot was already `long-transactions`. A second act has to claim
+only what the *composition* adds. Here that was a rate: the bloat grows with the queue's
+throughput, a number no single-mechanism lesson shows.
+
 ## Before opening a PR
 
 ```sh

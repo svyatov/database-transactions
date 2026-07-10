@@ -28,7 +28,9 @@ instantly visible to the next `SELECT`. Crash recovery isn't a feature you build
 The transaction is the lease, and that's the thing to watch. A worker holds its
 connection and its transaction open for the whole job — fine for seconds, wrong for
 hours, because a [long transaction](/postgres/04-mvcc/long-transactions) pins VACUUM for
-the entire database. For slow jobs, switch to a claimed-state design:
+the entire database, and this very queue's table then
+[grows with everything it drains](/postgres/07-pitfalls/queue-bloat) until the worker
+lets go. For slow jobs, switch to a claimed-state design:
 `UPDATE ... SET state = 'running', claimed_at = now()` in one short transaction, plus a
 reaper for stale claims. That trades this lesson's automatic crash safety for bounded
 transaction time. The other detail is cheap: `ORDER BY id` keeps the queue fair (oldest
