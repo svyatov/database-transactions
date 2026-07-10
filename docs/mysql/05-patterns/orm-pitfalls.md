@@ -9,8 +9,8 @@ your migration tool's "transactional" migrations aren't.
 ## Pitfall #1: DDL in a "transaction" — the migration lie
 
 Every serious framework wraps migrations in a transaction, and on PostgreSQL that means a
-failed migration rolls back cleanly — schema *and* data. On MySQL the wrapper is
-decorative. The
+[failed migration rolls back cleanly](/postgres/01-basics/begin-commit-rollback) — schema
+*and* data. On MySQL the wrapper is decorative. The
 [manual](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html): DDL statements
 "implicitly end any transaction active in the current session, as if you had done a
 `COMMIT` before executing the statement."

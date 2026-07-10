@@ -1,0 +1,49 @@
+title: ROLLBACK undoes DDL too
+claim: >-
+  Ordinary DDL participates in the transaction like any other statement: a
+  CREATE INDEX and a CREATE TABLE stay invisible until COMMIT, and a ROLLBACK
+  removes the schema they created along with the rows.
+setup: |
+  CREATE TABLE orders (id int PRIMARY KEY, state text NOT NULL);
+sessions: [A, B]
+steps:
+  - note: >-
+      A migration script wraps its work in a transaction, believing that makes
+      it atomic: insert data, add an index, create a table — and if anything
+      fails, roll back.
+  - A: BEGIN
+  - A: INSERT INTO orders VALUES (1, 'draft')
+  - B: SELECT count(*)::int AS visible FROM orders
+    expect: [{ visible: 0 }]
+    comment: uncommitted, invisible — so far so good
+
+  - A: CREATE INDEX idx_orders_state ON orders (state)
+    comment: DDL — on MySQL this is where the implicit COMMIT would fire
+  - A: CREATE TABLE migration_log (id int PRIMARY KEY, note text)
+
+  - B: SELECT count(*)::int AS visible FROM orders
+    expect: [{ visible: 0 }]
+    comment: still nothing committed — the DDL joined the transaction
+
+  - B.fails: SELECT count(*) FROM migration_log
+    error: "42P01"
+    comment: undefined_table — uncommitted schema is invisible, not merely empty
+
+  - note: >-
+      The script now hits an error and rolls back, trusting the transaction to
+      clean up:
+  - A: ROLLBACK
+  - B: SELECT count(*)::int AS visible FROM orders
+    expect: [{ visible: 0 }]
+    comment: the row is gone
+
+  - B: >-
+      SELECT to_regclass('migration_log') IS NULL AS table_gone,
+             to_regclass('idx_orders_state') IS NULL AS index_gone
+    expect: [{ table_gone: true, index_gone: true }]
+    comment: so is the table, and so is the index
+
+  - note: >-
+      PostgreSQL keeps schema changes in the same transaction as the data. A
+      migration that inserts, indexes, and creates its way to an error leaves
+      nothing behind — design for atomicity, not for re-runnability.
