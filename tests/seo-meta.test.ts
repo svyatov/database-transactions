@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import config, { buildPageClaims } from "../docs/.vitepress/config";
 
 const docsDir = new URL("../docs/", import.meta.url);
@@ -47,25 +49,37 @@ test("a page whose include has no matching ledger record is absent", () => {
   expect(partial.has("mysql/02-isolation/read-committed.md")).toBe(false);
 });
 
-// Every head[] href and manifest icon must resolve to a committed docs/public/ asset. A fresh CI
+// Every committed static asset referenced from head[] or the manifest must exist. A fresh CI
 // checkout carries only tracked files, so this fails there if a referenced asset was never
-// committed — VitePress's dead-link checker never inspects head hrefs or the manifest.
+// committed — VitePress's dead-link checker never inspects head hrefs or the manifest. Build
+// artifacts produced by `bun run gen` (llms.txt is gitignored and regenerated before docs:build)
+// are excluded: they legitimately don't exist at `bun test` time, which runs before gen in CI.
 const base = config.base ?? "/";
 const publicFile = (href: string) => new URL(`public/${href.slice(base.length)}`, docsDir);
+const isGenerated = (href: string): boolean => {
+  try {
+    execFileSync("git", ["check-ignore", "-q", fileURLToPath(publicFile(href))], { stdio: "ignore" });
+    return true; // check-ignore exits 0 -> the path is gitignored, i.e. a `bun run gen` artifact
+  } catch {
+    return false; // exit 1 -> not ignored, so it must be a committed asset
+  }
+};
+const missingAssets = (refs: string[]) => refs.filter((ref) => !isGenerated(ref) && !existsSync(publicFile(ref)));
 
-test("every head[] href resolves to an existing docs/public/ asset", () => {
+test("every committed head[] asset resolves to an existing docs/public/ file", () => {
   const hrefs = (config.head ?? [])
     .map((entry) => (Array.isArray(entry) ? (entry[1] as { href?: string })?.href : undefined))
     .filter((href): href is string => !!href && href.startsWith(base));
   expect(hrefs.length).toBeGreaterThan(0);
-  expect(hrefs.filter((href) => !existsSync(publicFile(href)))).toEqual([]);
+  expect(missingAssets(hrefs)).toEqual([]);
 });
 
-test("every manifest icon resolves to an existing docs/public/ asset", () => {
+test("every manifest icon is base-prefixed and resolves to an existing docs/public/ file", () => {
   const manifest = JSON.parse(readFileSync(new URL("public/manifest.webmanifest", docsDir), "utf8")) as {
     icons: { src: string }[];
   };
   const srcs = manifest.icons.map((icon) => icon.src);
   expect(srcs.length).toBeGreaterThan(0);
-  expect(srcs.filter((src) => !src.startsWith(base) || !existsSync(publicFile(src)))).toEqual([]);
+  expect(srcs.filter((src) => !src.startsWith(base))).toEqual([]);
+  expect(missingAssets(srcs)).toEqual([]);
 });
