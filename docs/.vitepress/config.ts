@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { type DefaultTheme, defineConfig } from "vitepress";
+import { type DefaultTheme, defineConfig, type HeadConfig } from "vitepress";
 
 const REPO = "https://github.com/svyatov/database-transactions";
 
@@ -53,6 +53,41 @@ export function buildPageClaims(
     }
   }
   return map;
+}
+
+/**
+ * JSON-LD for an `errors/<code>` answer page: a QAPage whose question is the code and
+ * whose accepted answer is the page's one-sentence explanation. Returns null for any page
+ * that isn't an error-code page — including the `errors/` index, which carries no `code` —
+ * so the `transformHead` branch stays a one-liner. Throws when an error page is missing a
+ * field the structured data needs, so a malformed page fails the build loudly rather than
+ * shipping broken JSON-LD.
+ */
+export function buildErrorJsonLd(
+  relativePath: string,
+  frontmatter: Record<string, unknown>,
+  url: string,
+): HeadConfig | null {
+  if (!relativePath.startsWith("errors/") || !frontmatter.code) return null;
+  const field = (key: string): string => {
+    const value = frontmatter[key];
+    if (typeof value !== "string" || !value) {
+      throw new Error(`errors/ JSON-LD: missing "${key}" in ${relativePath}`);
+    }
+    return value;
+  };
+  const code = field("code");
+  const ld = {
+    "@context": "https://schema.org",
+    "@type": "QAPage",
+    mainEntity: {
+      "@type": "Question",
+      name: `What is database error ${code} — ${field("name")}?`,
+      acceptedAnswer: { "@type": "Answer", text: field("description"), url },
+    },
+  };
+  // Escape `<` so a stray `</script>` in a frontmatter value can't break out of the ld+json block.
+  return ["script", { type: "application/ld+json" }, JSON.stringify(ld).replaceAll("<", "\\u003c")];
 }
 
 const records = ledgerRecords();
@@ -455,6 +490,29 @@ const mysql: DefaultTheme.SidebarItem[] = [
   },
 ];
 
+// Cross-engine error-code answer pages. Own nav entry and sidebar because the
+// section spans both engines, so it lives outside the /postgres/ and /mysql/ trees.
+const errors: DefaultTheme.SidebarItem[] = [
+  { text: "All error codes", link: "/errors/" },
+  {
+    text: "PostgreSQL",
+    items: [
+      { text: "40001 — serialization failure", link: "/errors/40001" },
+      { text: "40P01 — deadlock detected", link: "/errors/40P01" },
+      { text: "55P03 — lock timeout", link: "/errors/55P03" },
+      { text: "57014 — statement timeout", link: "/errors/57014" },
+    ],
+  },
+  {
+    text: "MySQL",
+    items: [
+      { text: "1213 — deadlock found", link: "/errors/1213" },
+      { text: "1205 — lock wait timeout", link: "/errors/1205" },
+      { text: "3572 — statement aborted (NOWAIT)", link: "/errors/3572" },
+    ],
+  },
+];
+
 export default defineConfig({
   title: "Database Transactions",
   description:
@@ -517,7 +575,7 @@ export default defineConfig({
     // Precedence: authored frontmatter → the lead scenario's proven claim (whole, untruncated) →
     // first-paragraph slice. The claim is a crafted single sentence, so it skips the 160-char guillotine.
     const desc = pageData.description || pageClaims.get(pageData.relativePath) || firstParagraph || description;
-    return [
+    const head: HeadConfig[] = [
       ["link", { rel: "canonical", href: url }],
       ["meta", { name: "description", content: desc }],
       ["meta", { property: "og:title", content: title }],
@@ -525,6 +583,9 @@ export default defineConfig({
       ["meta", { property: "og:url", content: url }],
       ["meta", { property: "og:type", content: path ? "article" : "website" }],
     ];
+    const jsonLd = buildErrorJsonLd(pageData.relativePath, pageData.frontmatter, url);
+    if (jsonLd) head.push(jsonLd);
+    return head;
   },
   markdown: {
     config(md) {
@@ -626,12 +687,14 @@ export default defineConfig({
       { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },
       { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
       { text: "Concepts", link: "/concepts/" },
+      { text: "Error codes", link: "/errors/" },
       { text: "How it works", link: "/about/methodology" },
     ],
     sidebar: {
       "/postgres/": postgres,
       "/mysql/": mysql,
       "/concepts/": neutral,
+      "/errors/": errors,
       "/about/": neutral,
     },
     socialLinks: [
