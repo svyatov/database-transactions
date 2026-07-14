@@ -156,6 +156,7 @@ function llmsIndex(): string {
     `- [Every proven transcript](${SITE}/llms-full.txt): all scenarios, with the SQL, the interleaving, and the database's own output.`,
     `- [Ledger](${SITE}/ledger.jsonl): one JSON Lines record per scenario — path, engine, pinned version, claim, sessions, observed error codes. No schema-stability guarantee; the shape grows as the site does.`,
     `- [Error codes, reproduced](${SITE}/errors/): the seven concurrency-control codes (PostgreSQL and MySQL), each with a one-sentence answer and the minimal reproduction that emits it.`,
+    `- [FAQ](${SITE}/faq): the questions people actually ask — dirty reads, lost updates, deadlocks, isolation levels — each answered in a sentence or two and linked to the transcript that proves it.`,
     "",
   ].join("\n");
 }

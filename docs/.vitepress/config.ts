@@ -56,6 +56,15 @@ export function buildPageClaims(
 }
 
 /**
+ * Wrap a JSON-LD payload as a `<script type="application/ld+json">` head entry, escaping `<`
+ * so a stray `</script>` in any embedded value (a frontmatter field, a claim, an answer) can't
+ * break out of the block. The single home for that escape — shared by every JSON-LD builder here.
+ */
+function ldScript(ld: object): HeadConfig {
+  return ["script", { type: "application/ld+json" }, JSON.stringify(ld).replaceAll("<", "\\u003c")];
+}
+
+/**
  * JSON-LD for an `errors/<code>` answer page: a QAPage whose question is the code and
  * whose accepted answer is the page's one-sentence explanation. Returns null for any page
  * that isn't an error-code page — including the `errors/` index, which carries no `code` —
@@ -86,8 +95,89 @@ export function buildErrorJsonLd(
       acceptedAnswer: { "@type": "Answer", text: field("description"), url },
     },
   };
-  // Escape `<` so a stray `</script>` in a frontmatter value can't break out of the ld+json block.
-  return ["script", { type: "application/ld+json" }, JSON.stringify(ld).replaceAll("<", "\\u003c")];
+  return ldScript(ld);
+}
+
+/**
+ * Plain text from a rendered HTML fragment: drop VitePress's header-anchor links, strip the
+ * remaining tags, decode the handful of entities the renderer emits, collapse whitespace.
+ * Shared by the meta-description first-paragraph slice and by `parseFaq`.
+ */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<a class="header-anchor"[\s\S]*?<\/a>/g, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\u200b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** `TechArticle` JSON-LD for a lesson or concept page — headline/description/url only. */
+export function techArticleLd(fields: { title: string; description: string; url: string }) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: fields.title,
+    description: fields.description,
+    url: fields.url,
+  };
+}
+
+/**
+ * Extract `{ question, answer }` pairs from the rendered FAQ page. `content` is the whole SSR
+ * layout, so scope to the `.vp-doc` article body first — an unscoped walk folds the doc-footer
+ * and provenance `<footer>` into the last answer. Each `<h2>` is a question; the prose up to the
+ * next `<h2>` is its answer. No `.vp-doc` (a bare test fragment) → walk `content` as-is.
+ */
+export function parseFaq(content: string): { question: string; answer: string }[] {
+  // Match `class` wherever it sits in the tag, and `vp-doc` as a whole class token: Vue SSR
+  // renders `style` before `class` (`<div style="…" class="vp-doc …">`), so an anchored
+  // `<div class="vp-doc` misses in production and the scoping below silently folds in the footer.
+  const open = content.match(/<div\b[^>]*\bclass="(?:[^"]*\s)?vp-doc(?:\s[^"]*)?"[^>]*>/);
+  let body = content;
+  if (open) {
+    const start = open.index! + open[0].length;
+    let depth = 1;
+    const div = /<(\/?)div\b[^>]*>/g;
+    div.lastIndex = start;
+    let end = content.length;
+    for (let m = div.exec(content); m; m = div.exec(content)) {
+      depth += m[1] ? -1 : 1;
+      if (depth === 0) {
+        end = m.index;
+        break;
+      }
+    }
+    body = content.slice(start, end);
+  }
+  const heads = [...body.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/g)];
+  const pairs: { question: string; answer: string }[] = [];
+  for (let i = 0; i < heads.length; i++) {
+    const question = stripHtml(heads[i]![1]!);
+    const from = heads[i]!.index! + heads[i]![0].length;
+    const to = i + 1 < heads.length ? heads[i + 1]!.index! : body.length;
+    const answer = stripHtml(body.slice(from, to));
+    if (question && answer) pairs.push({ question, answer });
+  }
+  return pairs;
+}
+
+/** `FAQPage` JSON-LD wrapping parsed pairs into `mainEntity: Question[]`. */
+export function faqPageLd(pairs: { question: string; answer: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: pairs.map((p) => ({
+      "@type": "Question",
+      name: p.question,
+      acceptedAnswer: { "@type": "Answer", text: p.answer },
+    })),
+  };
 }
 
 const records = ledgerRecords();
@@ -561,16 +651,8 @@ export default defineConfig({
     if (page === "404.md") return;
     const path = pageData.relativePath.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, "");
     const url = `https://svyatov.github.io/database-transactions/${path}`;
-    const text = content
-      .match(/<p>([\s\S]*?)<\/p>/)?.[1]
-      ?.replace(/<[^>]+>/g, "")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\s+/g, " ")
-      .trim();
+    const para = content.match(/<p>([\s\S]*?)<\/p>/)?.[1];
+    const text = para ? stripHtml(para) : undefined;
     const firstParagraph = text && text.length > 160 ? `${text.slice(0, 160).replace(/\s+\S*$/, "")}…` : text;
     // Precedence: authored frontmatter → the lead scenario's proven claim (whole, untruncated) →
     // first-paragraph slice. The claim is a crafted single sentence, so it skips the 160-char guillotine.
@@ -585,6 +667,17 @@ export default defineConfig({
     ];
     const jsonLd = buildErrorJsonLd(pageData.relativePath, pageData.frontmatter, url);
     if (jsonLd) head.push(jsonLd);
+    // Per-page article JSON-LD: FAQPage on /faq; TechArticle on lesson and concept article pages;
+    // nothing on home, about/*, section indexes, or error pages (they carry QAPage above). A path
+    // ending in "/" is a bare index and is skipped.
+    let article: object | undefined;
+    if (path === "faq") {
+      const pairs = parseFaq(content);
+      if (pairs.length) article = faqPageLd(pairs);
+    } else if (/^(postgres|mysql|concepts)\//.test(path) && !path.endsWith("/")) {
+      article = techArticleLd({ title, description: desc, url });
+    }
+    if (article) head.push(ldScript(article));
     return head;
   },
   markdown: {
@@ -688,6 +781,7 @@ export default defineConfig({
       { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
       { text: "Concepts", link: "/concepts/" },
       { text: "Error codes", link: "/errors/" },
+      { text: "FAQ", link: "/faq" },
       { text: "How it works", link: "/about/methodology" },
     ],
     sidebar: {
