@@ -1,8 +1,62 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { type DefaultTheme, defineConfig } from "vitepress";
 
 const REPO = "https://github.com/svyatov/database-transactions";
+
+// GitHub Pages project-site base. `head` hrefs below spell it out because VitePress does not
+// auto-prefix them with `base` (unlike page links); reuse this const so the two never drift.
+const BASE_PATH = "/database-transactions/";
+
+type LedgerRecord = { scenario: string; product: string; version: string; claim: string };
+
+/** Parse `public/ledger.jsonl` once; an absent ledger (fresh tree, `gen` never ran) yields []. */
+function ledgerRecords(): LedgerRecord[] {
+  try {
+    return readFileSync(new URL("../public/ledger.jsonl", import.meta.url), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as LedgerRecord);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Map each lesson page's docs-root-relative path to its lead scenario's ledger `claim`.
+ *
+ * A lesson page pulls in transcripts with `<!--@include: ./parts/<slug>.md-->`, and a part slug
+ * equals its scenario slug. The first include is the page's lead example, so we join `<pageDir>/<slug>`
+ * to a ledger record — stripping whatever extension the record keys on (`.yaml` for 110 records,
+ * `.ts` for 6), never assuming `.yaml`. Pages without an include, or whose lead slug has no ledger
+ * record, are simply absent (they fall back to the first-paragraph description at injection time).
+ */
+export function buildPageClaims(
+  docsDir: URL,
+  records: readonly { scenario: string; claim: string }[],
+): Map<string, string> {
+  const claims = new Map(records.map((r) => [r.scenario.replace(/\.\w+$/, ""), r.claim]));
+  const map = new Map<string, string>();
+  for (const engine of ["postgres", "mysql"]) {
+    const engineDir = new URL(`${engine}/`, docsDir);
+    if (!existsSync(engineDir)) continue;
+    for (const entry of readdirSync(engineDir, { recursive: true })) {
+      const rel = String(entry).replaceAll("\\", "/");
+      if (!rel.endsWith(".md") || rel.includes("parts/")) continue;
+      const include = readFileSync(new URL(rel, engineDir), "utf8").match(
+        /<!--\s*@include:\s*\.\/parts\/(.+?)\.md\s*-->/,
+      );
+      if (!include) continue;
+      const pagePath = `${engine}/${rel}`;
+      const claim = claims.get(`${pagePath.slice(0, pagePath.lastIndexOf("/"))}/${include[1]}`);
+      if (claim) map.set(pagePath, claim);
+    }
+  }
+  return map;
+}
+
+const records = ledgerRecords();
+const pageClaims = buildPageClaims(new URL("../", import.meta.url), records);
 
 /**
  * The footer's trust signal: one sentence, three clauses, each dropped when its evidence
@@ -23,17 +77,7 @@ function provenance(): string {
 
 /** Distinct `(product, version)` pairs across the ledger's records, in path order. */
 function engines(): string {
-  let pairs: string[];
-  try {
-    const ledger = readFileSync(new URL("../public/ledger.jsonl", import.meta.url), "utf8");
-    const records = ledger
-      .trim()
-      .split("\n")
-      .map((line) => JSON.parse(line) as { product: string; version: string });
-    pairs = [...new Set(records.map((r) => `${r.product} ${r.version}`))];
-  } catch {
-    return ""; // no ledger (a contributor deleted it, `gen` never ran on a fresh tree)
-  }
+  const pairs = [...new Set(records.map((r) => `${r.product} ${r.version}`))];
   return pairs.length ? ` against ${pairs.join(" and ")}` : "";
 }
 
@@ -415,8 +459,23 @@ export default defineConfig({
   title: "Database Transactions",
   description:
     "Learn database transactions from verified, runnable examples — every claim proven against a real database.",
-  base: "/database-transactions/",
+  base: BASE_PATH,
   cleanUrls: true,
+  // Site-wide head tags, identical on every page. `head` hrefs are NOT auto-prefixed with `base`
+  // (unlike page links), so each carries BASE_PATH explicitly — same reason the sitemap hostname
+  // below spells the path out. The favicon set follows evilmartians.com/chronicles/how-to-favicon-in-2021:
+  // one .ico for legacy tabs, one SVG for modern browsers (it carries its own dark-mode query), an
+  // Apple touch icon, and a manifest pointing at the maskable + regular PNGs. Every href here points
+  // at a docs/public/ asset — tests/seo-meta.test.ts asserts each one exists so a missing/uncommitted
+  // file fails CI instead of 404ing silently (the dead-link checker never sees head hrefs).
+  head: [
+    ["link", { rel: "icon", href: `${BASE_PATH}favicon.ico`, sizes: "32x32" }],
+    ["link", { rel: "icon", type: "image/svg+xml", href: `${BASE_PATH}icon.svg` }],
+    ["link", { rel: "apple-touch-icon", href: `${BASE_PATH}apple-touch-icon.png` }],
+    ["link", { rel: "manifest", href: `${BASE_PATH}manifest.webmanifest` }],
+    ["meta", { name: "theme-color", content: "#7a4a1e" }],
+    ["link", { rel: "alternate", type: "text/plain", href: `${BASE_PATH}llms.txt`, title: "llms.txt" }],
+  ],
   // Generated transcript fragments are included into lesson pages, never built as pages.
   // The rest are gitignored working notes — CI never checks them out, so keep local
   // builds matching CI rather than rendering pages that can never ship.
@@ -455,7 +514,9 @@ export default defineConfig({
       .replace(/\s+/g, " ")
       .trim();
     const firstParagraph = text && text.length > 160 ? `${text.slice(0, 160).replace(/\s+\S*$/, "")}…` : text;
-    const desc = pageData.description || firstParagraph || description;
+    // Precedence: authored frontmatter → the lead scenario's proven claim (whole, untruncated) →
+    // first-paragraph slice. The claim is a crafted single sentence, so it skips the 160-char guillotine.
+    const desc = pageData.description || pageClaims.get(pageData.relativePath) || firstParagraph || description;
     return [
       ["link", { rel: "canonical", href: url }],
       ["meta", { name: "description", content: desc }],
