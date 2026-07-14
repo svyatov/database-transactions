@@ -13,11 +13,11 @@ PostgreSQL grants a released lock strictly to
 [the first waiter in line](/postgres/03-locking/lock-queues). InnoDB since 8.0.20 uses
 *CATS*, Contention-Aware Transaction Scheduling: each waiter carries a weight computed from how
 many other transactions it in turn blocks, and the waiter that blocks the most can jump the
-queue. Under light load it usually looks FIFO — but it's a scheduling heuristic, not a promise.
+queue. Under light load it usually looks FIFO, but it's a scheduling heuristic, not a promise.
 Never build ordering guarantees on lock-grant order.
 
 None of this queue is visible to your application until it's already in trouble, which is why
-`sys.innodb_lock_waits` is worth watching ([monitoring locks](/mysql/03-locking/monitoring-locks)) —
+`sys.innodb_lock_waits` is worth watching ([monitoring locks](/mysql/03-locking/monitoring-locks)):
 it names each waiter and its blocker. Every queued update does land eventually, barring a
 [timeout](/mysql/03-locking/nowait-skip-locked) or [deadlock](/mysql/03-locking/deadlocks), but
 the order it lands in is the scheduler's call, not yours. One slow transaction on a hot row is

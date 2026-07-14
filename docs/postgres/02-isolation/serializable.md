@@ -14,12 +14,12 @@ guarantee the combination.
 PostgreSQL implements this as *Serializable Snapshot Isolation* (SSI): REPEATABLE READ snapshots
 plus tracking of the read/write dependencies between concurrent transactions. When a pattern
 appears that could produce a non-serializable outcome, it aborts one transaction with SQLSTATE
-`40001` — keep it, retry it, done.
+`40001`: keep it, retry it, done.
 
 ## Why REPEATABLE READ isn't enough: write skew
 
 Here's that on-call invariant as a live run at REPEATABLE READ. Two transactions, two different
-rows, both commit — and the rule they both checked is broken, with no error raised to warn you:
+rows, both commit, and the rule they both checked is broken, with no error raised to warn you:
 
 <!--@include: ./parts/write-skew-rr.md-->
 
@@ -30,7 +30,7 @@ rows, both commit — and the rule they both checked is broken, with no error ra
 ## It even protects read-only transactions
 
 The strangest anomaly in this chapter: at REPEATABLE READ, a read-only report can observe
-a state that no serial ordering of the transactions could ever produce — the numbers it
+a state that no serial ordering of the transactions could ever produce: the numbers it
 printed become retroactively wrong. Under SERIALIZABLE, PostgreSQL aborts the writer that
 would invalidate the already-committed report:
 
@@ -40,7 +40,7 @@ would invalidate the already-committed report:
 
 ::: warning A swallowed `40001` is a lost write
 Logging a serialization failure and moving on means the transaction never happened.
-`40001` is not an error to report — it's an instruction to retry.
+`40001` is not an error to report; it's an instruction to retry.
 :::
 
 Retries aren't optional at this level. Any serializable transaction, even a read-only one, can be
@@ -59,7 +59,7 @@ and its `_per_relation` and `_per_page` siblings, and long transactions and sequ
 widen the conflict surface. For read-only work that must never be aborted or drag others down,
 `BEGIN ISOLATION LEVEL SERIALIZABLE READ ONLY DEFERRABLE` may block while it acquires a safe
 snapshot, then runs "without any risk of contributing to or being canceled by a serialization
-failure" — the manual calls it
+failure". The manual calls it
 ["well suited for long-running reports or backups"](https://www.postgresql.org/docs/current/sql-set-transaction.html).
 
 The trade in one breath: SERIALIZABLE is REPEATABLE READ plus dependency monitoring rather than
@@ -72,8 +72,8 @@ the transaction.
 ## Further reading
 
 - [PostgreSQL docs: Serializable Isolation Level](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-SERIALIZABLE)
-- [PostgreSQL wiki: SSI examples](https://wiki.postgresql.org/wiki/SSI) — the source of the
+- [PostgreSQL wiki: SSI examples](https://wiki.postgresql.org/wiki/SSI): the source of the
   deposit-report example above
 - Ports & Grittner, [*Serializable Snapshot Isolation in PostgreSQL*](https://arxiv.org/abs/1208.4179)
-  (VLDB 2012) — the paper behind PostgreSQL's SSI implementation
+  (VLDB 2012): the paper behind PostgreSQL's SSI implementation
 - [The same lesson on MySQL](/mysql/02-isolation/serializable)

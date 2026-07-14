@@ -1,14 +1,14 @@
 # What is a transaction?
 
 A transaction groups several statements into one unit of work that either fully happens or
-fully doesn't — the engine-neutral theory, ACID and what each letter promises, lives in
+fully doesn't. The engine-neutral theory, ACID and what each letter promises, lives in
 [Concepts: what is a transaction?](/concepts/what-is-a-transaction). This page is PostgreSQL
 keeping the promise.
 
 ::: tip How to read the demos
 Each lesson shows a transcript generated from an actual run of the lesson's scenario
-(sessions `A`, `B`, … are separate PostgreSQL connections). How the scenarios work — and
-why the transcripts can't drift from reality — is explained in
+(sessions `A`, `B`, … are separate PostgreSQL connections). How the scenarios work, and
+why the transcripts can't drift from reality, is explained in
 [What this is](/about/methodology)
 :::
 
@@ -21,7 +21,7 @@ already-successful credit:
 <!--@include: ./parts/atomicity.md-->
 
 A failed statement doesn't only fail itself, it dooms the whole transaction: nothing in it can
-ever commit, and your only move is to roll back — fully, or to a
+ever commit, and your only move is to roll back: fully, or to a
 [savepoint](/postgres/01-basics/savepoints). Notice too that B never saw the half-finished
 transfer; it read bob's old balance while the credit was still in flight. What other sessions
 see of your in-flight work, and exactly when, is the entire subject of

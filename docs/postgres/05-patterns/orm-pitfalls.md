@@ -2,7 +2,7 @@
 
 ORMs are fine. What bites is the transaction machinery they hide. The three failure
 modes below account for most "the database is slow / the table keeps growing /
-everything is locked" incidents in ORM codebases — and every one of them is a lesson
+everything is locked" incidents in ORM codebases, and every one of them is a lesson
 this site has already proven, wearing a nicer API.
 
 ## Pitfall #1: the transaction that outlives the query
@@ -10,9 +10,9 @@ this site has already proven, wearing a nicer API.
 The classic: transaction-per-request middleware (or an explicit `transaction { ... }`
 block) opens a transaction, and the handler then calls a payment API, renders a
 template, `await`s something slow. The database sees a session that is
-*idle in transaction* — holding [row locks](/postgres/03-locking/row-locks), blocking
+*idle in transaction*, holding [row locks](/postgres/03-locking/row-locks), blocking
 [DDL](/postgres/03-locking/table-locks-and-ddl), and pinning
-[VACUUM's horizon](/postgres/04-mvcc/long-transactions) — while your code isn't talking to it at
+[VACUUM's horizon](/postgres/04-mvcc/long-transactions), while your code isn't talking to it at
 all. Here is that story end to end, including the guardrail that ends it:
 
 <!--@include: ./parts/idle-in-transaction-timeout.md-->
@@ -20,19 +20,19 @@ all. Here is that story end to end, including the guardrail that ends it:
 The timeout is
 [`idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT):
 ["Terminate any session that has been idle (that is, waiting for a client query) within an open transaction for longer than the specified amount of time."](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT)
-Note *terminate*, not "cancel a query" — there is no query. The server logs a `FATAL`
+Note *terminate*, not "cancel a query": there is no query. The server logs a `FATAL`
 with SQLSTATE [`25P03`](https://www.postgresql.org/docs/current/errcodes-appendix.html)
 (`idle_in_transaction_session_timeout`) and hangs up; the client, as the transcript
 shows, finds a dead connection on its next statement, and the uncommitted UPDATE
 is gone. That rollback is the point: better a failed request than a database-wide
-pileup. Keep transactions free of network I/O, and set this timeout as a seatbelt —
+pileup. Keep transactions free of network I/O, and set this timeout as a seatbelt,
 alongside `transaction_timeout` and `statement_timeout`,
 [both proven in chapter 8](/postgres/08-production/long-and-idle-transactions).
 
 ## Pitfall #2: no transaction where you assumed one
 
 The inverse failure. Without an explicit transaction block, most ORMs run each
-`save()` / `update()` as its own small transaction — so *load entity, change field in
+`save()` / `update()` as its own small transaction, so *load entity, change field in
 memory, save* is exactly chapter 2's
 [read-modify-write lost update](/postgres/02-isolation/lost-update): the save writes every stale
 value the object was loaded with. The fixes are the
@@ -43,16 +43,16 @@ work if you turn them on.
 
 ## Pitfall #3: trusting default isolation
 
-An ORM transaction block gives you the database's default — READ COMMITTED, with every
+An ORM transaction block gives you the database's default: READ COMMITTED, with every
 anomaly [chapter 2](/postgres/02-isolation/snapshots-and-the-four-levels) demonstrated at that
 level. If a unit of work needs REPEATABLE READ or SERIALIZABLE, you must say so (every
-serious ORM lets you set the isolation level per transaction) — and then you own the
+serious ORM lets you set the isolation level per transaction), and then you own the
 [`40001` retry loop](/postgres/05-patterns/retrying-serialization-failures), because the ORM
 won't rerun your business logic for you.
 
 The through-line across all three is the same: an ORM transaction is open from its first
 statement until your code returns, so every `await` inside it holds locks and pins
-VACUUM — keep network I/O out, and set `idle_in_transaction_session_timeout` as the
+VACUUM. Keep network I/O out, and set `idle_in_transaction_session_timeout` as the
 backstop. Object-style read-modify-write is a lost update by default, so turn on your
 ORM's version-column support or lock the row at the read. And the isolation level and the
 `40001` retry are your job, not the ORM's; left alone, it will happily run write-skewed

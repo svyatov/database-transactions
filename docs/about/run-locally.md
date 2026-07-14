@@ -1,7 +1,7 @@
 # Run it locally
 
 Everything on this site runs on your machine with two tools: [Bun](https://bun.com) and
-[Docker](https://www.docker.com/). The database clients are built into Bun — there is nothing
+[Docker](https://www.docker.com/). The database clients are built into Bun. There is nothing
 else to install.
 
 ```sh
@@ -17,11 +17,11 @@ docker compose up -d --wait   # PostgreSQL on :54321, MySQL on :33061 — off-de
 bun test
 ```
 
-This runs every scenario in `scenarios/` — both the `postgres/` and `mysql/` trees — against
-the real databases and asserts every outcome — the same check CI runs before anything is
+This runs every scenario in `scenarios/` (both the `postgres/` and `mysql/` trees) against
+the real databases and asserts every outcome: the same check CI runs before anything is
 published.
 
-A second, independent pair of drivers (psycopg + PyMySQL — the Python harness) re-verifies
+A second, independent pair of drivers (psycopg + PyMySQL, the Python harness) re-verifies
 the same scenarios, run with [uv](https://docs.astral.sh/uv/):
 
 ```sh
@@ -51,7 +51,7 @@ The best way to learn is to break things. Open any scenario, change something, a
 bun test
 ```
 
-The `expect: [{ balance: 200 }]` assertion now fails — at REPEATABLE READ the second read
+The `expect: [{ balance: 200 }]` assertion now fails. At REPEATABLE READ the second read
 returns `100`, because the anomaly you just read about *can no longer happen*. Every failing
 scenario prints its transcript up to the failure, so you can see exactly where reality
 diverged from the script.
@@ -64,4 +64,4 @@ bun run docs:dev   # browse the site locally
 ```
 
 If your regenerated transcripts differ from the committed ones, you've either changed a
-scenario — or found a behavior change in the database itself.
+scenario, or found a behavior change in the database itself.

@@ -1,13 +1,13 @@
 # Check-then-insert: the race you've already shipped
 
-"Check if the email exists; if not, insert it." Every codebase has this somewhere — a
+"Check if the email exists; if not, insert it." Every codebase has this somewhere: a
 `SELECT` followed by a conditional `INSERT`, usually via an ORM's `find_or_create`. Under
 concurrency it's wrong, and the failure needs no exotic interleaving:
 
 <!--@include: ./parts/check-then-insert-race.md-->
 
 ::: warning A check in code is not a constraint
-This race ships silently — no error, no lock wait, nothing in the logs — and surfaces as
+This race ships silently (no error, no lock wait, nothing in the logs) and surfaces as
 "impossible" duplicate rows weeks later. If uniqueness matters, declare it `UNIQUE`.
 :::
 
@@ -23,7 +23,7 @@ with a constraint that's checked *at* the insert:
 Three details in that transcript are worth a second look. The first is the wait: B's plain
 INSERT didn't fail immediately but parked in
 [the lock queue](/mysql/03-locking/lock-queues) until A's fate was decided. Had A rolled
-back, B's insert would have succeeded — the constraint arbitrates the race *correctly*, not
+back, B's insert would have succeeded. The constraint arbitrates the race *correctly*, not
 only loudly.
 
 The second is the affected-rows convention. Per the
@@ -34,7 +34,7 @@ transcript is your "it was a duplicate" signal, and the same `1`-versus-`0` dist
 powers the [idempotency pattern](/mysql/05-patterns/idempotency).
 
 The third is `INSERT IGNORE`, the blunt instrument. It absorbs the duplicate too, but it
-downgrades *every* error on the statement to a warning — type truncations included — so
+downgrades *every* error on the statement to a warning (type truncations included), so
 reach for `ON DUPLICATE KEY UPDATE`, which handles exactly the conflict you named.
 
 The lesson compresses to one rule: SELECT-then-INSERT can't enforce uniqueness at any

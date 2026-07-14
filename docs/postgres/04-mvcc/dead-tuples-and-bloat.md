@@ -2,7 +2,7 @@
 
 If [nothing is ever modified in place](/postgres/04-mvcc/row-versions) and nothing is immediately
 removed, an obvious question follows: where does it all go? Nowhere, is the honest answer. Old
-versions — *dead tuples* — stay right in the table's file, and the file only ever grows. That
+versions (*dead tuples*) stay right in the table's file, and the file only ever grows. That
 growth is bloat, and it isn't a malfunction: it's the rent MVCC pays for non-blocking reads.
 
 ## One row, four tuples
@@ -17,9 +17,9 @@ biography.
 
 The same story plays out page by page, and three facts on it are worth reading twice. An UPDATE
 of *every* row temporarily doubles the table, so a "harmless" backfill migration like
-`UPDATE users SET new_column = ...` rewrites every tuple — plan for the disk, and for the
+`UPDATE users SET new_column = ...` rewrites every tuple: plan for the disk, and for the
 [WAL and vacuum work](/postgres/04-mvcc/vacuum) that follows. Then the `DELETE` frees nothing:
-zero live rows, nine pages still on disk. That space isn't lost — VACUUM will make it reusable —
+zero live rows, nine pages still on disk. That space isn't lost (VACUUM will make it reusable),
 but it is not returned to the operating system. Which is the third fact: the file never shrinks on
 its own, and that's exactly where the [next lesson](/postgres/04-mvcc/vacuum) picks up.
 
@@ -30,8 +30,8 @@ faster than vacuum can reclaim them, and the usual culprit is a
 update-heavy tables live best with room to recycle: prefer many small transactions over giant
 `UPDATE`-everything sweeps, and let autovacuum keep pace. To know whether it is keeping pace, watch
 `n_dead_tup` in
-[`pg_stat_user_tables`](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW) —
-the production chapter builds monitoring on it.
+[`pg_stat_user_tables`](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW).
+The production chapter builds monitoring on it.
 
 ## Further reading
 

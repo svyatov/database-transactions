@@ -1,13 +1,13 @@
 # Idempotency keys: exactly-once, built from at-least-once
 
 Networks deliver requests *at least* once: a response lost between the server and the
-client means the client retries — and the server does the work again. For "send email"
+client means the client retries, and the server does the work again. For "send email"
 that's an annoyance. For "charge $30" it's an incident.
 
 The fix is the idempotency key: the client names each *intent* (`req-42`), and the server
 records the name in a table whose primary key makes the second attempt visibly a
 duplicate. On MySQL, `INSERT … ON DUPLICATE KEY UPDATE amount = amount` gives the perfect
-probe — the
+probe. The
 [affected-rows value](https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html)
 is `1` for a new key ("do the work") and `0` for "an existing row is set to its current
 values" ("skip; return the stored result"):
@@ -28,12 +28,12 @@ instead, the retry would have seen 1 affected row and correctly done the work it
 
 What holds both cases together is that the key and the work commit as a unit. The INSERT
 and the balance UPDATE share one transaction, so there's no window where the charge
-happened but the key is missing, or the reverse — the same discipline as the
+happened but the key is missing, or the reverse: the same discipline as the
 [transactional outbox](/mysql/06-distributed/transactional-outbox), state and its evidence
 in one atomic write.
 
 One design note: store the *result* (or enough to reconstruct the response) in the
-idempotency row, as the `amount` column sketches here — a retry has to answer the client,
+idempotency row, as the `amount` column sketches here. A retry has to answer the client,
 not only decline to charge.
 
 The 0-versus-1 probe leans on one driver assumption. The affected-rows count reports 0 for
@@ -44,7 +44,7 @@ charge from a replay. Check your driver before you trust the count.
 The shape stays small: a client-named key, a PRIMARY KEY that turns the second attempt
 into a visible duplicate, and an INSERT whose affected-rows count decides whether to do the
 work or replay the stored answer. Commit the key and the side effect in the same
-transaction, and the unique index's own locking handles the in-flight duplicate for you —
+transaction, and the unique index's own locking handles the in-flight duplicate for you:
 no advisory locks, no pre-flight SELECT, no isolation-level tricks required.
 
 ## Further reading

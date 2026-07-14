@@ -1,9 +1,9 @@
 # What is a transaction?
 
 A transaction groups several statements into one unit of work that either happens completely
-or not at all — the engine-neutral theory, ACID and what each letter promises, lives in
+or not at all. The engine-neutral theory, ACID and what each letter promises, lives in
 [Concepts: what is a transaction?](/concepts/what-is-a-transaction). This page is MySQL
-keeping the promise — with one caveat PostgreSQL doesn't have.
+keeping the promise, with one caveat PostgreSQL doesn't have.
 
 ::: tip How to read the demos
 Each lesson shows a transcript generated from an actual run of the scenario: plain SQL,
@@ -12,7 +12,7 @@ are produced and verified is explained in [What this is](/about/methodology)
 :::
 
 The caveat: all of this applies to InnoDB, MySQL's default storage engine. Tables on
-other engines (e.g. `MyISAM`) are not transactional at all — their writes commit instantly,
+other engines (e.g. `MyISAM`) are not transactional at all: their writes commit instantly,
 always.
 
 ## Atomicity, demonstrated
@@ -24,7 +24,7 @@ already-successful credit:
 <!--@include: ./parts/atomicity.md-->
 
 Two things to carry forward. Unlike PostgreSQL, a failed statement doesn't doom a MySQL
-transaction — you may roll back, but you're not forced to, as the next lesson
+transaction: you may roll back, but you're not forced to, as the next lesson
 [proves](/mysql/01-basics/begin-commit-rollback). And other sessions never saw an intermediate
 state: B read bob's balance mid-transfer and got the old value, which is exactly what
 [isolation levels](/mysql/02-isolation/snapshots-and-the-four-levels) govern.

@@ -1,5 +1,5 @@
 ---
-description: Every transaction isolation anomaly with its formal Adya name — dirty read, non-repeatable read, phantom, lost update, write skew, and the obscure ones — each linked to executable proofs on PostgreSQL and MySQL.
+description: "Every transaction isolation anomaly with its formal Adya name: dirty read, non-repeatable read, phantom, lost update, write skew, and the obscure ones, each linked to executable proofs on PostgreSQL and MySQL."
 ---
 
 # The anomaly catalog
@@ -24,20 +24,20 @@ Hermitage tests.
 | — | [Read-only anomaly](#the-read-only-anomaly) | even a pure report can observe an impossible state |
 
 Which isolation level stops which anomaly is an *engine* answer, not a *standard* answer.
-The per-engine answer sheets — one cell per anomaly per level, each with its proof:
+The per-engine answer sheets, one cell per anomaly per level, each with its proof:
 [PostgreSQL's answers](/postgres/02-isolation/anomaly-catalog) ·
 [MySQL's answers](/mysql/02-isolation/anomaly-catalog).
 
 ## What the standard's table doesn't tell you
 
-The SQL standard's three-anomaly table (dirty / non-repeatable / phantom — see
+The SQL standard's three-anomaly table (dirty / non-repeatable / phantom, see
 [isolation levels](/concepts/isolation-levels)) dates from 1992. Lost updates, write skew,
-and the read-only anomaly were formalized later¹ — and they're the ones that actually bite in
+and the read-only anomaly were formalized later¹, and they're the ones that actually bite in
 modern applications, because they emerge from *application logic* (read, decide, write)
 rather than from raw statement visibility.
 
 ¹ Berenson et al., [*A Critique of ANSI SQL Isolation Levels*](https://www.microsoft.com/en-us/research/publication/a-critique-of-ansi-sql-isolation-levels/) (1995);
-Adya, [*Weak Consistency: A Generalized Theory and Optimistic Implementations for Distributed Transactions*](https://pmg.csail.mit.edu/papers/adya-phd.pdf) (MIT PhD thesis, 1999) — the source of the G-codes;
+Adya, [*Weak Consistency: A Generalized Theory and Optimistic Implementations for Distributed Transactions*](https://pmg.csail.mit.edu/papers/adya-phd.pdf) (MIT PhD thesis, 1999), the source of the G-codes;
 Fekete et al., [*Making Snapshot Isolation Serializable*](https://doi.org/10.1145/1071610.1071615)
 (ACM TODS, 2005).
 
@@ -50,7 +50,7 @@ happen tells you what a level is really made of.
 ### Dirty write (G0)
 
 Two transactions interleave writes to the same rows before either commits. Every isolation
-level of both engines prevents it — writes always take exclusive row locks, so the result is
+level of both engines prevents it: writes always take exclusive row locks, so the result is
 always *one transaction's* writes, never a mix.
 See it proven: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#dirty-writes-g0) ·
 [MySQL](/mysql/02-isolation/anomaly-catalog#dirty-writes-g0).
@@ -58,14 +58,14 @@ See it proven: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#dirty-writes-
 ### Intermediate read (G1b)
 
 Reading a *draft*: the writer changes a value twice, and you catch the version that no
-committed history ever contained. Impossible from READ COMMITTED up on both engines — but
+committed history ever contained. Impossible from READ COMMITTED up on both engines, but
 MySQL's READ UNCOMMITTED really serves it.
 See it: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#intermediate-reads-g1b) ·
 [MySQL](/mysql/02-isolation/anomaly-catalog#intermediate-reads-g1b).
 
 ### Circular information flow (G1c)
 
-Two concurrent transactions each read the other's uncommitted writes — an information
+Two concurrent transactions each read the other's uncommitted writes, an information
 exchange no serial order could explain.
 See it: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#circular-information-flow-g1c) ·
 [MySQL](/mysql/02-isolation/anomaly-catalog#circular-information-flow-g1c).
@@ -73,7 +73,7 @@ See it: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#circular-information
 ### Observed transaction vanishes (OTV)
 
 A committed transaction should be visible as a whole or not at all. Under dirty reads it can
-show through *in pieces* — one row already overwritten by an uncommitted successor, the other
+show through *in pieces*: one row already overwritten by an uncommitted successor, the other
 still visible.
 See it: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#observed-transaction-vanishes-otv) ·
 [MySQL](/mysql/02-isolation/anomaly-catalog#observed-transaction-vanishes-otv).
@@ -81,14 +81,14 @@ See it: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#observed-transaction
 ### The read-only anomaly
 
 The strangest of all (Fekete et al.): a transaction that only *reads* observes a state that
-no serial ordering of the committed transactions could produce — the report it printed is
+no serial ordering of the committed transactions could produce: the report it printed is
 retroactively wrong. Only SERIALIZABLE prevents it.
 See it: [PostgreSQL](/postgres/02-isolation/serializable#it-even-protects-read-only-transactions).
 
 ## Further reading
 
-- [Hermitage](https://github.com/ept/hermitage) — runnable isolation tests for PostgreSQL,
+- [Hermitage](https://github.com/ept/hermitage): runnable isolation tests for PostgreSQL,
   MySQL, Oracle, and more; both tracks of this site prove every case it covers
 - [PostgreSQL's anomaly catalog](/postgres/02-isolation/anomaly-catalog) ·
-  [MySQL's anomaly catalog](/mysql/02-isolation/anomaly-catalog) — same anomalies,
+  [MySQL's anomaly catalog](/mysql/02-isolation/anomaly-catalog): same anomalies,
   meaningfully different answers

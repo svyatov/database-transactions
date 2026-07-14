@@ -1,7 +1,7 @@
 # Logs and counters
 
 The silent failures need counters; the loud ones need logs that actually capture them.
-MySQL ships both — mostly off or easy to miss. This lesson turns on the right ones.
+MySQL ships both, mostly off or easy to miss. This lesson turns on the right ones.
 
 ## Deadlocks: counted forever, logged if you ask
 
@@ -11,7 +11,7 @@ however, counts:
 <!--@include: ./parts/deadlock-counter.md-->
 
 Two companions round out the counter. `SHOW ENGINE INNODB STATUS` keeps the full story of
-the most recent deadlock — both transactions, both statements, both lock chains — under
+the most recent deadlock (both transactions, both statements, both lock chains) under
 its `LATEST DETECTED DEADLOCK` section, which makes it invaluable for diagnosing
 [which two queries](/mysql/03-locking/deadlocks) are fighting and useless for counting,
 since each new deadlock overwrites the last. When the counter starts climbing and you want
@@ -26,9 +26,9 @@ all proven meaningful by scenarios on this site:
 
 | Counter | What it means | Proven by |
 |---|---|---|
-| `lock_deadlocks` | deadlocks since startup — rate, not level | [the scenario above](#deadlocks-counted-forever-logged-if-you-ask) |
+| `lock_deadlocks` | deadlocks since startup: rate, not level | [the scenario above](#deadlocks-counted-forever-logged-if-you-ask) |
 | `lock_timeouts` | statements that hit `innodb_lock_wait_timeout` (`1205`) | [lock timeouts](/mysql/03-locking/nowait-skip-locked) |
-| `trx_rseg_history_len` | purge backlog — an old read view somewhere | [history list health](/mysql/08-production/history-list-health) |
+| `trx_rseg_history_len` | purge backlog: an old read view somewhere | [history list health](/mysql/08-production/history-list-health) |
 | `lock_row_lock_waits` / `lock_row_lock_time` | how often and how long writers queue | [lock queues](/mysql/03-locking/lock-queues) |
 
 ## The logs worth having
@@ -43,7 +43,7 @@ to the aborted connections and `wait_timeout` reaps from
 
 What no counter here catches is the silent failure: a lost update or a write skew commits
 cleanly and leaves every metric untouched, which is why those get caught in code rather
-than on a graph. For everything loud, the counters suffice — alert on the rate of
+than on a graph. For everything loud, the counters suffice: alert on the rate of
 `lock_deadlocks`, keep `LATEST DETECTED DEADLOCK` for the last one and
 `innodb_print_all_deadlocks` for the full population, and read a slow-log row with big time
 and tiny examine counts as a lock victim rather than a missing index.

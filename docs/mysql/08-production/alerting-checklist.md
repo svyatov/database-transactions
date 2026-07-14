@@ -16,7 +16,7 @@ Reading the board:
 
 - 1, 2, and 6 firing together is one forgotten transaction: alert 2's join names it, so
   kill it or fix the code path and the other alerts drain on their own.
-- 3 spiking while 1 stays quiet is hot-row contention, not a stuck session — look at
+- 3 spiking while 1 stays quiet is hot-row contention, not a stuck session. Look at
   [lock queues](/mysql/03-locking/lock-queues) and whether a
   [SKIP LOCKED](/mysql/05-patterns/job-queue) or
   [atomic-update](/mysql/05-patterns/fixing-lost-updates) shape fits.
@@ -24,12 +24,11 @@ Reading the board:
   ([deadlock avoidance](/mysql/03-locking/deadlocks)), then
   [gap locks](/mysql/03-locking/gap-locks) if the statements involve ranges or inserts,
   and every consumer wants the [retry loop](/mysql/05-patterns/retrying-deadlocks).
-- 5 without 4 means the waits are long but acyclic — usually one slow writer everyone
+- 5 without 4 means the waits are long but acyclic, usually one slow writer everyone
   queues behind, and alert 3's view names it.
 
 What's deliberately *not* here: anomaly detection for
-[lost updates and write skew](/mysql/02-isolation/anomaly-catalog). No counter sees them —
-they look like successful transactions. They're prevented by
+[lost updates and write skew](/mysql/02-isolation/anomaly-catalog). No counter sees them. They look like successful transactions. They're prevented by
 [code patterns](/mysql/05-patterns/fixing-lost-updates), caught by application-level
 invariant checks, and that's precisely why the patterns chapter exists.
 

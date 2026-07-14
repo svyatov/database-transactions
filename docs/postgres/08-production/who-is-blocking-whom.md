@@ -10,7 +10,7 @@ who is the blocker, and what is the blocker doing?*
 ## Reading the answer
 
 The transcript shows the classic production shape: the blocker's state is
-`idle in transaction` — it isn't running anything, it's *holding* things (locks it
+`idle in transaction`: it isn't running anything, it's *holding* things (locks it
 took [that live until COMMIT](/postgres/03-locking/row-locks)) while the application forgot about
 it. `blocker_last_query` shows the last statement it ran, which is usually all you need
 to find the guilty code path.
@@ -18,17 +18,17 @@ to find the guilty code path.
 Two escalation levels, straight from the manual:
 
 - [`pg_cancel_backend`](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL):
-  ["Cancels the current query of the session whose backend process has the specified process ID"](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL) —
-  polite, but useless against an *idle* blocker: there is no current query to cancel.
+  ["Cancels the current query of the session whose backend process has the specified process ID"](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL).
+  Polite, but useless against an *idle* blocker: there is no current query to cancel.
 - [`pg_terminate_backend`](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL):
-  ["Terminates the session whose backend process has the specified process ID"](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL) —
+  ["Terminates the session whose backend process has the specified process ID"](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL):
   the whole session dies and its transaction rolls back, which is exactly what the
   transcript shows freeing the queue.
 
 So the whole investigation is one join worth memorizing: `pg_stat_activity` waiter ×
 `pg_blocking_pids()` × `pg_stat_activity` blocker, which names names in a single round
 trip. An idle-in-transaction blocker can't be canceled, only terminated, and terminating
-it rolls back whatever it was holding — but [a rollback is always
+it rolls back whatever it was holding, but [a rollback is always
 safe](/postgres/01-basics/what-is-a-transaction), so killing a blocker never corrupts
 data. The real fix lives in the code that left the transaction open, and
 [the next lesson](/postgres/08-production/long-and-idle-transactions) hunts those sessions

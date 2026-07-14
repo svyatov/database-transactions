@@ -3,20 +3,20 @@
 Every chapter has ended up pointing here. The idle transaction holds
 [locks](/mysql/08-production/who-is-blocking-whom), pins
 [purge](/mysql/04-mvcc/history-list-length), blocks
-[DDL](/mysql/03-locking/table-locks-and-ddl) — and does it all silently, because *doing
+[DDL](/mysql/03-locking/table-locks-and-ddl), and does it all silently, because *doing
 nothing* is its defining feature. This lesson is the detection kit:
 
 <!--@include: ./parts/find-long-transactions.md-->
 
-Detector 3 is the counterintuitive one: the report transaction never wrote a row — it
-doesn't even have a [real transaction ID](/mysql/04-mvcc/read-views) — yet it's the
+Detector 3 is the counterintuitive one: the report transaction never wrote a row (it
+doesn't even have a [real transaction ID](/mysql/04-mvcc/read-views)), yet it's the
 oldest read view on the server, which makes it exactly what
 [purge waits for](/mysql/04-mvcc/history-list-length). Read-only is not harmless.
 
 ## The guardrails
 
 PostgreSQL lets you cap transaction *and* idle-in-transaction time server-side. MySQL's
-toolbox is smaller — one per-statement ceiling, one session-idle killer, and nothing in
+toolbox is smaller. One per-statement ceiling, one session-idle killer, and nothing in
 between:
 
 <!--@include: ./parts/timeout-guardrails.md-->
@@ -28,13 +28,13 @@ to `max_execution_time` (no statement running) and untouched by any sane `wait_t
 (that would also kill healthy idle pool connections). Your options are the detectors
 above on a schedule, an application-side transaction deadline, or a proxy that enforces
 one. This is why [ORM pitfall #2](/mysql/05-patterns/orm-pitfalls) has to be fixed in
-code — the server won't save you.
+code: the server won't save you.
 
 The detection kit and the guardrails split the work between them. `innodb_trx` finds the
 long transactions by `trx_started` and, joined to a `command = Sleep` processlist row, the
 idle ones that are worse; it flags the read-only offenders too, since those pin purge all
 the same, so age-alert on the oldest `trx_started` whether or not it ever wrote a row. The
-guardrails then cap what they can — `max_execution_time` for a runaway SELECT,
+guardrails then cap what they can: `max_execution_time` for a runaway SELECT,
 `wait_timeout` for a dead-quiet session (rolling back whatever it held), and
 `innodb_lock_wait_timeout` ([chapter 3](/mysql/03-locking/nowait-skip-locked)) for a lock
 wait, though that last one rolls back only the statement, so a half-done transaction plus a

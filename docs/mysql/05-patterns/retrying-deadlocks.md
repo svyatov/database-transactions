@@ -2,7 +2,7 @@
 
 On PostgreSQL the transient error you retry is
 [SQLSTATE `40001`](/postgres/05-patterns/retrying-serialization-failures). On MySQL it's
-[errno `1213`](/mysql/03-locking/deadlocks) — a deadlock victim. Different mechanism, same
+[errno `1213`](/mysql/03-locking/deadlocks), a deadlock victim. Different mechanism, same
 contract: the database rolled your transaction back not because it was wrong, but because
 it collided with another one. Run it again and it will very likely succeed.
 
@@ -26,7 +26,7 @@ succeeds:
 ## What must be inside the retry
 
 The same rule as PostgreSQL's: re-run the whole transaction, including the application
-logic — every read, every decision, every computed value. The first attempt's reads are
+logic: every read, every decision, every computed value. The first attempt's reads are
 void, and reusing any of them re-introduces the stale-read bug you're recovering from. In
 the scenario, attempt 2 re-runs both UPDATEs from the top.
 
@@ -38,11 +38,11 @@ succeeded, so roll back first, then retry.
 
 Second, SERIALIZABLE multiplies deadlocks. InnoDB's SERIALIZABLE
 [detects conflicts via locks](/mysql/02-isolation/serializable), so the errors your retry
-loop meets at that level are these same `1213`s — budget for more of them.
+loop meets at that level are these same `1213`s. Budget for more of them.
 
 The mental model is short: `1213` means "collided", not "failed", so you retry the whole
 transaction with fresh reads and all. Cap the attempts and log exhaustion, because a hot
-row can starve a naive infinite loop. And keep `1205` in its own lane — ROLLBACK first,
+row can starve a naive infinite loop. And keep `1205` in its own lane: ROLLBACK first,
 since a statement-level rollback leaves the transaction open, then retry.
 
 ## Further reading

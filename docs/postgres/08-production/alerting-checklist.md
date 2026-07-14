@@ -17,7 +17,7 @@ caught at different ages: one forgotten transaction becomes a lock queue becomes
 pool, so alert 1 fires first and you treat it as the root rather than three separate
 pages.
 
-Alert 4 is different in kind — it's a rate, not a level. The deadlock counter
+Alert 4 is different in kind: it's a rate, not a level. The deadlock counter
 [never resets on its own](/postgres/08-production/logs-and-counters), so a steady trickle
 under load can be normal for your workload while a step change is the thing worth paging
 on.

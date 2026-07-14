@@ -1,7 +1,7 @@
 # Long transactions block VACUUM
 
 Everything in this chapter converges here. Old row versions must be kept as long as any snapshot
-might still read them — so one forgotten transaction, holding one old snapshot, pins garbage
+might still read them, so one forgotten transaction, holding one old snapshot, pins garbage
 collection for the *whole database*. Not only the tables it read: every table, because PostgreSQL
 tracks "this backend's snapshot needs xids from here back", not which rows it will touch.
 
@@ -9,7 +9,7 @@ tracks "this backend's snapshot needs xids from here back", not which rows it wi
 
 <!--@include: ./parts/long-transactions.md-->
 
-The first VACUUM is the quiet failure mode: it succeeds. No error, no warning in your terminal —
+The first VACUUM is the quiet failure mode: it succeeds. No error, no warning in your terminal,
 and the heap page is byte-for-byte unchanged, because the manual's rule is that
 ["the row version must not be deleted while it is still potentially visible to other transactions"](https://www.postgresql.org/docs/current/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY),
 and A's Repeatable Read snapshot, taken before all three updates, can still see every one of them
@@ -17,12 +17,12 @@ and A's Repeatable Read snapshot, taken before all three updates, can still see 
 clears the page.
 
 Autovacuum hits the same wall. A dashboard that shows autovacuum running on schedule can sit right
-next to a table that's ballooning — the vacuums are running and *keeping nothing*, while every
+next to a table that's ballooning, the vacuums are running and *keeping nothing*, while every
 UPDATE adds another [dead tuple](/postgres/04-mvcc/dead-tuples-and-bloat) behind the pinned horizon.
 
 ## Spotting the offender
 
-The horizon is visible in `pg_stat_activity.backend_xmin` — the oldest xid each backend's snapshot
+The horizon is visible in `pg_stat_activity.backend_xmin`, the oldest xid each backend's snapshot
 still needs. The classic triage query (illustrative here; the production chapter turns it into
 monitoring):
 
@@ -36,19 +36,19 @@ ORDER BY age(backend_xmin) DESC;
 ```
 
 The usual suspects: an app that did `BEGIN` and went idle
-(`state = 'idle in transaction'` — the same villain as in the
+(`state = 'idle in transaction'`, the same villain as in the
 [DDL outage](/postgres/03-locking/table-locks-and-ddl)), a many-hour analytics query against the
 primary, a stuck migration. Guardrails exist for each:
 
-- [`idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT) —
+- [`idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT):
   kills sessions that hold a transaction open while doing nothing;
 - [`transaction_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT)
-  (PostgreSQL 17+) — a hard ceiling on total transaction duration;
-- [`statement_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT) —
+  (PostgreSQL 17+): a hard ceiling on total transaction duration;
+- [`statement_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT):
   bounds any single query.
 
 The lesson underneath all three is that a long transaction is a database-wide tax, even when it's
-read-only and touches one tiny table. The snapshot is what's expensive, not the query — the cost
+read-only and touches one tiny table. The snapshot is what's expensive, not the query. The cost
 is the time you hold one open. And the failure is silent: VACUUM and autovacuum degrade to no-ops
 behind an old snapshot, invisible until the bloat itself becomes visible. So keep transactions
 short by design and set `idle_in_transaction_session_timeout` as a seatbelt; chapter 8 builds the

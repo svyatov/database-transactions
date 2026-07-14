@@ -17,7 +17,7 @@ many drained past the one that is.
 <!--@include: ./parts/queue-bloat.md-->
 
 Session A is the stuck worker: it claims job 1 and never commits. A slow HTTP call, a debugger
-breakpoint, a `BEGIN` an ORM forgot to close — the cause doesn't matter, only that the transaction
+breakpoint, a `BEGIN` an ORM forgot to close. The cause doesn't matter, only that the transaction
 stays open. B is every other worker, healthy, running the taught loop. The first cycle shows the
 pattern in the open: B skips A's locked job 1 (that's [SKIP
 LOCKED](/postgres/03-locking/nowait-skip-locked) earning its keep), claims job 2, marks it done,
@@ -25,7 +25,7 @@ commits. One dead row version left behind, the old `'queued'` tuple of job 2.
 
 Then B runs that same body a thousand more times through `drain`, a procedure holding the identical
 three statements. The page count is the meter: 9 pages before, 11 after 250 cycles, 17 after 750
-more. The table hasn't gained a single live row — it's still 1200 jobs — but every completed cycle
+more. The table hasn't gained a single live row (it's still 1200 jobs), but every completed cycle
 left a dead version A's snapshot might still need, and not one can go while A holds the horizon.
 Count the occupied line pointers across the pages and there they are: 1200 live plus 1001 dead,
 2201 in all.

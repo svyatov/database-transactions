@@ -1,7 +1,7 @@
 # Read Committed
 
 At READ COMMITTED, every statement gets a fresh snapshot: it sees everything committed by
-the time *it* starts. Within one transaction, two identical reads can disagree — because the
+the time *it* starts. Within one transaction, two identical reads can disagree, because the
 world moved between them.
 
 ## Non-repeatable reads
@@ -17,7 +17,7 @@ that didn't exist in the first.
 
 ## Read skew: a total that never existed
 
-Non-repeatable reads have a nastier multi-row cousin —
+Non-repeatable reads have a nastier multi-row cousin,
 [read skew](/concepts/non-repeatable-read#read-skew): every row you read was committed and
 correct, yet the combination existed at no point in time:
 
@@ -32,7 +32,7 @@ When an UPDATE waits for a row lock and finally gets it, the row may no longer m
 <!--@include: ./parts/update-recheck.md-->
 
 A fresh snapshot per statement means no dirty reads, but non-repeatable reads and phantoms are
-routine — if a report has to be internally consistent, run it at
+routine. If a report has to be internally consistent, run it at
 [REPEATABLE READ](/mysql/02-isolation/repeatable-read). And `Query OK, 0 rows affected` after a
 lock wait may mean the row escaped your `WHERE`, so code that assumes it updated exactly the
 rows it saw is wrong at this level. InnoDB also takes fewer gap locks here than at RR, which is

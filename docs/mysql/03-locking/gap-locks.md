@@ -1,7 +1,7 @@
 # Gap locks: locking rows that don't exist
 
-PostgreSQL locks rows. InnoDB at REPEATABLE READ also locks the spaces between rows —
-*gap locks* — and the combination of a row lock plus the gap before it, a *next-key
+PostgreSQL locks rows. InnoDB at REPEATABLE READ also locks the spaces between rows
+(*gap locks*) and the combination of a row lock plus the gap before it, a *next-key
 lock*. It's how InnoDB keeps phantoms out of locking reads without PostgreSQL-style
 predicate tracking: if nobody can insert into the range you scanned, nobody can create a
 phantom in it.
@@ -21,7 +21,7 @@ gap between them, plus the gap running up to the next key above the range, so no
 appear in that window until you commit.
 
 That permissiveness among readers is exactly why gap locks are a top deadlock source. Gap locks
-don't conflict with each other — only with inserts — so two transactions can gap-lock the same
+don't conflict with each other, only with inserts, so two transactions can gap-lock the same
 range at the same time, and then both try to INSERT into it. Each now waits for the other's gap
 lock, and that's a deadlock, [errno `1213`](/mysql/03-locking/deadlocks).
 
@@ -35,10 +35,10 @@ tagged `X,GAP,INSERT_INTENTION`, the insert-intention lock
 ([monitoring locks](/mysql/03-locking/monitoring-locks)).
 
 Gap locking is why InnoDB's REPEATABLE READ is stronger than the SQL standard asks for, and why
-it deadlocks more than PostgreSQL — those two facts are the same fact. When the waits pile up
+it deadlocks more than PostgreSQL: those two facts are the same fact. When the waits pile up
 instead of deadlocking, the next thing to understand is how the
 [queue itself behaves](/mysql/03-locking/lock-queues).
 
 ## Further reading
 
-- [MySQL docs: InnoDB Locking — gap locks, next-key locks, insert intention locks](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html)
+- [MySQL docs: InnoDB Locking (gap locks, next-key locks, insert intention locks)](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html)

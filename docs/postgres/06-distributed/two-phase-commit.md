@@ -2,7 +2,7 @@
 
 Sagas gave up on atomicity across systems and engineered around it. Two-phase commit
 (2PC) is the other road: *actually* commit across multiple databases, by splitting
-COMMIT in two. Phase one, every participant prepares — gets its transaction to the
+COMMIT in two. Phase one, every participant prepares: gets its transaction to the
 point where commit can no longer fail, and promises to hold that pose. Phase two, a
 coordinator tells everyone to commit for real. PostgreSQL implements a participant's
 side natively, and the primitive is worth seeing even if you never deploy it. The
@@ -32,11 +32,11 @@ Session B: VACUUM ledger → collects all three ← the horizon moved
 
 <!--@include: ./parts/two-phase-commit.md-->
 
-The session that *created* the transaction can't see its changes anymore — the
+The session that *created* the transaction can't see its changes anymore: the
 transaction has left the session and lives on disk now. Then the scenario gets violent.
 
-Everything this site showed about crashes so far — "PostgreSQL rolls back open
-transactions on disconnect" — stops at PREPARE. The killed backend took nothing with
+Everything this site showed about crashes so far, "PostgreSQL rolls back open
+transactions on disconnect", stops at PREPARE. The killed backend took nothing with
 it: the transaction, its locks, its promise all survive, waiting for *anyone* to say
 `COMMIT PREPARED 'transfer-42'` or `ROLLBACK PREPARED 'transfer-42'`.
 
@@ -64,8 +64,8 @@ Check `pg_prepared_xacts` whenever locks seem stuck and no session admits to hol
 Straight from the manual:
 ["PREPARE TRANSACTION is not intended for use in applications or interactive sessions. Its purpose is to allow an external transaction manager to perform atomic global transactions across multiple databases or other transactional resources"](https://www.postgresql.org/docs/current/sql-prepare-transaction.html).
 PostgreSQL even ships with the feature off:
-["Setting this parameter to zero (which is the default) disables the prepared-transaction feature"](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-MAX-PREPARED-TRANSACTIONS)
-— this site's docker-compose sets `max_prepared_transactions=10` precisely so this
+["Setting this parameter to zero (which is the default) disables the prepared-transaction feature"](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-MAX-PREPARED-TRANSACTIONS).
+This site's docker-compose sets `max_prepared_transactions=10` precisely so this
 scenario can run. Unless an XA transaction manager owns both phases (including recovery
 of orphans!), the [outbox](/postgres/06-distributed/transactional-outbox) and
 [sagas](/postgres/06-distributed/sagas) give you the guarantees you actually need with failure
@@ -76,7 +76,7 @@ transaction from its session and makes it crash-proof, and `COMMIT PREPARED` or
 `ROLLBACK PREPARED` finishes it from any session, by name. Between the phases it holds
 every lock and blocks VACUUM, with no timeout and no automatic cleanup, so
 `pg_prepared_xacts` is the view you keep an eye on. It's a building block for external
-transaction managers, not an application tool — for anything you would actually ship,
+transaction managers, not an application tool. For anything you would actually ship,
 reach for the outbox and sagas first.
 
 ## Further reading

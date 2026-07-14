@@ -8,7 +8,7 @@ anomaly happen (and the fix work) instead of reading that it would.
 It was built because learning this topic usually means piecing it together yourself: an
 article here, a conference talk there, the official manual open in a third tab to check which
 parts apply to *your* database and version. This site is an attempt to put the whole picture
-in one place and hold it to one rule: *nothing here is claimed — everything is demonstrated.*
+in one place and hold it to one rule: *nothing here is claimed; everything is demonstrated.*
 The rest of this page is the machinery that keeps that promise.
 
 ## Every lesson is an executable scenario

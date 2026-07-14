@@ -1,6 +1,6 @@
 # Long & idle transactions
 
-The most damaging thing a session can do in PostgreSQL is nothing — inside an open
+The most damaging thing a session can do in PostgreSQL is nothing, inside an open
 transaction. It [holds locks](/postgres/03-locking/row-locks), it
 [pins VACUUM's horizon for the whole database](/postgres/04-mvcc/long-transactions), and it
 occupies a pooled connection. This lesson is about finding those sessions, then making
@@ -25,20 +25,20 @@ from narrowest to widest:
 
 - [`statement_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT):
   ["Abort any statement that takes more than the specified amount of time"](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT).
-  Error `57014`, session survives — the seatbelt for runaway queries.
+  Error `57014`, session survives: the seatbelt for runaway queries.
 - [`idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT)
-  kills exactly the "went to lunch" pattern —
+  kills exactly the "went to lunch" pattern;
   [chapter 5 proved it](/postgres/05-patterns/orm-pitfalls), server-side FATAL and all.
 - [`transaction_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT)
   (PostgreSQL 17+):
-  ["Terminate any session that spans longer than the specified amount of time in a transaction"](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT) —
+  ["Terminate any session that spans longer than the specified amount of time in a transaction"](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT):
   the hard ceiling that catches both previous cases *and* the slow-but-busy transaction
   neither of them can. One caveat from the manual, pointing straight back at
   [chapter 6](/postgres/06-distributed/two-phase-commit):
   ["Prepared transactions are not subject to this timeout"](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT).
 
 Three columns of `pg_stat_activity` carry the whole story: `xact_start` for age, `state`
-for the idle-in-transaction pattern, and `backend_xmin` for the vacuum horizon — the
+for the idle-in-transaction pattern, and `backend_xmin` for the vacuum horizon. The
 scenario's three detectors are copy-paste ready. Remember that a read-only transaction
 pins VACUUM just as hard as a writer, so age is what you sort on, not write activity. Set
 `statement_timeout` and `idle_in_transaction_session_timeout` on every application role,
@@ -47,7 +47,7 @@ backstop, because a kill switch beats pager duty.
 
 ## Further reading
 
-- [PostgreSQL docs: client connection defaults](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT) —
+- [PostgreSQL docs: client connection defaults](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT),
   all three timeouts
 - [PostgreSQL docs: pg_stat_activity](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW)
 - [The same lesson on MySQL](/mysql/08-production/long-and-idle-transactions)
