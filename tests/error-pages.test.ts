@@ -105,21 +105,43 @@ test("the nav sidebar and the index both link exactly the cluster codes", () => 
   expect(errorCodeLinks(readFileSync(new URL("index.md", errorsDir), "utf8")), "index.md").toEqual(CLUSTER);
 });
 
-// The builder is wired into transformHead: error pages get JSON-LD, every other page gets none.
-test("transformHead attaches JSON-LD to error pages only", () => {
-  const run = (relativePath: string, fm: Record<string, unknown>): unknown[] =>
+// The builder is wired into transformHead: an error page carries a QAPage and no article node; the
+// errors index and a section index (no code, path ends in "/") and the home page carry none; a
+// lesson page carries a TechArticle; the /faq page carries a FAQPage built from its rendered body.
+test("transformHead emits QAPage on errors, TechArticle on lessons, FAQPage on /faq, nothing on indexes or home", () => {
+  const run = (relativePath: string, fm: Record<string, unknown>, content = "<p>body</p>"): unknown[] =>
     (config.transformHead as (ctx: unknown) => unknown[] | undefined)?.({
       page: relativePath,
       pageData: { relativePath, frontmatter: fm, description: fm.description ?? "" },
       title: "t",
       description: "d",
-      content: "<p>body</p>",
+      content,
     }) ?? [];
-  const hasLd = (head: unknown[]): boolean =>
-    head.some(
+  const jsonLd = (head: unknown[]): unknown[] =>
+    head.filter(
       (e) => Array.isArray(e) && e[0] === "script" && (e[1] as { type?: string })?.type === "application/ld+json",
     );
-  expect(hasLd(run("errors/1213.md", { code: "1213", name: "Deadlock found", description: "x" }))).toBe(true);
-  expect(hasLd(run("errors/index.md", { description: "the index" }))).toBe(false);
-  expect(hasLd(run("postgres/03-locking/deadlocks.md", {}))).toBe(false);
+  const ldTypes = (head: unknown[]): string[] =>
+    jsonLd(head).map((e) => JSON.parse((e as unknown[])[2] as string)["@type"] as string);
+  expect(ldTypes(run("errors/1213.md", { code: "1213", name: "Deadlock found", description: "x" }))).toEqual([
+    "QAPage",
+  ]);
+  expect(ldTypes(run("postgres/03-locking/deadlocks.md", {}))).toEqual(["TechArticle"]);
+  expect(jsonLd(run("errors/index.md", { description: "the index" }))).toHaveLength(0);
+  // A section index under the article-prefix regex must still be skipped (the !endsWith("/") guard).
+  expect(jsonLd(run("concepts/index.md", {}))).toHaveLength(0);
+  expect(jsonLd(run("index.md", {}))).toHaveLength(0);
+
+  // FAQ wiring end-to-end: content shaped as VitePress actually renders it — `style` before `class`,
+  // a trailing site <footer> — so the .vp-doc scoping runs against the real attribute order, not a
+  // class-first fixture. Regression guard for the footer folding into the last answer.
+  const faqContent = `<div style="position:relative;" class="vp-doc _database-transactions_faq" data-v-abc123>
+<h2 id="q1" tabindex="-1">Does it work? <a class="header-anchor" href="#q1">​</a></h2>
+<p>Yes, it works.</p>
+</div>
+<footer class="VPFooter"><p>MIT Licensed. © 2026 Leonid Svyatov</p></footer>`;
+  const faqHead = run("faq.md", {}, faqContent);
+  expect(ldTypes(faqHead)).toEqual(["FAQPage"]);
+  const faqLd = JSON.parse((jsonLd(faqHead)[0] as unknown[])[2] as string);
+  expect(faqLd.mainEntity[0].acceptedAnswer.text).toBe("Yes, it works.");
 });
