@@ -11,12 +11,6 @@ hero:
       text: Start here
       link: /start-here
     - theme: alt
-      text: Learn PostgreSQL transactions
-      link: /postgres/01-basics/what-is-a-transaction
-    - theme: alt
-      text: Learn MySQL transactions
-      link: /mysql/01-basics/what-is-a-transaction
-    - theme: alt
       text: How this site works
       link: /about/methodology
 
