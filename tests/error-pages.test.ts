@@ -108,6 +108,7 @@ test("the nav sidebar and the index both link exactly the cluster codes", () => 
 // The builder is wired into transformHead: an error page carries a QAPage and no article node; the
 // errors index and a section index (no code, path ends in "/") and the home page carry none; a
 // lesson page carries a TechArticle; the /faq page carries a FAQPage built from its rendered body.
+// Every non-index/home page also carries a trailing BreadcrumbList (indexes and home get none).
 test("transformHead emits QAPage on errors, TechArticle on lessons, FAQPage on /faq, nothing on indexes or home", () => {
   const run = (relativePath: string, fm: Record<string, unknown>, content = "<p>body</p>"): unknown[] =>
     (config.transformHead as (ctx: unknown) => unknown[] | undefined)?.({
@@ -125,8 +126,9 @@ test("transformHead emits QAPage on errors, TechArticle on lessons, FAQPage on /
     jsonLd(head).map((e) => JSON.parse((e as unknown[])[2] as string)["@type"] as string);
   expect(ldTypes(run("errors/1213.md", { code: "1213", name: "Deadlock found", description: "x" }))).toEqual([
     "QAPage",
+    "BreadcrumbList",
   ]);
-  expect(ldTypes(run("postgres/03-locking/deadlocks.md", {}))).toEqual(["TechArticle"]);
+  expect(ldTypes(run("postgres/03-locking/deadlocks.md", {}))).toEqual(["TechArticle", "BreadcrumbList"]);
   expect(jsonLd(run("errors/index.md", { description: "the index" }))).toHaveLength(0);
   // A section index under the article-prefix regex must still be skipped (the !endsWith("/") guard).
   expect(jsonLd(run("concepts/index.md", {}))).toHaveLength(0);
@@ -141,7 +143,7 @@ test("transformHead emits QAPage on errors, TechArticle on lessons, FAQPage on /
 </div>
 <footer class="VPFooter"><p>MIT Licensed. © 2026 Leonid Svyatov</p></footer>`;
   const faqHead = run("faq.md", {}, faqContent);
-  expect(ldTypes(faqHead)).toEqual(["FAQPage"]);
+  expect(ldTypes(faqHead)).toEqual(["FAQPage", "BreadcrumbList"]);
   const faqLd = JSON.parse((jsonLd(faqHead)[0] as unknown[])[2] as string);
   expect(faqLd.mainEntity[0].acceptedAnswer.text).toBe("Yes, it works.");
 });
