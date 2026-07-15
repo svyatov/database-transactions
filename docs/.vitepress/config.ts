@@ -248,6 +248,17 @@ function crossDriver(): string {
   return ran ? ", and re-proven through psycopg and PyMySQL" : "";
 }
 
+// Orientation pages that otherwise fall outside every section sidebar. Listing them
+// here gives /start-here and /faq the same left menu as the rest of the neutral pages,
+// and keeps them from being the only doc-layout pages with no sidebar at all.
+const getStarted: DefaultTheme.SidebarItem = {
+  text: "Get started",
+  items: [
+    { text: "Start here", link: "/start-here" },
+    { text: "FAQ", link: "/faq" },
+  ],
+};
+
 const about: DefaultTheme.SidebarItem = {
   text: "About",
   items: [
@@ -303,7 +314,7 @@ const concepts = (collapsed: boolean): DefaultTheme.SidebarItem => ({
 
 // Shared sidebar for every engine-neutral page (concepts + about): the same
 // About and Concepts groups as the track sidebars, then links into both tracks.
-const neutral: DefaultTheme.SidebarItem[] = [about, concepts(false), tracks];
+const neutral: DefaultTheme.SidebarItem[] = [getStarted, about, concepts(false), tracks];
 
 const postgres: DefaultTheme.SidebarItem[] = [
   about,
@@ -856,6 +867,8 @@ export default defineConfig({
       "/concepts/": neutral,
       "/errors/": errors,
       "/about/": neutral,
+      "/start-here": neutral,
+      "/faq": neutral,
     },
     socialLinks: [
       {
