@@ -17,11 +17,11 @@ hero:
 features:
   - icon: ✅
     title: Verified, not vibed
-    details: Every session transcript is generated from a real run. CI re-verifies all of them on every change, the site cannot drift from actual database behavior.
+    details: Nothing here is hand-waved. Every transcript came out of a real Postgres or MySQL run, and CI runs them all again on every commit. The day a claim stops being true, the build goes red.
   - icon: 🧪
-    title: Runnable at home
-    details: Clone the repo, `docker compose up`, `bun test`. Every lesson is an executable scenario you can tweak, break, and learn from.
+    title: Run it yourself
+    details: "`docker compose up`, then `bun test`. Every lesson is a real scenario you can run, poke at, and break on purpose. Flip an isolation level and watch the anomaly walk right back in."
   - icon: 🧠
-    title: Built for working devs
-    details: You already use transactions. These lessons show you the anomalies hiding in your code, and the patterns that fix them.
+    title: Focused on what breaks
+    details: "You already write transactions. This digs into the parts that go wrong under load: lost updates, deadlocks, phantom reads, and the fixes that actually hold up."
 ---

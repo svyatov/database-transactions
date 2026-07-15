@@ -1,3 +1,22 @@
+/* Home hero: keep the copy from running into the transcript snippet that fills the
+   image slot. VitePress lays .main (text) and .image side by side with no gutter
+   between them once they sit in a row, so add one on the text side. */
+@media (min-width: 960px) {
+  .VPHero .main {
+    padding-right: 48px;
+  }
+}
+
+/* Below the side-by-side breakpoint VitePress stacks the hero image on top in a
+   fixed-height (320/392px) container with a blurred backdrop. Our snippet is
+   desktop-only, so hide the whole image box — not just the snippet — to reclaim the
+   blank band it would otherwise leave above the title. */
+@media (max-width: 959px) {
+  .VPHero .image {
+    display: none;
+  }
+}
+
 /* Transcript blocks: CLI-flavored scenario runs, one color per session. */
 
 :root {

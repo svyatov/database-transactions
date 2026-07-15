@@ -14,6 +14,20 @@ const SITE_URL = "https://svyatov.github.io/database-transactions/";
 
 type LedgerRecord = { scenario: string; product: string; version: string; claim: string };
 
+// Build-time data the curriculum component reads via `useData().theme`. Augment
+// DefaultTheme.Config so both the write (themeConfig below) and the read (in the .vue
+// component) are typed, and the component never touches the filesystem — SSR-safe, and
+// the determinism story stays identical to the footer's.
+export type CurriculumEntry = { label: string; chapter: string; postgres: string; mysql: string };
+
+declare module "vitepress" {
+  namespace DefaultTheme {
+    interface Config {
+      curriculum?: CurriculumEntry[];
+    }
+  }
+}
+
 /** Parse `public/ledger.jsonl` once; an absent ledger (fresh tree, `gen` never ran) yields []. */
 function ledgerRecords(): LedgerRecord[] {
   try {
@@ -228,19 +242,49 @@ function engines(): string {
   return pairs.length ? ` against ${pairs.join(" and ")}` : "";
 }
 
-function commit(): string {
-  let sha = process.env.GITHUB_SHA;
-  if (!sha) {
-    try {
-      sha = execFileSync("git", ["rev-parse", "HEAD"], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      }).trim();
-    } catch {
-      return ""; // a tarball with no .git, built outside CI
-    }
+/** The build commit: `GITHUB_SHA` in CI, else `git rev-parse`, else "" (a tarball with no .git). */
+function commitSha(): string {
+  const sha = process.env.GITHUB_SHA;
+  if (sha) return sha;
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
   }
-  return ` at <a href="${REPO}/tree/${sha}"><code>${sha.slice(0, 7)}</code></a>`;
+}
+
+function commit(): string {
+  const sha = commitSha();
+  return sha ? ` at <a href="${REPO}/tree/${sha}"><code>${sha.slice(0, 7)}</code></a>` : "";
+}
+
+/**
+ * The curriculum grid: one entry per chapter, in order, each pointing at the chapter's first
+ * lesson per engine (KTD3). Derived from the two sidebar arrays rather than a hand-listed slug
+ * table, so the dead-link gate covers every link and the grid can't rot. Chapter groups are the
+ * numbered ones (`1.`, `2.`, …); the leading About/Concepts groups are skipped. `chapter` is the
+ * dir slug (`basics`, `isolation`, …); `label` is the group title minus its number prefix.
+ */
+export function buildCurriculum(
+  pgSidebar: readonly DefaultTheme.SidebarItem[],
+  mysqlSidebar: readonly DefaultTheme.SidebarItem[],
+): CurriculumEntry[] {
+  const chapters = (s: readonly DefaultTheme.SidebarItem[]) => s.filter((g) => /^\d+\./.test(g.text ?? ""));
+  const pg = chapters(pgSidebar);
+  const my = chapters(mysqlSidebar);
+  return pg.map((group, i) => {
+    const postgres = group.items?.[0]?.link ?? "";
+    const mysql = my[i]?.items?.[0]?.link ?? "";
+    return {
+      label: (group.text ?? "").replace(/^\d+\.\s*/, ""),
+      chapter: postgres.split("/")[2]?.replace(/^\d+-/, "") ?? "",
+      postgres,
+      mysql,
+    };
+  });
 }
 
 function crossDriver(): string {
@@ -316,7 +360,7 @@ const concepts = (collapsed: boolean): DefaultTheme.SidebarItem => ({
 // About and Concepts groups as the track sidebars, then links into both tracks.
 const neutral: DefaultTheme.SidebarItem[] = [getStarted, about, concepts(false), tracks];
 
-const postgres: DefaultTheme.SidebarItem[] = [
+export const sidebarPostgres: DefaultTheme.SidebarItem[] = [
   about,
   concepts(true),
   {
@@ -482,7 +526,7 @@ const postgres: DefaultTheme.SidebarItem[] = [
   },
 ];
 
-const mysql: DefaultTheme.SidebarItem[] = [
+export const sidebarMysql: DefaultTheme.SidebarItem[] = [
   about,
   concepts(true),
   {
@@ -646,7 +690,7 @@ const sidebarLabels = new Map<string, string>();
       if (it.items) walk(it.items);
     }
   };
-  walk([...neutral, ...postgres, ...mysql, ...errors]);
+  walk([...neutral, ...sidebarPostgres, ...sidebarMysql, ...errors]);
 }
 
 /**
@@ -671,6 +715,8 @@ export function breadcrumbLd(path: string, leaf: string): object | undefined {
     itemListElement: crumbs.map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c.name, item: c.url })),
   };
 }
+
+const curriculum = buildCurriculum(sidebarPostgres, sidebarMysql);
 
 export default defineConfig({
   title: "Database Transactions",
@@ -854,16 +900,27 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: "Start here", link: "/start-here" },
-      { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },
-      { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
-      { text: "Concepts", link: "/concepts/" },
-      { text: "Error codes", link: "/errors/" },
-      { text: "FAQ", link: "/faq" },
-      { text: "How it works", link: "/about/methodology" },
+      {
+        text: "Learn",
+        items: [
+          { text: "Concepts", link: "/concepts/" },
+          { text: "PostgreSQL", link: "/postgres/01-basics/what-is-a-transaction" },
+          { text: "MySQL", link: "/mysql/01-basics/what-is-a-transaction" },
+        ],
+      },
+      {
+        text: "Reference",
+        items: [
+          { text: "How it works", link: "/about/methodology" },
+          { text: "Error codes", link: "/errors/" },
+          { text: "FAQ", link: "/faq" },
+        ],
+      },
     ],
+    curriculum,
     sidebar: {
-      "/postgres/": postgres,
-      "/mysql/": mysql,
+      "/postgres/": sidebarPostgres,
+      "/mysql/": sidebarMysql,
       "/concepts/": neutral,
       "/errors/": errors,
       "/about/": neutral,
