@@ -8,6 +8,10 @@ const REPO = "https://github.com/svyatov/database-transactions";
 // auto-prefix them with `base` (unlike page links); reuse this const so the two never drift.
 const BASE_PATH = "/database-transactions/";
 
+// Absolute site origin + base, trailing slash included — the single source of truth for the
+// canonical origin (sitemap hostname, canonical/OG/Twitter URLs, and every JSON-LD `url`).
+const SITE_URL = "https://svyatov.github.io/database-transactions/";
+
 type LedgerRecord = { scenario: string; product: string; version: string; claim: string };
 
 /** Parse `public/ledger.jsonl` once; an absent ledger (fresh tree, `gen` never ran) yields []. */
@@ -126,6 +130,24 @@ export function techArticleLd(fields: { title: string; description: string; url:
     description: fields.description,
     url: fields.url,
   };
+}
+
+/**
+ * Site-wide `WebSite` + `Organization` JSON-LD — identical on every page, so it lives in the
+ * static `head[]` rather than `transformHead`. No `WebSite.potentialAction`/`SearchAction`:
+ * search is client-side, with no results-page URL to point a sitelinks searchbox at.
+ */
+export function siteJsonLd(): object[] {
+  return [
+    { "@context": "https://schema.org", "@type": "WebSite", name: "Database Transactions", url: SITE_URL },
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "Database Transactions",
+      url: SITE_URL,
+      logo: `${SITE_URL}icon-512.png`,
+    },
+  ];
 }
 
 /**
@@ -603,6 +625,42 @@ const errors: DefaultTheme.SidebarItem[] = [
   },
 ];
 
+// Flat map from a page's docs-relative path (no leading/trailing slash) to its sidebar label,
+// walked from every sidebar tree. Powers the per-page BreadcrumbList crumb names below.
+const sidebarLabels = new Map<string, string>();
+{
+  const walk = (items: DefaultTheme.SidebarItem[]) => {
+    for (const it of items) {
+      if (it.link) sidebarLabels.set(it.link.replace(/^\/|\/$/g, ""), it.text ?? "");
+      if (it.items) walk(it.items);
+    }
+  };
+  walk([...neutral, ...postgres, ...mysql, ...errors]);
+}
+
+/**
+ * Per-page `BreadcrumbList`: Home → any ancestor path segment that is itself a real page
+ * (found in the sidebar map) → the page. Numbered lesson-section dirs have no landing page,
+ * so they're skipped — every emitted crumb carries an `item` URL, as Google expects. Returns
+ * undefined for the home page and bare section indexes (a path ending in "/").
+ */
+export function breadcrumbLd(path: string, leaf: string): object | undefined {
+  if (!path || path.endsWith("/")) return undefined;
+  const crumbs: { name: string; url: string }[] = [{ name: "Home", url: SITE_URL }];
+  const segs = path.split("/");
+  for (let i = 0; i < segs.length - 1; i++) {
+    const prefix = segs.slice(0, i + 1).join("/");
+    const name = sidebarLabels.get(prefix);
+    if (name) crumbs.push({ name, url: `${SITE_URL}${prefix}` });
+  }
+  crumbs.push({ name: leaf, url: `${SITE_URL}${path}` });
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c.name, item: c.url })),
+  };
+}
+
 export default defineConfig({
   title: "Database Transactions",
   description:
@@ -623,6 +681,8 @@ export default defineConfig({
     ["link", { rel: "manifest", href: `${BASE_PATH}manifest.webmanifest` }],
     ["meta", { name: "theme-color", content: "#7a4a1e" }],
     ["link", { rel: "alternate", type: "text/plain", href: `${BASE_PATH}llms.txt`, title: "llms.txt" }],
+    // Site-wide WebSite + Organization JSON-LD (same on every page).
+    ...siteJsonLd().map(ldScript),
   ],
   // Generated transcript fragments are included into lesson pages, never built as pages.
   // The rest are gitignored working notes — CI never checks them out, so keep local
@@ -632,8 +692,8 @@ export default defineConfig({
   // (It resolves the sibling llms.txt and llms-full.txt on its own.)
   ignoreDeadLinks: ["/ledger.jsonl"],
   // VitePress resolves sitemap <loc>s against this URL, so it must include the
-  // base path WITH the trailing slash — without it the base is dropped.
-  sitemap: { hostname: "https://svyatov.github.io/database-transactions/" },
+  // base path WITH the trailing slash (SITE_URL has it) — without it the base is dropped.
+  sitemap: { hostname: SITE_URL },
   // Distinct SERP titles for the two tracks: "Read Committed — PostgreSQL | …"
   // vs "Read Committed — MySQL | …". Concepts/about/home keep the default.
   transformPageData(pageData) {
@@ -650,7 +710,7 @@ export default defineConfig({
   transformHead({ page, pageData, title, description, content }) {
     if (page === "404.md") return;
     const path = pageData.relativePath.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, "");
-    const url = `https://svyatov.github.io/database-transactions/${path}`;
+    const url = `${SITE_URL}${path}`;
     const para = content.match(/<p>([\s\S]*?)<\/p>/)?.[1];
     const text = para ? stripHtml(para) : undefined;
     const firstParagraph = text && text.length > 160 ? `${text.slice(0, 160).replace(/\s+\S*$/, "")}…` : text;
@@ -664,6 +724,10 @@ export default defineConfig({
       ["meta", { property: "og:description", content: desc }],
       ["meta", { property: "og:url", content: url }],
       ["meta", { property: "og:type", content: path ? "article" : "website" }],
+      // Twitter falls back to og:* but wants an explicit card type; "summary" since there's no per-page image.
+      ["meta", { name: "twitter:card", content: "summary" }],
+      ["meta", { name: "twitter:title", content: title }],
+      ["meta", { name: "twitter:description", content: desc }],
     ];
     const jsonLd = buildErrorJsonLd(pageData.relativePath, pageData.frontmatter, url);
     if (jsonLd) head.push(jsonLd);
@@ -678,6 +742,8 @@ export default defineConfig({
       article = techArticleLd({ title, description: desc, url });
     }
     if (article) head.push(ldScript(article));
+    const crumbs = breadcrumbLd(path, pageData.title || title);
+    if (crumbs) head.push(ldScript(crumbs));
     return head;
   },
   markdown: {

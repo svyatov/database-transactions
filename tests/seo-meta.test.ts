@@ -2,7 +2,14 @@ import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import config, { buildPageClaims, faqPageLd, parseFaq, techArticleLd } from "../docs/.vitepress/config";
+import config, {
+  breadcrumbLd,
+  buildPageClaims,
+  faqPageLd,
+  parseFaq,
+  siteJsonLd,
+  techArticleLd,
+} from "../docs/.vitepress/config";
 
 const docsDir = new URL("../docs/", import.meta.url);
 
@@ -60,6 +67,49 @@ test("techArticleLd carries the exact three fields under TechArticle", () => {
     description: "no dirty reads",
     url: "https://x/y",
   });
+});
+
+test("siteJsonLd emits WebSite + Organization anchored at the site URL", () => {
+  const [website, org] = siteJsonLd() as Record<string, unknown>[];
+  expect(website).toMatchObject({ "@type": "WebSite", url: "https://svyatov.github.io/database-transactions/" });
+  expect(org).toMatchObject({
+    "@type": "Organization",
+    url: "https://svyatov.github.io/database-transactions/",
+    logo: "https://svyatov.github.io/database-transactions/icon-512.png",
+  });
+});
+
+test("breadcrumbLd includes an ancestor that is a real page (concepts index)", () => {
+  const ld = breadcrumbLd("concepts/write-skew", "Write skew") as { itemListElement: Record<string, unknown>[] };
+  expect(ld.itemListElement.map((i) => i.name)).toEqual(["Home", "Concepts", "Write skew"]);
+  expect(ld.itemListElement.map((i) => i.position)).toEqual([1, 2, 3]);
+  expect(ld.itemListElement.every((i) => typeof i.item === "string")).toBe(true);
+});
+
+test("breadcrumbLd skips section dirs with no landing page (lesson pages get Home → leaf)", () => {
+  const ld = breadcrumbLd("postgres/03-locking/deadlocks", "Deadlocks") as {
+    itemListElement: Record<string, unknown>[];
+  };
+  expect(ld.itemListElement.map((i) => i.name)).toEqual(["Home", "Deadlocks"]);
+});
+
+test("breadcrumbLd returns undefined for home and bare indexes", () => {
+  expect(breadcrumbLd("", "Home")).toBeUndefined();
+  expect(breadcrumbLd("concepts/", "Concepts")).toBeUndefined();
+});
+
+test("transformHead emits twitter card meta and a BreadcrumbList script", () => {
+  const head = config.transformHead?.({
+    page: "postgres/03-locking/deadlocks.md",
+    pageData: { relativePath: "postgres/03-locking/deadlocks.md", frontmatter: {}, title: "Deadlocks" },
+    title: "Deadlocks — PostgreSQL | Database Transactions",
+    description: "fallback",
+    content: "<p>Two transactions lock rows in opposite order.</p>",
+  } as any);
+  const tags = (head ?? []) as [string, Record<string, string>, string?][];
+  expect(tags.some(([tag, a]) => tag === "meta" && a.name === "twitter:card")).toBe(true);
+  const ld = tags.filter(([tag, a]) => tag === "script" && a.type === "application/ld+json").map(([, , body]) => body);
+  expect(ld.some((body) => body?.includes('"@type":"BreadcrumbList"'))).toBe(true);
 });
 
 // A `.vp-doc` article with two questions, wrapped as VitePress actually renders it: `style` before

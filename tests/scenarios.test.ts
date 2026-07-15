@@ -15,6 +15,10 @@ for (const file of files) {
     async () => {
       await runScenario(s, dialectFor(file));
     },
-    { timeout: 30_000 },
+    // Must stay well above harness BLOCK_DEADLINE_MS (30s): a scenario can spend that whole
+    // budget on a single lock-wait fence, and with the two equal the test wall fired first —
+    // killing the run with a bare "timed out after 30000ms" before the harness could report
+    // which claim was false. The slack also gives a CPU-starved CI runner room on a green run.
+    { timeout: 45_000 },
   );
 }
