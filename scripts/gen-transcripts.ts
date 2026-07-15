@@ -5,8 +5,9 @@
  * CI regenerates all transcripts and fails on any diff — the docs cannot drift
  * from actual database behavior.
  *
- * The same pass records what it proved: docs/public/ledger.jsonl (committed, inside
- * the drift gate) plus llms-full.txt and llms.txt (generated, gitignored).
+ * The same pass records what it proved: docs/public/ledger.jsonl plus llms-full.txt
+ * and llms.txt — all committed, inside the drift gate, so a prose-only CI run that
+ * skips `gen` still ships them.
  */
 import { rm } from "node:fs/promises";
 import { type Dialect, dialectFor } from "../harness/dialect";
@@ -103,10 +104,10 @@ function oneLine(text: string): string {
 }
 
 /**
- * Every transcript behind a heading that attributes it. Unlike the transcripts themselves
- * this file is never drift-checked, so the concatenation checks itself: parse the rendered
- * text back and demand one section per record, path and claim matching. A dropped or
- * mispaired transcript is well inside any byte-size tolerance wide enough not to be brittle.
+ * Every transcript behind a heading that attributes it. The concatenation also checks
+ * itself: parse the rendered text back and demand one section per record, path and claim
+ * matching — so a dropped or mispaired transcript fails here at gen time with a precise
+ * message, not later as an opaque line in the drift gate that now covers this file too.
  */
 function llmsFull(records: Ledger[], transcripts: string[]): string {
   if (transcripts.length !== records.length || transcripts.some((t) => !t.trim())) {
