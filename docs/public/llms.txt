@@ -1,0 +1,12 @@
+# Database Transactions
+
+> Transaction behavior on PostgreSQL and MySQL, taught from transcripts of real database
+> runs. Every claim on this site is proven by a scenario that CI replays against pinned
+> engine versions on every push, and fails on any drift.
+
+## Proofs
+
+- [Every proven transcript](https://svyatov.github.io/database-transactions/llms-full.txt): all scenarios, with the SQL, the interleaving, and the database's own output.
+- [Ledger](https://svyatov.github.io/database-transactions/ledger.jsonl): one JSON Lines record per scenario — path, engine, pinned version, claim, sessions, observed error codes. No schema-stability guarantee; the shape grows as the site does.
+- [Error codes, reproduced](https://svyatov.github.io/database-transactions/errors/): the seven concurrency-control codes (PostgreSQL and MySQL), each with a one-sentence answer and the minimal reproduction that emits it.
+- [FAQ](https://svyatov.github.io/database-transactions/faq): the questions people actually ask — dirty reads, lost updates, deadlocks, isolation levels — each answered in a sentence or two and linked to the transcript that proves it.
