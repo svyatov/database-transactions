@@ -7,9 +7,6 @@ docs/solutions/
 docs/brainstorms/
 .compound-engineering/
 CONCEPTS.md
-# Rendered from docs/public/ledger.jsonl, which is committed and drift-checked instead.
-docs/public/llms-full.txt
-docs/public/llms.txt
 # Written by a clean pytest, deleted by `bun run gen` — evidence, never an artifact.
 .cross-driver-ok
 *.log
