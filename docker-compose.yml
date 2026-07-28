@@ -1,5 +1,9 @@
 # The single source of truth for the database versions every claim is verified against.
 # Used identically by local dev and CI.
+#
+# Both images are pinned to the patch. A floating tag silently re-versions every transcript
+# footer and ledger record the next time it is pulled, which surfaces as unrelated drift in
+# whatever PR happens to run first. Renovate proposes the bumps instead, and CI proves them.
 services:
   postgres:
     image: postgres:18.4
@@ -16,7 +20,7 @@ services:
       timeout: 2s
       retries: 15
   mysql:
-    image: mysql:8.4
+    image: mysql:8.4.11
     environment:
       MYSQL_ROOT_PASSWORD: mysql
       MYSQL_DATABASE: app
