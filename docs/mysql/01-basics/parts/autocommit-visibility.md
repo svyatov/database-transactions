@@ -51,4 +51,4 @@ B> SELECT balance FROM accounts WHERE id = 1;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/autocommit-visibility.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/autocommit-visibility.yaml)</small>

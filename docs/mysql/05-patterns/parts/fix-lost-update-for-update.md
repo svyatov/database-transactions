@@ -47,4 +47,4 @@ A> SELECT balance FROM accounts WHERE id = 1; -- both deposits survived
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/fix-lost-update-for-update.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/fix-lost-update-for-update.yaml)</small>

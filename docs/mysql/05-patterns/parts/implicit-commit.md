@@ -40,4 +40,4 @@ B> SELECT count(*) AS visible FROM orders; -- rolled back nothing — the INSERT
 
 *There is no transactional DDL in MySQL. A migration that mixes data and schema changes has commit points at every DDL statement — design for re-runnability instead of atomicity.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/implicit-commit.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/implicit-commit.yaml)</small>

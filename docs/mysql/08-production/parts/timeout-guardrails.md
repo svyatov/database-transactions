@@ -44,4 +44,4 @@ B> SELECT balance FROM accounts WHERE id = 1; -- rolled back with the session
 
 *The third guardrail, innodb_lock_wait_timeout, was proven in chapter 3 — remember it rolls back the STATEMENT, not the transaction.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/timeout-guardrails.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/timeout-guardrails.yaml)</small>

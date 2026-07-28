@@ -56,4 +56,4 @@ A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- nobody is on call �
 
 *Each transaction was internally consistent; together they broke the rule. Only SERIALIZABLE catches this.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-rr.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-rr.yaml)</small>

@@ -51,4 +51,4 @@ M> SELECT im.count - b.n >= 1 AS deadlocks_since_snapshot
 
 *For the full story of the LAST deadlock (both statements, both lock chains), read the LATEST DETECTED DEADLOCK section of SHOW ENGINE INNODB STATUS — or set innodb_print_all_deadlocks=ON to log every one.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/deadlock-counter.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/deadlock-counter.yaml)</small>

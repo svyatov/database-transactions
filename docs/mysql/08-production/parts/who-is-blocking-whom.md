@@ -54,4 +54,4 @@ B> SELECT balance FROM accounts WHERE id = 1; -- A's 200 rolled back with its de
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/who-is-blocking-whom.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/who-is-blocking-whom.yaml)</small>

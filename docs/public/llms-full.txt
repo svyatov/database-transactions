@@ -5,7 +5,7 @@ The structured index of the same runs is at https://svyatov.github.io/database-t
 
 ## mysql/01-basics/aborted-transaction.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: After an error inside a transaction, MySQL keeps the transaction alive — only the failed statement is rolled back, and everything else commits normally.
 
 ```transcript
@@ -37,11 +37,11 @@ A> SELECT id, name FROM items ORDER BY id; -- survived the error in the middle
 (3 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/aborted-transaction.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/aborted-transaction.yaml)</small>
 
 ## mysql/01-basics/atomicity.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: A transaction that fails halfway leaves zero partial writes — even statements that already succeeded inside it are undone.
 
 ```timeline
@@ -89,11 +89,11 @@ B> SELECT owner, balance FROM accounts ORDER BY id;
 (2 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/atomicity.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/atomicity.yaml)</small>
 
 ## mysql/01-basics/autocommit-visibility.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Without BEGIN, every statement commits instantly and is immediately visible to everyone; inside BEGIN, changes stay private until COMMIT.
 
 ```timeline
@@ -147,11 +147,11 @@ B> SELECT balance FROM accounts WHERE id = 1;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/autocommit-visibility.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/autocommit-visibility.yaml)</small>
 
 ## mysql/01-basics/savepoint-nesting.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Rolling back to an outer savepoint discards inner savepoints along with their work; RELEASE keeps the changes but forfeits the rollback point.
 
 ```transcript
@@ -204,11 +204,11 @@ A> SELECT n FROM steps ORDER BY n;
 (2 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/savepoint-nesting.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/savepoint-nesting.yaml)</small>
 
 ## mysql/01-basics/savepoint-recovery.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: ROLLBACK TO SAVEPOINT discards only the work done after the savepoint — the rest of the transaction commits normally.
 
 ```transcript
@@ -253,11 +253,11 @@ A> SELECT id, name FROM items ORDER BY id; -- survived — it predates the savep
 (3 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/savepoint-recovery.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/savepoint-recovery.yaml)</small>
 
 ## mysql/02-isolation/circular-information-flow.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: At READ UNCOMMITTED two concurrent transactions can each read the other's uncommitted write (Adya's G1c, "circular information flow") — an exchange no serial order can explain. READ COMMITTED makes it impossible.
 
 ```timeline
@@ -353,11 +353,11 @@ B> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/circular-information-flow.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/circular-information-flow.yaml)</small>
 
 ## mysql/02-isolation/current-reads.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: A REPEATABLE READ transaction's UPDATE operates on the CURRENT committed row, not on its snapshot — and afterwards the transaction sees its own write, so the 'repeatable' read changes.
 
 ```timeline
@@ -452,11 +452,11 @@ A> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/current-reads.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/current-reads.yaml)</small>
 
 ## mysql/02-isolation/dirty-read.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: At READ UNCOMMITTED, MySQL serves other transactions' uncommitted changes — including values that are later rolled back and thus never existed.
 
 ```timeline
@@ -512,11 +512,11 @@ B> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/dirty-read.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/dirty-read.yaml)</small>
 
 ## mysql/02-isolation/dirty-write.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: InnoDB always takes exclusive row locks for writes, so two transactions repricing the same rows cannot interleave their writes (Adya's G0, "dirty write") at any isolation level — even the one that allows dirty reads.
 
 ```timeline
@@ -578,11 +578,11 @@ A> SELECT id, price FROM items ORDER BY id; -- all B — as if B ran after A. Ne
 (2 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/dirty-write.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/dirty-write.yaml)</small>
 
 ## mysql/02-isolation/intermediate-read.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: At READ UNCOMMITTED a reader can observe an intermediate value the writer later overwrites before committing (Adya's G1b, "intermediate read") — a number that is never part of any committed state. READ COMMITTED stops this.
 
 ```timeline
@@ -658,11 +658,11 @@ B> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/intermediate-read.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/intermediate-read.yaml)</small>
 
 ## mysql/02-isolation/lost-update-read-committed.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Two read-modify-write transactions at READ COMMITTED can silently overwrite each other: two deposits of 10 grow the balance by only 10.
 
 ```timeline
@@ -727,11 +727,11 @@ A> SELECT balance FROM accounts WHERE id = 1; -- two +10 deposits, but only one 
 
 *A's deposit vanished without any error. Fixes: atomic UPDATE or SELECT FOR UPDATE — see the lesson.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-read-committed.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-read-committed.yaml)</small>
 
 ## mysql/02-isolation/lost-update-repeatable-read.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: The interleaving that loses an update at READ COMMITTED loses it at REPEATABLE READ too — MySQL raises no error, unlike PostgreSQL's 40001. The fix must be a locking read or an atomic UPDATE.
 
 ```timeline
@@ -790,11 +790,11 @@ A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is gone — silentl
 
 *PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not — don't port that assumption.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml)</small>
 
 ## mysql/02-isolation/non-repeatable-read.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: At READ COMMITTED, a transaction can read two different values for the same row — other transactions' commits become visible between its statements.
 
 ```timeline
@@ -858,11 +858,11 @@ B> SELECT balance FROM accounts WHERE id = 1; -- B's write landed on top of A's 
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/non-repeatable-read.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/non-repeatable-read.yaml)</small>
 
 ## mysql/02-isolation/observed-transaction-vanishes.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: At READ UNCOMMITTED a reader can see a later transaction's uncommitted overwrite of one row while relying on the overwritten transaction's other row (Adya's OTV, "observed transaction vanishes") — the committed transaction is visible only in pieces. READ COMMITTED restores atomic visibility.
 
 ```timeline
@@ -971,11 +971,11 @@ C> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml)</small>
 
 ## mysql/02-isolation/phantom-read.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: At READ COMMITTED, re-running the same range query inside one transaction can return rows that weren't there before — phantoms.
 
 ```timeline
@@ -1018,11 +1018,11 @@ Query OK
 
 *A's report now says '2 orders' in one place and '3 orders, total 1500' in another.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/phantom-read.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/phantom-read.yaml)</small>
 
 ## mysql/02-isolation/read-skew.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: At READ COMMITTED, a transaction reading two rows around a concurrent transfer observes money that never existed (Adya's G-single, "read skew"); REPEATABLE READ's transaction-wide snapshot keeps plain SELECTs consistent.
 
 ```timeline
@@ -1107,11 +1107,11 @@ A> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/read-skew.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/read-skew.yaml)</small>
 
 ## mysql/02-isolation/stable-snapshot.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: At REPEATABLE READ — MySQL's default — plain SELECTs use a single snapshot for the entire transaction: no non-repeatable reads and no phantoms.
 
 ```timeline
@@ -1171,11 +1171,11 @@ A> SELECT id, balance FROM accounts ORDER BY id;
 (3 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/stable-snapshot.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/stable-snapshot.yaml)</small>
 
 ## mysql/02-isolation/update-recheck.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: An UPDATE at READ COMMITTED that waited for a lock re-evaluates its WHERE clause against the new row version — rows that no longer match are silently skipped.
 
 ```timeline
@@ -1230,11 +1230,11 @@ B> SELECT id, value FROM items ORDER BY id;
 (2 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/update-recheck.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/update-recheck.yaml)</small>
 
 ## mysql/02-isolation/write-predicate-skew.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Under REPEATABLE READ a write's WHERE clause is evaluated against the CURRENT committed data while SELECTs keep showing the snapshot — so a transaction can "delete every row matching X", delete nothing, and still see rows matching X (Hermitage's G-single write-predicate anomaly).
 
 ```timeline
@@ -1286,11 +1286,11 @@ Query OK
 
 *A's writes ran in one world, its reads in another. PostgreSQL's REPEATABLE READ aborts the DELETE with a serialization failure instead; on MySQL the cure is a locking read (FOR UPDATE) or SERIALIZABLE.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-predicate-skew.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-predicate-skew.yaml)</small>
 
 ## mysql/02-isolation/write-skew-rr.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Two REPEATABLE READ transactions can each validate an invariant against their snapshots, write to different rows, and both commit — leaving the invariant broken. This is write skew.
 
 ```timeline
@@ -1349,11 +1349,11 @@ A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- nobody is on call �
 
 *Each transaction was internally consistent; together they broke the rule. Only SERIALIZABLE catches this.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-rr.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-rr.yaml)</small>
 
 ## mysql/02-isolation/write-skew-serializable.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Under MySQL's SERIALIZABLE, plain SELECTs take shared locks, so the write-skew interleaving deadlocks: one transaction is rolled back with errno 1213, and the invariant survives.
 
 ```timeline
@@ -1426,11 +1426,11 @@ A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- the invariant survi
 
 *PostgreSQL detects the same skew without blocking (SSI, at COMMIT). MySQL prevents it the classic way: locks and a deadlock victim.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-serializable.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-serializable.yaml)</small>
 
 ## mysql/03-locking/alter-table-outage.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: An ALTER TABLE queued behind one long transaction blocks every later query on that table — even plain SELECTs — because they must queue behind its exclusive metadata-lock request.
 
 ```timeline
@@ -1493,11 +1493,11 @@ Query OK
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/alter-table-outage.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/alter-table-outage.yaml)</small>
 
 ## mysql/03-locking/ddl-lock-timeout.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: With lock_wait_timeout set, a migration that can't get its metadata lock fails fast (errno 1205) instead of queueing — and other sessions' queries are never blocked behind it.
 
 ```transcript
@@ -1541,11 +1541,11 @@ B> ALTER TABLE accounts ADD COLUMN note varchar(50);
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/ddl-lock-timeout.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/ddl-lock-timeout.yaml)</small>
 
 ## mysql/03-locking/deadlock-avoidance.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: The same two opposite-direction transfers cannot deadlock if both transactions lock the rows in the same (id) order first — the second simply waits its turn.
 
 ```timeline
@@ -1611,11 +1611,11 @@ A> SELECT owner, balance FROM accounts ORDER BY id; -- both transfers landed —
 (2 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/deadlock-avoidance.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/deadlock-avoidance.yaml)</small>
 
 ## mysql/03-locking/deadlock.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Two transactions locking the same rows in opposite order deadlock; InnoDB detects the cycle instantly and rolls back one of them with errno 1213 so the other can finish.
 
 ```timeline
@@ -1675,11 +1675,11 @@ A> SELECT owner, balance FROM accounts ORDER BY id; -- A's transfer survived; B'
 
 *Unlike a lock timeout, a deadlock rolls back B's entire transaction — there is nothing left to ROLLBACK.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/deadlock.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/deadlock.yaml)</small>
 
 ## mysql/03-locking/fk-shared-lock.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: INSERTing a child row locks the referenced parent row with a plain shared lock: even a non-key UPDATE of the parent blocks until the child commits (PostgreSQL's FOR KEY SHARE would allow it), and deleting a referenced parent fails outright.
 
 ```timeline
@@ -1724,11 +1724,11 @@ B> SELECT balance FROM customers WHERE id = 1; -- the parent survived, with B's 
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/fk-shared-lock.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/fk-shared-lock.yaml)</small>
 
 ## mysql/03-locking/for-update-blocks.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: A row locked with SELECT FOR UPDATE can still be read by everyone, but any write to it waits until the locking transaction ends.
 
 ```timeline
@@ -1782,11 +1782,11 @@ B> SELECT balance FROM accounts WHERE id = 1; -- B's -10 applied on top of A's c
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/for-update-blocks.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/for-update-blocks.yaml)</small>
 
 ## mysql/03-locking/gap-locks.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Under REPEATABLE READ a locking read on a range takes next-key locks — the matching rows AND the gaps between them — so INSERTs into the range block until the reader finishes. Under READ COMMITTED only the found rows are locked and the same INSERT sails through.
 
 ```timeline
@@ -1872,11 +1872,11 @@ A> SELECT slot FROM bookings ORDER BY slot;
 (5 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/gap-locks.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/gap-locks.yaml)</small>
 
 ## mysql/03-locking/lock-mode-matrix.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: InnoDB row locks come in exactly two strengths — S locks coexist with each other but block writers, X locks block everything. There is no PostgreSQL-style four-mode ladder.
 
 ```timeline
@@ -1953,11 +1953,11 @@ Query OK
 
 *PostgreSQL's FOR KEY SHARE would coexist with that UPDATE — InnoDB has no lock that weak.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-mode-matrix.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-mode-matrix.yaml)</small>
 
 ## mysql/03-locking/lock-queue.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Sessions waiting for the same row lock pile up behind the holder, visible live in sys.innodb_lock_waits — and every queued update lands once the holder commits.
 
 ```timeline
@@ -2013,11 +2013,11 @@ C> SELECT balance FROM accounts WHERE id = 1; -- 100 + 1 + 10 + 100 — nothing 
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-queue.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-queue.yaml)</small>
 
 ## mysql/03-locking/lock-timeout.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: With innodb_lock_wait_timeout set, a statement waits for a row lock only that long, then fails with errno 1205 — only the statement is rolled back, the transaction survives.
 
 ```timeline
@@ -2061,11 +2061,11 @@ B> SELECT balance FROM accounts WHERE id = 1;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-timeout.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-timeout.yaml)</small>
 
 ## mysql/03-locking/monitoring-locks.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: data_locks shows every lock a transaction holds — a single-row UPDATE takes an intention lock on the table plus a record lock on the row — and a waiter shows up as WAITING, findable via sys.innodb_lock_waits.
 
 ```transcript
@@ -2120,11 +2120,11 @@ Query OK
 Query OK, 1 row affected
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/monitoring-locks.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/monitoring-locks.yaml)</small>
 
 ## mysql/03-locking/nowait.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: SELECT ... FOR UPDATE NOWAIT refuses to wait: if the row is locked it fails immediately with errno 3572 instead of joining the lock queue.
 
 ```transcript
@@ -2154,11 +2154,11 @@ B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/nowait.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/nowait.yaml)</small>
 
 ## mysql/03-locking/skip-locked.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: SELECT ... FOR UPDATE SKIP LOCKED silently skips locked rows, so concurrent workers each grab a different row without ever waiting — the backbone of SQL job queues.
 
 ```timeline
@@ -2227,11 +2227,11 @@ C> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/skip-locked.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/skip-locked.yaml)</small>
 
 ## mysql/04-mvcc/history-list-length.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: While any read view stays open, purge cannot remove the undo history behind it: every committed write transaction adds to the history list, and the history list length — InnoDB's bloat metric — grows for as long as the reader lives.
 
 ```timeline
@@ -2279,11 +2279,11 @@ Query OK
 
 *With the read view gone, purge is free to reclaim all 200 versions in the background. The one number to watch in production is exactly this counter — trx_rseg_history_len.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/04-mvcc/history-list-length.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/04-mvcc/history-list-length.yaml)</small>
 
 ## mysql/04-mvcc/read-views.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: BEGIN does not take the snapshot — the transaction's first read does. START TRANSACTION WITH CONSISTENT SNAPSHOT takes it immediately. And until it writes, a transaction doesn't even get a real transaction ID — readers are cheap by design.
 
 ```timeline
@@ -2353,11 +2353,11 @@ R> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/04-mvcc/read-views.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/04-mvcc/read-views.yaml)</small>
 
 ## mysql/04-mvcc/undo-logs.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: A committed DELETE removes rows only from the current version of the table. A transaction whose read view predates it keeps reading the old versions, rebuilt on demand from the undo log — long after the "real" rows are gone.
 
 ```timeline
@@ -2416,11 +2416,11 @@ R> SELECT count(*) AS remaining FROM accounts; -- the read view is gone — and 
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/04-mvcc/undo-logs.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/04-mvcc/undo-logs.yaml)</small>
 
 ## mysql/05-patterns/advisory-locks.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: GET_LOCK serializes application-defined work with no table involved: timeout 0 gives an instant yes/no, a positive timeout gives a bounded wait, and the lock ignores transactions entirely — only RELEASE_LOCK (or disconnecting) lets go.
 
 ```timeline
@@ -2509,11 +2509,11 @@ B> SELECT RELEASE_ALL_LOCKS() AS released;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/advisory-locks.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/advisory-locks.yaml)</small>
 
 ## mysql/05-patterns/check-then-insert-race.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: "SELECT first, INSERT if absent" cannot enforce uniqueness: two concurrent requests both see 0 rows, both insert, and the duplicate lands without any error.
 
 ```timeline
@@ -2570,11 +2570,11 @@ A> SELECT count(*) AS bobs FROM signups WHERE email = 'bob@example.com'; -- the 
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/check-then-insert-race.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/check-then-insert-race.yaml)</small>
 
 ## mysql/05-patterns/fix-lost-update-atomic.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: UPDATE ... SET balance = balance + 10 reads and writes in one statement: the second writer waits for the first and stacks on top — both deposits survive, at any isolation level.
 
 *Same two +10 deposits that lost an update in chapter 2 — but the math moved into the UPDATE itself.*
@@ -2624,11 +2624,11 @@ A> SELECT balance FROM accounts WHERE id = 1; -- both deposits survived
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/fix-lost-update-atomic.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/fix-lost-update-atomic.yaml)</small>
 
 ## mysql/05-patterns/fix-lost-update-for-update.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: When the new value must be computed in application code, SELECT ... FOR UPDATE serializes the read-modify-write: the second reader waits and then reads the committed 110 — a locking read pierces the snapshot by design — so both deposits land.
 
 *The app must apply business rules to the balance in code — so it locks the row while it reads.*
@@ -2678,11 +2678,11 @@ A> SELECT balance FROM accounts WHERE id = 1; -- both deposits survived
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/fix-lost-update-for-update.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/fix-lost-update-for-update.yaml)</small>
 
 ## mysql/05-patterns/fix-lost-update-version-column.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: A version column makes the lost update detectable instead of silent: the stale write matches 0 rows, and retrying against the new version lands both deposits — no locks held while the app thinks.
 
 *Both app servers read the row — including its version — with no locks held.*
@@ -2751,11 +2751,11 @@ A> SELECT balance, version FROM accounts WHERE id = 1; -- both deposits survived
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/fix-lost-update-version-column.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/fix-lost-update-version-column.yaml)</small>
 
 ## mysql/05-patterns/idempotency-key.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: An INSERT on an idempotency key reports 1 affected row exactly once: the first request charges, every retry — even one racing the original in flight — gets 0 affected rows and charges nothing.
 
 *The client sends 'charge $30' with idempotency key req-42. Server A processes it.*
@@ -2839,11 +2839,11 @@ A> SELECT balance FROM accounts WHERE id = 1; -- 100 - 30 - 25: every charge app
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/idempotency-key.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/idempotency-key.yaml)</small>
 
 ## mysql/05-patterns/implicit-commit.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Every DDL statement performs an implicit COMMIT of the current transaction first: after a mid-transaction CREATE INDEX, the "uncommitted" work is permanently committed and a later ROLLBACK undoes nothing.
 
 *A migration script wraps its work in a transaction, believing that makes it atomic: insert data, add an index, and if anything fails — roll back.*
@@ -2886,11 +2886,11 @@ B> SELECT count(*) AS visible FROM orders; -- rolled back nothing — the INSERT
 
 *There is no transactional DDL in MySQL. A migration that mixes data and schema changes has commit points at every DDL statement — design for re-runnability instead of atomicity.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/implicit-commit.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/implicit-commit.yaml)</small>
 
 ## mysql/05-patterns/job-queue.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: The full worker loop — claim with FOR UPDATE SKIP LOCKED, work, mark done, commit — never double-processes a job and never loses one: a worker crash returns its job to the queue automatically.
 
 ```timeline
@@ -2969,11 +2969,11 @@ A> SELECT id, state FROM jobs ORDER BY id;
 (2 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/job-queue.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/job-queue.yaml)</small>
 
 ## mysql/05-patterns/on-duplicate-key.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: A UNIQUE constraint makes the concurrent duplicate wait for the first insert's fate and then fail with errno 1062 — and ON DUPLICATE KEY UPDATE turns that error into a clean upsert (INSERT IGNORE absorbs it, at a price).
 
 ```timeline
@@ -3029,11 +3029,11 @@ B> INSERT IGNORE INTO signups (email) VALUES ('bob@example.com');
 Query OK, 0 rows affected
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/on-duplicate-key.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/on-duplicate-key.yaml)</small>
 
 ## mysql/05-patterns/retry-deadlocks.ts
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Errno 1213 is transient, not fatal: the victim's transaction rerun from the top sees the survivor's committed state and succeeds — withRetry needs exactly two attempts here.
 
 ```transcript
@@ -3094,11 +3094,11 @@ A> SELECT balance FROM accounts WHERE id = 2;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/retry-deadlocks.ts)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/retry-deadlocks.ts)</small>
 
 ## mysql/06-distributed/dual-write-problem.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Two systems, two writes, no shared transaction: whichever write goes first, a failure between them leaves the database and the broker permanently disagreeing.
 
 *Attempt 1 — write, then publish. The order commits…*
@@ -3150,11 +3150,11 @@ App> SELECT (SELECT count(*) FROM orders WHERE id = 2) AS orders,
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/dual-write-problem.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/dual-write-problem.yaml)</small>
 
 ## mysql/06-distributed/saga-compensation.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: A saga replaces one distributed transaction with a chain of local ones: every step commits immediately and is visible to everyone, and a failed step is undone by a new compensating transaction — not by ROLLBACK.
 
 *Step 1 — book the flight. A local transaction, committed immediately.*
@@ -3218,11 +3218,11 @@ Saga> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/saga-compensation.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/saga-compensation.yaml)</small>
 
 ## mysql/06-distributed/transactional-outbox.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Writing the order and its event in one transaction makes them atomic, and a SKIP LOCKED relay gives at-least-once delivery: a crashed relay redelivers the event instead of losing it.
 
 *The order and its event are written in ONE transaction — both land in the same database.*
@@ -3311,11 +3311,11 @@ Relay> SELECT count(*) AS pending FROM outbox;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/transactional-outbox.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/transactional-outbox.yaml)</small>
 
 ## mysql/06-distributed/xa-transactions.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: XA PREPARE detaches a transaction from its session: it survives the session's death, keeps holding its locks, and any later session can finish it by name with XA COMMIT.
 
 *A is one participant in a distributed transfer. It does its work, then PREPARES — phase one.*
@@ -3393,11 +3393,11 @@ B> SELECT balance FROM accounts WHERE id = 1;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/xa-transactions.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/xa-transactions.yaml)</small>
 
 ## mysql/08-production/deadlock-counter.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Every deadlock increments the server-wide lock_deadlocks counter in INNODB_METRICS — deadlocks are countable and alertable even if nobody saw the error, because the counter only ever goes up.
 
 ```timeline
@@ -3451,11 +3451,11 @@ M> SELECT im.count - b.n >= 1 AS deadlocks_since_snapshot
 
 *For the full story of the LAST deadlock (both statements, both lock chains), read the LATEST DETECTED DEADLOCK section of SHOW ENGINE INNODB STATUS — or set innodb_print_all_deadlocks=ON to log every one.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/deadlock-counter.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/deadlock-counter.yaml)</small>
 
 ## mysql/08-production/find-long-transactions.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Two joins on information_schema.innodb_trx find the forgotten transaction: the oldest open transaction by trx_started, and the session that holds one open while doing nothing — including the read-only kind that never shows up in write metrics but still pins purge.
 
 *A starts a 'quick report'… and never gets around to committing.*
@@ -3518,11 +3518,11 @@ A> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/find-long-transactions.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/find-long-transactions.yaml)</small>
 
 ## mysql/08-production/history-list-health.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: Two queries make undo bloat diagnosable: INNODB_METRICS' history list length says purge is falling behind, and a join on innodb_trx names the session whose old read view is holding it back.
 
 *R opens a read view and goes quiet; the write workload keeps humming.*
@@ -3572,11 +3572,11 @@ R> COMMIT;
 Query OK
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/history-list-health.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/history-list-health.yaml)</small>
 
 ## mysql/08-production/timeout-guardrails.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: max_execution_time cuts a runaway SELECT short without touching the session, and wait_timeout kills a connection that goes idle — rolling back whatever transaction it silently held open.
 
 *Guardrail 1 — max_execution_time: a per-session (or per-query) ceiling for SELECTs.*
@@ -3623,11 +3623,11 @@ B> SELECT balance FROM accounts WHERE id = 1; -- rolled back with the session
 
 *The third guardrail, innodb_lock_wait_timeout, was proven in chapter 3 — remember it rolls back the STATEMENT, not the transaction.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/timeout-guardrails.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/timeout-guardrails.yaml)</small>
 
 ## mysql/08-production/who-is-blocking-whom.yaml
 
-- engine: mysql (MySQL 8.4.10)
+- engine: mysql (MySQL 8.4.11)
 - claim: One query on sys.innodb_lock_waits names the waiter and the blocker, and a join to the processlist shows the blocker is sitting idle in transaction — and killing it drains the queue.
 
 ```timeline
@@ -3684,7 +3684,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- A's 200 rolled back with its de
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/who-is-blocking-whom.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/who-is-blocking-whom.yaml)</small>
 
 ## postgres/01-basics/aborted-transaction.yaml
 
