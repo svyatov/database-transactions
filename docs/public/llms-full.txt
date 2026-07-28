@@ -1,7 +1,7 @@
 # Database Transactions — every proven transcript
 
 Each section below is one scenario, replayed against a real database by `bun run gen`.
-The structured index of the same runs is at https://svyatov.github.io/database-transactions/ledger.jsonl.
+The structured index of the same runs is at https://database-transactions.svyatov.com/ledger.jsonl.
 
 ## mysql/01-basics/aborted-transaction.yaml
 

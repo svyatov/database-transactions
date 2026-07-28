@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://svyatov.github.io/database-transactions/sitemap.xml
+Sitemap: https://database-transactions.svyatov.com/sitemap.xml

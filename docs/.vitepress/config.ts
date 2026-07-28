@@ -4,13 +4,14 @@ import { type DefaultTheme, defineConfig, type HeadConfig } from "vitepress";
 
 const REPO = "https://github.com/svyatov/database-transactions";
 
-// GitHub Pages project-site base. `head` hrefs below spell it out because VitePress does not
-// auto-prefix them with `base` (unlike page links); reuse this const so the two never drift.
-const BASE_PATH = "/database-transactions/";
+// Site root. The custom domain serves the site at "/", but `head` hrefs below still spell the
+// base out because VitePress does not auto-prefix them with `base` (unlike page links); reuse
+// this const so the two never drift if the base ever moves again.
+const BASE_PATH = "/";
 
 // Absolute site origin + base, trailing slash included — the single source of truth for the
 // canonical origin (sitemap hostname, canonical/OG/Twitter URLs, and every JSON-LD `url`).
-const SITE_URL = "https://svyatov.github.io/database-transactions/";
+const SITE_URL = "https://database-transactions.svyatov.com/";
 
 type LedgerRecord = { scenario: string; product: string; version: string; claim: string };
 
