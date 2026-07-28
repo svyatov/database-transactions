@@ -29,4 +29,4 @@ A> SELECT id, name FROM items ORDER BY id; -- survived the error in the middle
 (3 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/aborted-transaction.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/aborted-transaction.yaml)</small>

@@ -49,4 +49,4 @@ Query OK
 
 *A's writes ran in one world, its reads in another. PostgreSQL's REPEATABLE READ aborts the DELETE with a serialization failure instead; on MySQL the cure is a locking read (FOR UPDATE) or SERIALIZABLE.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-predicate-skew.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-predicate-skew.yaml)</small>

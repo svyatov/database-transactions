@@ -59,4 +59,4 @@ A> SELECT id, price FROM items ORDER BY id; -- all B — as if B ran after A. Ne
 (2 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/dirty-write.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/dirty-write.yaml)</small>

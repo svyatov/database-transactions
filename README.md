@@ -6,7 +6,7 @@ An interactive tutorial covering isolation levels, anomalies, locking, MVCC, and
 concurrency patterns, where **every single claim is proven by executable code** running against
 a real database.
 
-📖 **Read online:** https://svyatov.github.io/database-transactions/
+📖 **Read online:** https://database-transactions.svyatov.com/
 
 ## How it works
 

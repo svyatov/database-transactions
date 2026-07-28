@@ -16,7 +16,7 @@ import { runScenario } from "../harness/run";
 import { renderMarkdown, renderTimeline } from "../harness/transcript";
 
 const REPO = "https://github.com/svyatov/database-transactions";
-const SITE = "https://svyatov.github.io/database-transactions";
+const SITE = "https://database-transactions.svyatov.com";
 const root = new URL("..", import.meta.url).pathname;
 
 const versions = new Map<Dialect, string>();

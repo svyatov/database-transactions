@@ -53,4 +53,4 @@ B> INSERT IGNORE INTO signups (email) VALUES ('bob@example.com');
 Query OK, 0 rows affected
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/on-duplicate-key.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/on-duplicate-key.yaml)</small>

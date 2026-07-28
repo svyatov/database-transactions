@@ -81,4 +81,4 @@ A> SELECT balance FROM accounts WHERE id = 1; -- 100 - 30 - 25: every charge app
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/idempotency-key.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/idempotency-key.yaml)</small>

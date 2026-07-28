@@ -70,4 +70,4 @@ A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- the invariant survi
 
 *PostgreSQL detects the same skew without blocking (SSI, at COMMIT). MySQL prevents it the classic way: locks and a deadlock victim.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-serializable.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-serializable.yaml)</small>

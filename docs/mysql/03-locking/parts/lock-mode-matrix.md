@@ -74,4 +74,4 @@ Query OK
 
 *PostgreSQL's FOR KEY SHARE would coexist with that UPDATE — InnoDB has no lock that weak.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-mode-matrix.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-mode-matrix.yaml)</small>

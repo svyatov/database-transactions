@@ -71,11 +71,11 @@ test("techArticleLd carries the exact three fields under TechArticle", () => {
 
 test("siteJsonLd emits WebSite + Organization anchored at the site URL", () => {
   const [website, org] = siteJsonLd() as Record<string, unknown>[];
-  expect(website).toMatchObject({ "@type": "WebSite", url: "https://svyatov.github.io/database-transactions/" });
+  expect(website).toMatchObject({ "@type": "WebSite", url: "https://database-transactions.svyatov.com/" });
   expect(org).toMatchObject({
     "@type": "Organization",
-    url: "https://svyatov.github.io/database-transactions/",
-    logo: "https://svyatov.github.io/database-transactions/icon-512.png",
+    url: "https://database-transactions.svyatov.com/",
+    logo: "https://database-transactions.svyatov.com/icon-512.png",
   });
 });
 

@@ -56,4 +56,4 @@ A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is gone — silentl
 
 *PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not — don't port that assumption.*
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml)</small>

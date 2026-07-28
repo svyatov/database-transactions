@@ -27,4 +27,4 @@ B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
 (1 row)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/nowait.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/nowait.yaml)</small>

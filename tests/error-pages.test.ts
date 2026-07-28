@@ -53,7 +53,7 @@ test("the seven cluster codes each have exactly one page and no others", () => {
 });
 
 // The exported JSON-LD builder, unit-tested without a full site build.
-const sampleUrl = "https://svyatov.github.io/database-transactions/errors/1213";
+const sampleUrl = "https://database-transactions.svyatov.com/errors/1213";
 const sampleFm = { code: "1213", name: "Deadlock found", description: "InnoDB rolled one transaction back." };
 
 test("the builder emits well-formed QAPage JSON-LD for an error page", () => {

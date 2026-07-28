@@ -45,4 +45,4 @@ B> SELECT owner, balance FROM accounts ORDER BY id;
 (2 rows)
 ```
 
-<small>Verified against MySQL 8.4.10 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/atomicity.yaml)</small>
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/01-basics/atomicity.yaml)</small>
