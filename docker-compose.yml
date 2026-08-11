@@ -3,7 +3,7 @@
 #
 # Both images are pinned to the patch. A floating tag silently re-versions every transcript
 # footer and ledger record the next time it is pulled, which surfaces as unrelated drift in
-# whatever PR happens to run first. Renovate proposes the bumps instead, and CI proves them.
+# whatever PR happens to run first. Dependabot proposes the bumps instead, and CI proves them.
 services:
   postgres:
     image: postgres:18.4

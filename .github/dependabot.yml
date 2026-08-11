@@ -1,0 +1,60 @@
+version: 2
+updates:
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    groups:
+      bun:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # `uv` and not `pip`. The pip ecosystem cannot read uv.lock, so it would edit
+  # pyproject.toml and leave the lock behind; every declaration here is a floor
+  # (`>=`) that already admits the current release, so it would find nothing to
+  # change at all. The uv ecosystem writes both files.
+  - package-ecosystem: "uv"
+    directory: "/python"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    groups:
+      uv:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # docker-compose.yml pins both images to the patch, on purpose: a floating tag
+  # re-versions every transcript footer the next time it is pulled. This entry is
+  # what moves the pins forward, and CI proves each bump by regenerating the
+  # transcripts and failing on drift.
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    groups:
+      docker-compose:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Every `uses:` line is pinned to a commit SHA, which freezes it until something
+  # unfreezes it. This entry is that something: it rewrites both the SHA and the
+  # version comment when a new release ships.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
