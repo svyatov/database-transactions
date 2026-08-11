@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Cross-driver check for the database-transactions scenarios — same YAML claims, asserted through psycopg + PyMySQL"
 requires-python = ">=3.12"
 dependencies = [
-    "psycopg[binary]>=3.2",
+    "psycopg[binary]>=3.3.4",
     "pymysql>=1.1",
     "cryptography>=42",   # MySQL 8.4's caching_sha2_password auth needs it
     "pyyaml>=6",
