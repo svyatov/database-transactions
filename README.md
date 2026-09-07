@@ -27,7 +27,7 @@ holds it to one rule, nothing is claimed and everything is demonstrated:
 git clone https://github.com/svyatov/database-transactions.git
 cd database-transactions
 bun install
-docker compose up -d --wait   # PostgreSQL 18.4 on :54321, MySQL 8.4 on :33061
+docker compose up -d --wait   # PostgreSQL 18.6 on :54321, MySQL 8.4 on :33061
 bun test                      # run every scenario, assert every claim
 bun lesson                    # list every lesson scenario…
 bun lesson mysql/03-locking/deadlock --step   # …and replay one live, statement by statement

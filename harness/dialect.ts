@@ -75,12 +75,13 @@ export const postgres: Dialect = {
     await admin`SELECT pg_cancel_backend(${id})`;
   },
 
-  // Bun's extended-protocol encoder corrupts a multi-byte UTF-8 character that
-  // straddles its first write-buffer boundary (~byte 38 of the statement) — em
-  // dashes in `comment:` text land there. Parameterless statements take the
-  // simple query protocol, which encodes correctly.
-  exec(conn, strings, values, text) {
-    return (values.length ? conn(strings, ...values) : conn.unsafe(text)) as Promise<Rows>;
+  // Always the extended protocol, even without parameters. Bun >= 1.4 follows a
+  // simple-protocol query (`unsafe()`) with a bare Flush and no Sync; the server
+  // reads that Flush as the next command, which disarms the idle-in-transaction
+  // timer it had just armed, so idle_in_transaction_session_timeout never fires.
+  // The extended path ends with Sync, which re-arms it.
+  exec(conn, strings, values) {
+    return conn(strings, ...values) as Promise<Rows>;
   },
 
   /** Bun puts the SQLSTATE in `errno`; move it to `code`, where scenarios expect it. */
@@ -126,7 +127,9 @@ export const mysql: Dialect = {
 
   connect(max) {
     const url = process.env.MYSQL_URL ?? "mysql://root:mysql@localhost:33061/app";
-    return new SQL({ url, max });
+    // caching_sha2_password over plain TCP asks the server for its RSA key; Bun >= 1.4 refuses
+    // that unless told the connection is trusted. It's a local docker container.
+    return new SQL({ url, max, allowPublicKeyRetrieval: true });
   },
 
   // Recreate the whole database; fresh session connections pick `app` from the URL.

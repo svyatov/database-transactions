@@ -5,8 +5,9 @@ psycopg 3 for PostgreSQL, PyMySQL for MySQL.
 """
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urlparse
 
 import psycopg
@@ -110,7 +111,7 @@ def _my_open_session(conn, name: str) -> int:
     # No application_name equivalent — @session_name makes the session findable via
     # performance_schema.user_variables_by_thread (deterministic KILLs and monitoring).
     with conn.cursor() as cur:
-        cur.execute("SET @session_name = '%s'" % name.replace("'", "''"))
+        cur.execute(f"SET @session_name = '{name.replace("'", "''")}'")
         cur.execute("SELECT CONNECTION_ID() AS pid")
         return cur.fetchone()["pid"]
 

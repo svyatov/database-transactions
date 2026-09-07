@@ -39,6 +39,11 @@ updates:
     open-pull-requests-limit: 10
     cooldown:
       default-days: 7
+    # MySQL stays on the 8.4 LTS track. Innovation releases (9.x, 26.x, ...) are a
+    # different product line, not an upgrade of it.
+    ignore:
+      - dependency-name: "mysql"
+        update-types: ["version-update:semver-major"]
     groups:
       docker-compose:
         patterns: ["*"]

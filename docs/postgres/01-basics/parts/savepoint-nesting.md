@@ -53,4 +53,4 @@ A> SELECT n FROM steps ORDER BY n;
 (2 rows)
 ```
 
-<small>Verified against PostgreSQL 18.4 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/01-basics/savepoint-nesting.yaml)</small>
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/01-basics/savepoint-nesting.yaml)</small>

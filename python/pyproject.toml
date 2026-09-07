@@ -20,6 +20,10 @@ testpaths = ["tests"]
 [tool.ruff]
 target-version = "py312"
 
+[tool.ruff.lint]
+# The harness wraps whatever the driver throws (BLE001) and cleans up best-effort (S110).
+ignore = ["BLE001", "S110"]
+
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
