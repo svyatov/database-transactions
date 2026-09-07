@@ -139,4 +139,4 @@ B> SELECT (pg_relation_size('jobs') / 8192)::int AS pages;
 (1 row)
 ```
 
-<small>Verified against PostgreSQL 18.4 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/07-pitfalls/queue-bloat.yaml)</small>
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/07-pitfalls/queue-bloat.yaml)</small>

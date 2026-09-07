@@ -55,4 +55,4 @@ A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is safe; B retries 
 
 *Retrying B from scratch reads the fresh 110 and correctly produces 120.*
 
-<small>Verified against PostgreSQL 18.4 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml)</small>
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml)</small>

@@ -57,10 +57,10 @@ const sampleUrl = "https://database-transactions.svyatov.com/errors/1213";
 const sampleFm = { code: "1213", name: "Deadlock found", description: "InnoDB rolled one transaction back." };
 
 test("the builder emits well-formed QAPage JSON-LD for an error page", () => {
-  const entry = buildErrorJsonLd("errors/1213.md", sampleFm, sampleUrl);
-  expect(entry?.[0]).toBe("script");
-  expect((entry?.[1] as { type: string }).type).toBe("application/ld+json");
-  const ld = JSON.parse(entry![2] as string);
+  const entry = buildErrorJsonLd("errors/1213.md", sampleFm, sampleUrl)!;
+  expect(entry[0]).toBe("script");
+  expect((entry[1] as { type: string }).type).toBe("application/ld+json");
+  const ld = JSON.parse(entry[2] as string);
   expect(ld["@type"]).toBe("QAPage");
   expect(ld.mainEntity.name).toContain("1213");
   expect(ld.mainEntity.name).toContain("Deadlock found");

@@ -92,4 +92,4 @@ B> SELECT lp, lp_flags, t_xmin, t_xmax, t_ctid
 (4 rows)
 ```
 
-<small>Verified against PostgreSQL 18.4 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/04-mvcc/long-transactions.ts)</small>
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/04-mvcc/long-transactions.ts)</small>

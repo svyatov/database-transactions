@@ -65,4 +65,4 @@ M> SELECT (d.deadlocks - s.deadlocks)::int AS new_deadlocks
 (1 row)
 ```
 
-<small>Verified against PostgreSQL 18.4 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/08-production/deadlock-counter.yaml)</small>
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/08-production/deadlock-counter.yaml)</small>

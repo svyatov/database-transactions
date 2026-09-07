@@ -6,7 +6,7 @@
 # whatever PR happens to run first. Dependabot proposes the bumps instead, and CI proves them.
 services:
   postgres:
-    image: postgres:18.4
+    image: postgres:18.6
     # Chapter 6 (two-phase commit) needs prepared transactions, which are off by default.
     command: -c max_prepared_transactions=10
     environment:

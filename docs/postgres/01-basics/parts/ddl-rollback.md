@@ -53,4 +53,4 @@ B> SELECT to_regclass('migration_log') IS NULL AS table_gone,
 
 *PostgreSQL keeps schema changes in the same transaction as the data. A migration that inserts, indexes, and creates its way to an error leaves nothing behind — design for atomicity, not for re-runnability.*
 
-<small>Verified against PostgreSQL 18.4 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/01-basics/ddl-rollback.yaml)</small>
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/01-basics/ddl-rollback.yaml)</small>

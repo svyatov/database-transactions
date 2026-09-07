@@ -66,4 +66,4 @@ A> SELECT balance, version FROM accounts WHERE id = 1; -- both deposits survived
 (1 row)
 ```
 
-<small>Verified against PostgreSQL 18.4 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/05-patterns/fix-lost-update-version-column.yaml)</small>
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/05-patterns/fix-lost-update-version-column.yaml)</small>

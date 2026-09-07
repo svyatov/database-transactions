@@ -61,4 +61,4 @@ COMMIT
 
 *Two NOTIFYs went in, one notification came out.*
 
-<small>Verified against PostgreSQL 18.4 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/06-distributed/listen-notify.ts)</small>
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/06-distributed/listen-notify.ts)</small>

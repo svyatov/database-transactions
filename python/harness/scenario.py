@@ -6,8 +6,8 @@ harness is the transcript generator; this harness re-verifies the same claims th
 an independent pair of drivers (psycopg + PyMySQL).
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 
 class DbError(Exception):
