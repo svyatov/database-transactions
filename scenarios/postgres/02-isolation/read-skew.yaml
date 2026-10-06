@@ -1,8 +1,6 @@
-title: "Read skew: one transaction, two rows, an impossible total"
+title: Read skew across two plain SELECTs
 claim: >-
-  At READ COMMITTED, a transaction reading two rows around a concurrent
-  transfer observes money that never existed (Adya's G-single, "read skew");
-  REPEATABLE READ's single snapshot makes the same interleaving consistent.
+  At READ COMMITTED, A's separate SELECTs around B's committed transfer return balances totaling 125; in the second schedule at REPEATABLE READ, the two reads total 100 despite B's intervening transfer.
 anomaly: G-single
 isolation: REPEATABLE READ
 setup: |
@@ -13,12 +11,12 @@ steps:
   - note: >-
       The invariant: alice + bob = 100 at every moment. A is an auditor summing
       the accounts row by row; B transfers 25 between them mid-audit.
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: SELECT balance FROM accounts WHERE owner = 'alice'
     expect: [{ balance: 50 }]
     tl: SELECT alice → 50 (before the transfer)
 
-  - B: BEGIN
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
   - B: UPDATE accounts SET balance = balance - 25 WHERE owner = 'alice'
     tl: UPDATE alice −25
   - B: UPDATE accounts SET balance = balance + 25 WHERE owner = 'bob'
@@ -41,7 +39,7 @@ steps:
   - A: SELECT balance FROM accounts WHERE owner = 'alice'
     expect: [{ balance: 25 }]
 
-  - B: BEGIN
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
   - B: UPDATE accounts SET balance = balance - 10 WHERE owner = 'alice'
   - B: UPDATE accounts SET balance = balance + 10 WHERE owner = 'bob'
   - B: COMMIT

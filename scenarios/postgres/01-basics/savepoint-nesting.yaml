@@ -1,12 +1,11 @@
 title: Nested savepoints and RELEASE
 claim: >-
-  Rolling back to an outer savepoint discards inner savepoints along with
-  their work; RELEASE keeps the changes but forfeits the rollback point.
+  Rolling back to outer_sp removes the later rows and inner_sp; RELEASE outer_sp retains row 4, and COMMIT preserves rows 1 and 4.
 setup: |
   CREATE TABLE steps (n int PRIMARY KEY);
 sessions: [A]
 steps:
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: INSERT INTO steps VALUES (1)
   - A: SAVEPOINT outer_sp
   - A: INSERT INTO steps VALUES (2)
@@ -26,6 +25,11 @@ steps:
   - note: RELEASE keeps the work done after the savepoint, but you can no longer rewind to it.
   - A: INSERT INTO steps VALUES (4)
   - A: RELEASE SAVEPOINT outer_sp
+  - A: SAVEPOINT after_release
+  - A.fails: ROLLBACK TO SAVEPOINT outer_sp
+    error: "3B001"
+    comment: RELEASE removed outer_sp; recover using the newer savepoint
+  - A: ROLLBACK TO SAVEPOINT after_release
   - A: COMMIT
 
   - A: SELECT n FROM steps ORDER BY n

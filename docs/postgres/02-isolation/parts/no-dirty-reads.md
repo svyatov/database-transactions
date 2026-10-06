@@ -7,14 +7,14 @@ B: SELECT → 100 ← A's 999 stays invisible
 ```
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 999 WHERE id = 1;
 UPDATE 1
 ```
 
-*B explicitly requests READ UNCOMMITTED — the one level that would permit dirty reads.*
+*The SQL standard permits dirty reads at READ UNCOMMITTED; PostgreSQL maps that request to READ COMMITTED behavior.*
 
 ```transcript
 B> BEGIN ISOLATION LEVEL READ UNCOMMITTED;

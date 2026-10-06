@@ -1,15 +1,13 @@
-title: Readers never see intermediate states
+title: READ COMMITTED SELECTs do not see this intermediate value
 claim: >-
-  A transaction that changes a value twice exposes neither draft to other
-  transactions (Adya's G1b, "intermediate read"): readers see the old value
-  until commit, then only the final one.
+  B's plain SELECT reads 100 while A's draft 999 is uncommitted, and its SELECT after A commits reads the final 110.
 anomaly: G1b
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
 sessions: [A, B]
 steps:
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
     comment: a working draft — A isn't done yet
     tl: UPDATE balance = 999 (draft, uncommitted)
@@ -30,5 +28,5 @@ steps:
     tl: SELECT → 110 ← only the final value, never 999
 
   - note: >-
-      To every other transaction, the balance went 100 → 110 in one step.
-      The intermediate 999 never existed outside A.
+      B's two SELECTs returned 100 and 110, never A's uncommitted draft 999.
+      A transaction with an older stable snapshot need not see 110 yet.

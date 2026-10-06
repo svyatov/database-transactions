@@ -1,7 +1,6 @@
 title: Lost update at READ COMMITTED
 claim: >-
-  Two read-modify-write transactions at READ COMMITTED can silently overwrite
-  each other: two deposits of 10 grow the balance by only 10.
+  Two read-modify-write transactions at READ COMMITTED both read 100 and write 110; both commit, leaving 110 rather than the intended 120.
 anomaly: P4
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
@@ -11,13 +10,13 @@ steps:
   - note: >-
       Two app servers process a +10 deposit each: read the balance, add 10 in
       code, write it back.
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
     capture: readA
     tl: SELECT balance → 100
 
-  - B: BEGIN
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
     capture: readB

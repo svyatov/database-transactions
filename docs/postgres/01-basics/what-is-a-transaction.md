@@ -1,33 +1,38 @@
 # What is a transaction?
 
-A transaction groups several statements into one unit of work that either fully happens or
-fully doesn't. The engine-neutral theory, ACID and what each letter promises, lives in
-[Concepts: what is a transaction?](/concepts/what-is-a-transaction). This page is PostgreSQL
-keeping the promise.
+A transaction groups database work into a unit that can commit or roll back. The
+[PostgreSQL 18 transaction tutorial](https://www.postgresql.org/docs/18/tutorial-transactions.html)
+documents this contract. ACID terminology is in
+[Concepts: what is a transaction?](/concepts/what-is-a-transaction).
 
 ::: tip How to read the demos
-Each lesson shows a transcript generated from an actual run of the lesson's scenario
-(sessions `A`, `B`, … are separate PostgreSQL connections). How the scenarios work, and
-why the transcripts can't drift from reality, is explained in
-[What this is](/about/methodology)
+The Transcripts below are generated from Scenarios with separate PostgreSQL connections.
+Their footers identify the executed server version, currently PostgreSQL 18.6. Assertions
+establish the displayed outcomes for these schedules, not every possible schedule.
+Manual links identify Documented contracts; marked derivations identify Entailed guarantees.
+See [the methodology](/about/methodology) for the runner and generation process.
 :::
 
 ## Atomicity, demonstrated
 
-Session A transfers 150 from alice (who has only 100) to bob. The credit to bob *succeeds*;
-the debit from alice violates a `CHECK` constraint. Watch what happens to bob's
-already-successful credit:
+A credits bob, then attempts to debit 150 from alice, whose balance is only 100.
+The debit violates the table's CHECK constraint. After full ROLLBACK, the Scenario
+asserts both original balances. B's plain SELECT also asserts that A's uncommitted
+credit was not visible at READ COMMITTED.
 
 <!--@include: ./parts/atomicity.md-->
 
-A failed statement doesn't only fail itself, it dooms the whole transaction: nothing in it can
-ever commit, and your only move is to roll back: fully, or to a
-[savepoint](/postgres/01-basics/savepoints). Notice too that B never saw the half-finished
-transfer; it read bob's old balance while the credit was still in flight. What other sessions
-see of your in-flight work, and exactly when, is the entire subject of
-[isolation levels](/postgres/02-isolation/snapshots-and-the-four-levels).
+This statement error leaves the explicit transaction failed. Full ROLLBACK discards
+the earlier credit; a savepoint established before a statement error can instead
+permit [partial recovery](/postgres/01-basics/savepoints). Error scope depends on
+whether a transaction block is open and which error occurred, as the
+[next lesson](/postgres/01-basics/begin-commit-rollback) explains.
+
+This atomicity claim concerns transactional table changes. It does not include external
+effects or sequence counters. The [isolation manual's sequence warning](https://www.postgresql.org/docs/18/transaction-iso.html)
+documents that sequence changes are visible immediately and are not rolled back.
 
 ## Further reading
 
-- [PostgreSQL docs: Transactions (tutorial)](https://www.postgresql.org/docs/current/tutorial-transactions.html)
+- [PostgreSQL 18: Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html)
 - [The same lesson on MySQL](/mysql/01-basics/what-is-a-transaction)

@@ -33,10 +33,10 @@ A> COMMIT;
 COMMIT
 ```
 
-*Readers never block — but writers do. The same interleaving with UPDATEs makes B wait for A's row lock.*
+*The plain SELECTs above did not wait for a row lock. The following UPDATE of the same row makes B wait for A's row lock; SELECT can still wait for conflicting table locks.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 300 WHERE id = 1;

@@ -50,7 +50,7 @@ A> SELECT balance FROM accounts WHERE id = 1; -- snapshot taken
      150 
 (1 row)
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> UPDATE accounts SET balance = 300 WHERE id = 1;
@@ -60,7 +60,7 @@ A> UPDATE accounts SET balance = 999 WHERE id = 1;
 ⏳ A is waiting for a lock…
 ```
 
-*…and fails with 40001 the moment B commits. (Had B rolled back, A would have proceeded.)*
+*A's waiting UPDATE fails with 40001 after B commits. The next schedule checks the different outcome when B rolls back.*
 
 ```transcript
 B> COMMIT;
@@ -71,6 +71,39 @@ ERROR:  40001: could not serialize access due to concurrent update
 
 A> ROLLBACK;
 ROLLBACK
+
+A> BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+
+A> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     300 
+(1 row)
+
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+B> UPDATE accounts SET balance = 400 WHERE id = 1;
+UPDATE 1
+
+A> UPDATE accounts SET balance = 999 WHERE id = 1;
+⏳ A is waiting for a lock…
+
+B> ROLLBACK;
+ROLLBACK
+
+⏵ A resumes:
+UPDATE 1
+
+A> COMMIT;
+COMMIT
+
+B> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     999 
+(1 row)
 ```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/concurrent-update-40001.yaml)</small>

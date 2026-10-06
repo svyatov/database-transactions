@@ -11,7 +11,7 @@ A: SELECT bob → 75 ← 50+75=125, money that never existed
 *The invariant: alice + bob = 100 at every moment. A is an auditor summing the accounts row by row; B transfers 25 between them mid-audit.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> SELECT balance FROM accounts WHERE owner = 'alice';
@@ -20,7 +20,7 @@ A> SELECT balance FROM accounts WHERE owner = 'alice';
       50 
 (1 row)
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> UPDATE accounts SET balance = balance - 25 WHERE owner = 'alice';
@@ -54,7 +54,7 @@ A> SELECT balance FROM accounts WHERE owner = 'alice';
       25 
 (1 row)
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> UPDATE accounts SET balance = balance - 10 WHERE owner = 'alice';
