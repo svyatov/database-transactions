@@ -366,16 +366,18 @@
       {
         "identity": "scenarios/mysql/01-basics/aborted-transaction.yaml#steps[0]",
         "line": 11,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/aborted-transaction.yaml#steps[1]",
         "line": 12,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/aborted-transaction.yaml#steps[2]",
@@ -384,28 +386,32 @@
         "fields": ["A.fails", "error", "comment"],
         "assertions": {
           "error": "1062"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/aborted-transaction.yaml#steps[3]",
         "line": 18,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/aborted-transaction.yaml#steps[4]",
         "line": 19,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/aborted-transaction.yaml#steps[5]",
         "line": 20,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/aborted-transaction.yaml#steps[6]",
@@ -427,7 +433,8 @@
               "name": "doohickey"
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -460,21 +467,24 @@
         "line": 14,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[1]",
         "line": 15,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[2]",
         "line": 16,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[3]",
@@ -487,14 +497,16 @@
               "balance": 50
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[4]",
         "line": 24,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[5]",
@@ -503,14 +515,16 @@
         "fields": ["A.fails", "error", "comment", "tl"],
         "assertions": {
           "error": "3819"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[6]",
         "line": 30,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[7]",
@@ -528,14 +542,16 @@
               "balance": 200
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[8]",
         "line": 33,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/atomicity.yaml#steps[9]",
@@ -553,7 +569,8 @@
               "balance": 50
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -594,7 +611,8 @@
               "engine": "InnoDB"
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[1]",
@@ -607,21 +625,24 @@
               "autocommit": 1
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[2]",
         "line": 15,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[3]",
         "line": 16,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[4]",
@@ -634,28 +655,32 @@
               "balance": 150
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[5]",
         "line": 24,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[6]",
         "line": 25,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[7]",
         "line": 26,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[8]",
@@ -668,21 +693,24 @@
               "balance": 150
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[9]",
         "line": 34,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[10]",
         "line": 35,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/autocommit-visibility.yaml#steps[11]",
@@ -695,7 +723,8 @@
               "balance": 999
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -724,58 +753,66 @@
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[0]",
         "line": 9,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[1]",
         "line": 10,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[2]",
         "line": 11,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[3]",
         "line": 12,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[4]",
         "line": 13,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[5]",
         "line": 14,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[6]",
         "line": 16,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[7]",
         "line": 17,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[8]",
@@ -784,28 +821,32 @@
         "fields": ["A.fails", "error", "comment"],
         "assertions": {
           "error": "1305"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[9]",
         "line": 23,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[10]",
         "line": 24,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[11]",
         "line": 25,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[12]",
@@ -814,14 +855,16 @@
         "fields": ["A.fails", "error", "comment"],
         "assertions": {
           "error": "1305"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[13]",
         "line": 29,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-nesting.yaml#steps[14]",
@@ -837,7 +880,8 @@
               "n": 4
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -866,37 +910,42 @@
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[0]",
         "line": 11,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[1]",
         "line": 12,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[2]",
         "line": 13,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[3]",
         "line": 15,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[4]",
         "line": 16,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[5]",
@@ -905,21 +954,24 @@
         "fields": ["A.fails", "error", "comment"],
         "assertions": {
           "error": "1062"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[6]",
         "line": 21,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[7]",
         "line": 22,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[8]",
@@ -937,21 +989,24 @@
               "name": "gadget"
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[9]",
         "line": 25,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[10]",
         "line": 26,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/01-basics/savepoint-recovery.yaml#steps[11]",
@@ -973,7 +1028,8 @@
               "name": "doohickey"
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -1009,49 +1065,56 @@
         "line": 13,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[1]",
         "line": 16,
-        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[2]",
         "line": 17,
-        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[3]",
         "line": 18,
-        "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[4]",
         "line": 19,
-        "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[5]",
         "line": 20,
         "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[6]",
         "line": 22,
         "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[7]",
@@ -1064,7 +1127,8 @@
               "balance": 222
             }
           ]
-        }
+        },
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[8]",
@@ -1077,28 +1141,32 @@
               "balance": 111
             }
           ]
-        }
+        },
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[9]",
         "line": 34,
         "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[10]",
         "line": 38,
-        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[11]",
         "line": 40,
-        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[12]",
@@ -1116,63 +1184,72 @@
               "balance": 222
             }
           ]
-        }
+        },
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[13]",
         "line": 44,
         "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[14]",
         "line": 46,
         "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[15]",
         "line": 47,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[16]",
         "line": 48,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[17]",
         "line": 49,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[18]",
         "line": 50,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[19]",
         "line": 51,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[20]",
         "line": 52,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[21]",
@@ -1185,7 +1262,8 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[22]",
@@ -1198,21 +1276,24 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[23]",
         "line": 57,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/circular-information-flow.yaml#steps[24]",
         "line": 58,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -1248,14 +1329,16 @@
         "line": 11,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[1]",
         "line": 12,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[2]",
@@ -1268,21 +1351,24 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[3]",
         "line": 18,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[4]",
         "line": 19,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[5]",
@@ -1295,21 +1381,24 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[6]",
         "line": 26,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[7]",
         "line": 29,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[8]",
@@ -1322,35 +1411,40 @@
               "balance": 200
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[9]",
         "line": 37,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[10]",
         "line": 39,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[11]",
         "line": 41,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[12]",
         "line": 42,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[13]",
@@ -1363,21 +1457,24 @@
               "balance": 200
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[14]",
         "line": 47,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[15]",
         "line": 48,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[16]",
@@ -1386,28 +1483,32 @@
         "fields": ["A", "blocks"],
         "assertions": {
           "blocks": "p1"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[17]",
         "line": 53,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[18]",
         "line": 54,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[19]",
         "line": 56,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["success"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[20]",
@@ -1420,14 +1521,16 @@
               "balance": 350
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/current-reads.yaml#steps[21]",
         "line": 60,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -1461,37 +1564,42 @@
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[0]",
         "line": 13,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[1]",
         "line": 14,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[2]",
         "line": 17,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[3]",
         "line": 18,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[4]",
         "line": 19,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[5]",
@@ -1504,7 +1612,8 @@
               "isolation": "READ-UNCOMMITTED"
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[6]",
@@ -1517,21 +1626,24 @@
               "balance": 999
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[7]",
         "line": 29,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[8]",
         "line": 30,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[9]",
@@ -1544,14 +1656,16 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-read.yaml#steps[10]",
         "line": 36,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -1587,49 +1701,56 @@
         "line": 13,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[1]",
         "line": 17,
-        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[2]",
         "line": 18,
-        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[3]",
         "line": 19,
-        "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[4]",
         "line": 20,
-        "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[5]",
         "line": 21,
         "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[6]",
         "line": 24,
         "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[7]",
@@ -1638,42 +1759,48 @@
         "fields": ["B", "blocks", "tl"],
         "assertions": {
           "blocks": "p1"
-        }
+        },
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[8]",
         "line": 29,
         "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[9]",
         "line": 31,
-        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "comment", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[10]",
         "line": 34,
         "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["success"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[11]",
         "line": 36,
         "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[12]",
         "line": 38,
-        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/dirty-write.yaml#steps[13]",
@@ -1691,7 +1818,8 @@
               "price": 22
             }
           ]
-        }
+        },
+        "state_after": "A=READ UNCOMMITTED, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -1727,35 +1855,40 @@
         "line": 13,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[1]",
         "line": 14,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[2]",
         "line": 15,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[3]",
         "line": 17,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[4]",
         "line": 18,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "comment", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[5]",
@@ -1768,21 +1901,24 @@
               "balance": 999
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[6]",
         "line": 27,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "comment", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[7]",
         "line": 30,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[8]",
@@ -1795,49 +1931,56 @@
               "balance": 110
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[9]",
         "line": 36,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[10]",
         "line": 38,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[11]",
         "line": 41,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[12]",
         "line": 42,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[13]",
         "line": 43,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[14]",
         "line": 44,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[15]",
@@ -1850,21 +1993,24 @@
               "balance": 110
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[16]",
         "line": 48,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/intermediate-read.yaml#steps[17]",
         "line": 49,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -1900,21 +2046,24 @@
         "line": 12,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[1]",
         "line": 15,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[2]",
         "line": 16,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[3]",
@@ -1927,21 +2076,24 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[4]",
         "line": 22,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[5]",
         "line": 23,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[6]",
@@ -1954,42 +2106,48 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[7]",
         "line": 30,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[8]",
         "line": 32,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[9]",
         "line": 35,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[10]",
         "line": 36,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[11]",
         "line": 38,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[12]",
@@ -2002,14 +2160,16 @@
               "balance": 110
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-read-committed.yaml#steps[13]",
         "line": 46,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -2045,28 +2205,32 @@
         "line": 13,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[1]",
         "line": 14,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[2]",
         "line": 15,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[3]",
         "line": 16,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[4]",
@@ -2079,14 +2243,16 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[5]",
         "line": 22,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[6]",
@@ -2099,42 +2265,48 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[7]",
         "line": 28,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[8]",
         "line": 30,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[9]",
         "line": 33,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[10]",
         "line": 34,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[11]",
         "line": 36,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[12]",
@@ -2147,14 +2319,16 @@
               "balance": 110
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml#steps[13]",
         "line": 44,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -2188,16 +2362,18 @@
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[0]",
         "line": 12,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[1]",
         "line": 13,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[2]",
@@ -2210,21 +2386,24 @@
               "balance": 100
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[3]",
         "line": 18,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[4]",
         "line": 19,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[5]",
@@ -2237,35 +2416,40 @@
               "balance": 200
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[6]",
         "line": 26,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[7]",
         "line": 28,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[8]",
         "line": 31,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[9]",
         "line": 32,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[10]",
@@ -2274,14 +2458,16 @@
         "fields": ["B", "blocks"],
         "assertions": {
           "blocks": "p1"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[11]",
         "line": 37,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "comment"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[12]",
@@ -2290,7 +2476,8 @@
         "fields": ["success", "affected"],
         "assertions": {
           "affected": 1
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/non-repeatable-read.yaml#steps[13]",
@@ -2303,7 +2490,8 @@
               "balance": 400
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -2339,49 +2527,56 @@
         "line": 15,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[1]",
         "line": 16,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["C"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[2]",
         "line": 17,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["C"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[3]",
         "line": 19,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[4]",
         "line": 20,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[5]",
         "line": 22,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[6]",
         "line": 25,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[7]",
@@ -2390,21 +2585,24 @@
         "fields": ["B", "blocks", "tl"],
         "assertions": {
           "blocks": "p1"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[8]",
         "line": 29,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["A", "comment", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[9]",
         "line": 32,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["success"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[10]",
@@ -2422,28 +2620,32 @@
               "balance": 19
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[11]",
         "line": 39,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[12]",
         "line": 43,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[13]",
         "line": 44,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[14]",
@@ -2461,56 +2663,64 @@
               "balance": 18
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[15]",
         "line": 47,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, open transaction, autocommit=1",
         "fields": ["C"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[16]",
         "line": 49,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[17]",
         "line": 50,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ UNCOMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["C"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[18]",
         "line": 51,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["C"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[19]",
         "line": 52,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[20]",
         "line": 53,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[21]",
         "line": 54,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[22]",
@@ -2528,14 +2738,16 @@
               "balance": 18
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[23]",
         "line": 58,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[24]",
@@ -2553,14 +2765,16 @@
               "balance": 59
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/observed-transaction-vanishes.yaml#steps[25]",
         "line": 62,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["C"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1; C=READ COMMITTED, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -2596,21 +2810,24 @@
         "line": 12,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/phantom-read.yaml#steps[1]",
         "line": 15,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/phantom-read.yaml#steps[2]",
         "line": 16,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/phantom-read.yaml#steps[3]",
@@ -2623,21 +2840,24 @@
               "n": 2
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/phantom-read.yaml#steps[4]",
         "line": 22,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/phantom-read.yaml#steps[5]",
         "line": 23,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/phantom-read.yaml#steps[6]",
@@ -2651,21 +2871,24 @@
               "total": 1500
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/phantom-read.yaml#steps[7]",
         "line": 31,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/phantom-read.yaml#steps[8]",
         "line": 32,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -2701,21 +2924,24 @@
         "line": 13,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[1]",
         "line": 16,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[2]",
         "line": 17,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[3]",
@@ -2728,35 +2954,40 @@
               "balance": 50
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[4]",
         "line": 22,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[5]",
         "line": 23,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[6]",
         "line": 25,
         "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[7]",
         "line": 27,
-        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "comment", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[8]",
@@ -2769,35 +3000,40 @@
               "balance": 75
             }
           ]
-        }
+        },
+        "state_after": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[9]",
         "line": 35,
-        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[10]",
         "line": 37,
         "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[11]",
         "line": 41,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=READ COMMITTED, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[12]",
         "line": 42,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[13]",
@@ -2810,35 +3046,40 @@
               "balance": 25
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[14]",
         "line": 46,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[15]",
         "line": 47,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[16]",
         "line": 48,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[17]",
         "line": 49,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[18]",
@@ -2851,14 +3092,16 @@
               "balance": 75
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/read-skew.yaml#steps[19]",
         "line": 54,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -2894,28 +3137,32 @@
         "line": 13,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[1]",
         "line": 14,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[2]",
         "line": 15,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[3]",
         "line": 17,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[4]",
@@ -2933,28 +3180,32 @@
               "balance": 50
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[5]",
         "line": 22,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[6]",
         "line": 23,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[7]",
         "line": 25,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[8]",
@@ -2972,14 +3223,16 @@
               "balance": 50
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[9]",
         "line": 35,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[10]",
@@ -2997,21 +3250,24 @@
               "balance": 60
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[11]",
         "line": 40,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[12]",
         "line": 43,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/stable-snapshot.yaml#steps[13]",
@@ -3033,7 +3289,8 @@
               "balance": 300
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -3067,37 +3324,42 @@
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[0]",
         "line": 11,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[1]",
         "line": 12,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "comment", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[2]",
         "line": 16,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[3]",
         "line": 19,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[4]",
         "line": 20,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[5]",
@@ -3106,21 +3368,24 @@
         "fields": ["B", "blocks", "tl"],
         "assertions": {
           "blocks": "p1"
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[6]",
         "line": 25,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[7]",
         "line": 28,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[8]",
@@ -3129,21 +3394,24 @@
         "fields": ["success", "affected"],
         "assertions": {
           "affected": 0
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[9]",
         "line": 33,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[10]",
         "line": 34,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=READ COMMITTED, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/update-recheck.yaml#steps[11]",
@@ -3161,7 +3429,8 @@
               "value": 30
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -3197,21 +3466,24 @@
         "line": 11,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[1]",
         "line": 12,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[2]",
         "line": 13,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[3]",
@@ -3229,35 +3501,40 @@
               "balance": 20
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[4]",
         "line": 19,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[5]",
         "line": 20,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[6]",
         "line": 22,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "comment", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[7]",
         "line": 26,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[8]",
@@ -3266,7 +3543,8 @@
         "fields": ["A", "affected", "tl"],
         "assertions": {
           "affected": 0
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[9]",
@@ -3280,21 +3558,24 @@
               "balance": 20
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[10]",
         "line": 38,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-predicate-skew.yaml#steps[11]",
         "line": 40,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -3330,35 +3611,40 @@
         "line": 13,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[1]",
         "line": 14,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[2]",
         "line": 15,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[3]",
         "line": 18,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[4]",
         "line": 19,
-        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[5]",
@@ -3371,7 +3657,8 @@
               "on_call": 2
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[6]",
@@ -3384,42 +3671,48 @@
               "on_call": 2
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[7]",
         "line": 31,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[8]",
         "line": 32,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[9]",
         "line": 34,
         "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[10]",
         "line": 37,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, open transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[11]",
         "line": 39,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B", "comment", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[12]",
@@ -3432,14 +3725,16 @@
               "on_call": 0
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-rr.yaml#steps[13]",
         "line": 48,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [
@@ -3481,42 +3776,48 @@
               "deadlock_detect": 1
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[1]",
         "line": 16,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[2]",
         "line": 17,
-        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[3]",
         "line": 18,
-        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[4]",
         "line": 19,
-        "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[5]",
         "line": 20,
-        "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[6]",
@@ -3529,7 +3830,8 @@
               "on_call": 2
             }
           ]
-        }
+        },
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[7]",
@@ -3542,14 +3844,16 @@
               "on_call": 2
             }
           ]
-        }
+        },
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[8]",
         "line": 30,
         "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[9]",
@@ -3558,44 +3862,50 @@
         "fields": ["A", "blocks", "tl"],
         "assertions": {
           "blocks": "p1"
-        }
+        },
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[10]",
         "line": 35,
         "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[11]",
         "line": 36,
-        "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1",
         "fields": ["B.fails", "error", "comment", "tl"],
         "assertions": {
           "error": "1213"
-        }
+        },
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[12]",
         "line": 41,
         "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[13]",
         "line": 42,
         "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["success"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[14]",
         "line": 43,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, open transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A", "tl"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[15]",
@@ -3608,28 +3918,32 @@
               "on_call": 1
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[16]",
         "line": 51,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[17]",
         "line": 54,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[18]",
         "line": 55,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=SERIALIZABLE, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[19]",
@@ -3642,14 +3956,16 @@
               "on_call": 1
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[20]",
         "line": 58,
-        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=SERIALIZABLE, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[21]",
@@ -3667,21 +3983,24 @@
               "on_call": 1
             }
           ]
-        }
+        },
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[22]",
         "line": 62,
         "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[23]",
         "line": 63,
-        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=REPEATABLE READ, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[24]",
@@ -3694,21 +4013,24 @@
               "autocommit": 1
             }
           ]
-        }
+        },
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[25]",
         "line": 66,
-        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[26]",
         "line": 67,
         "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[27]",
@@ -3721,37 +4043,42 @@
               "on_call": 1
             }
           ]
-        }
+        },
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[28]",
         "line": 71,
         "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["note"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[29]",
         "line": 72,
-        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=0; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, implicit transaction mode, autocommit=0; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[30]",
         "line": 73,
-        "scope": "A=SERIALIZABLE, open transaction, autocommit=0; B=REPEATABLE READ, open transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, implicit transaction mode, autocommit=0; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["A", "blocks"],
         "assertions": {
           "blocks": "p2"
-        }
+        },
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=0; B=REPEATABLE READ, open transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[31]",
         "line": 75,
-        "scope": "A=SERIALIZABLE, open transaction, autocommit=0; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, open transaction, autocommit=0; B=REPEATABLE READ, open transaction, autocommit=1",
         "fields": ["B"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=0; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[32]",
@@ -3764,21 +4091,24 @@
               "on_call": 1
             }
           ]
-        }
+        },
+        "state_after": "A=SERIALIZABLE, open transaction, autocommit=0; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[33]",
         "line": 78,
-        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=0; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, open transaction, autocommit=0; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, implicit transaction mode, autocommit=0; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       },
       {
         "identity": "scenarios/mysql/02-isolation/write-skew-serializable.yaml#steps[34]",
         "line": 79,
-        "scope": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
+        "scope": "A=SERIALIZABLE, implicit transaction mode, autocommit=0; B=REPEATABLE READ, standalone/next transaction, autocommit=1",
         "fields": ["A"],
-        "assertions": {}
+        "assertions": {},
+        "state_after": "A=SERIALIZABLE, standalone/next transaction, autocommit=1; B=REPEATABLE READ, standalone/next transaction, autocommit=1"
       }
     ],
     "mirrors": [

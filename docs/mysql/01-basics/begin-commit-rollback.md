@@ -31,8 +31,14 @@ Do not treat every error this way. Documented exceptions in that same manual sec
   reads and decisions, or return a controlled failure.
 - A row-lock wait timeout rolls back the **waiting statement** by default. With
   `innodb_rollback_on_timeout=ON`, it rolls back the entire transaction.
-- Connection loss needs reconnection and outcome handling. A lost COMMIT response
-  does not by itself tell the application whether COMMIT succeeded.
+
+**Entailed guarantee, by inference:** a missing COMMIT reply does not establish
+rollback. The [COMMIT contract](https://dev.mysql.com/doc/refman/8.4/en/commit.html)
+makes successful changes permanent. If COMMIT succeeds but its reply is lost, the
+changes remain committed; if COMMIT never reaches the server, that commit has not
+happened. The missing reply alone cannot distinguish these cases. After connection
+loss, reconnect and determine the outcome before repeating the work. No Transcript
+here demonstrates a network failure.
 
 If the application abandons an open transaction after a statement error, explicitly
 ROLLBACK. Continuing to COMMIT can retain earlier changes. A savepoint can discard a
