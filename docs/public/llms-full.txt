@@ -6,7 +6,7 @@ The structured index of the same runs is at https://database-transactions.svyato
 ## mysql/01-basics/aborted-transaction.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: After an error inside a transaction, MySQL keeps the transaction alive — only the failed statement is rolled back, and everything else commits normally.
+- claim: The demonstrated duplicate-key INSERT error (1062, without IGNORE) rolls back that statement; the earlier and later INSERTs commit in the same InnoDB transaction. This does not describe deadlock or connection errors.
 
 ```transcript
 A> BEGIN;
@@ -19,7 +19,7 @@ A> INSERT INTO items VALUES (3, 'widget'); -- ER_DUP_ENTRY
 ERROR 1062 (23000): Duplicate entry 'widget' for key 'items.name'
 ```
 
-*PostgreSQL would now refuse every statement until ROLLBACK. MySQL just carries on.*
+*This 1062 error leaves the earlier INSERT intact. A chooses to continue and COMMIT.*
 
 ```transcript
 A> INSERT INTO items VALUES (3, 'doohickey');
@@ -42,13 +42,13 @@ A> SELECT id, name FROM items ORDER BY id; -- survived the error in the middle
 ## mysql/01-basics/atomicity.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: A transaction that fails halfway leaves zero partial writes — even statements that already succeeded inside it are undone.
+- claim: On InnoDB, the demonstrated CHECK error leaves bob's earlier credit in A's transaction; explicit ROLLBACK then discards both balances' changes.
 
 ```timeline
 A: credit bob +150 (uncommitted)
 B: read bob → 50 (credit hidden)
 A: debit alice −150 ← 3819 Check constraint 'accounts_chk_1' is violated.
-A: ROLLBACK — bob's credit gone too
+A: ROLLBACK; bob's credit gone too
 B: read → alice 100, bob 50 (untouched)
 ```
 
@@ -68,16 +68,23 @@ B> SELECT balance FROM accounts WHERE owner = 'bob'; -- B can't see A's uncommit
 (1 row)
 ```
 
-*…but debiting alice violates the CHECK constraint — she only has 100.*
+*…but debiting alice violates the CHECK constraint; she only has 100.*
 
 ```transcript
 A> UPDATE accounts SET balance = balance - 150 WHERE owner = 'alice'; -- ER_CHECK_CONSTRAINT_VIOLATED
 ERROR 3819 (HY000): Check constraint 'accounts_chk_1' is violated.
 ```
 
-*Roll the transaction back. Bob's credit — which had succeeded — evaporates with it.*
+*A's SELECT still sees bob's successful credit. The explicit ROLLBACK below discards it.*
 
 ```transcript
+A> SELECT owner, balance FROM accounts ORDER BY id;
+ owner | balance 
+-------+---------
+ alice |     100 
+ bob   |     200 
+(2 rows)
+
 A> ROLLBACK;
 Query OK
 
@@ -94,7 +101,7 @@ B> SELECT owner, balance FROM accounts ORDER BY id;
 ## mysql/01-basics/autocommit-visibility.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Without BEGIN, every statement commits instantly and is immediately visible to everyone; inside BEGIN, changes stay private until COMMIT.
+- claim: With autocommit=1 on InnoDB, A's successful standalone UPDATE is visible to B's later standalone SELECT. B excludes A's explicit-transaction UPDATE until COMMIT; a pre-existing REPEATABLE READ snapshot need not refresh.
 
 ```timeline
 A: UPDATE balance = 150 (autocommit)
@@ -105,7 +112,21 @@ A: COMMIT
 B: SELECT balance → 999 (now visible)
 ```
 
-*No BEGIN — the UPDATE is its own transaction, committed the instant it finishes.*
+```transcript
+A> SELECT @@autocommit AS autocommit, @@transaction_isolation AS isolation, @@default_storage_engine AS engine;
+ autocommit |    isolation    | engine 
+------------+-----------------+--------
+          1 | REPEATABLE-READ | InnoDB 
+(1 row)
+
+B> SELECT @@autocommit AS autocommit;
+ autocommit 
+------------
+          1 
+(1 row)
+```
+
+*No BEGIN; the UPDATE is its own transaction, committed the instant it finishes.*
 
 ```transcript
 A> UPDATE accounts SET balance = 150 WHERE id = 1;
@@ -134,7 +155,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- still the old value
 (1 row)
 ```
 
-*…until A commits.*
+*B's next standalone SELECT takes a new snapshot after A commits.*
 
 ```transcript
 A> COMMIT;
@@ -174,13 +195,13 @@ A> INSERT INTO steps VALUES (3);
 Query OK, 1 row affected
 ```
 
-*Rolling back to the OUTER savepoint discards rows 2 and 3 — and inner_sp itself.*
+*Rolling back to the OUTER savepoint discards rows 2 and 3; and inner_sp itself.*
 
 ```transcript
 A> ROLLBACK TO SAVEPOINT outer_sp;
 Query OK
 
-A> ROLLBACK TO SAVEPOINT inner_sp; -- SAVEPOINT inner_sp does not exist — destroyed by the outer rollback
+A> ROLLBACK TO SAVEPOINT inner_sp; -- SAVEPOINT inner_sp does not exist; destroyed by the outer rollback
 ERROR 1305 (42000): SAVEPOINT inner_sp does not exist
 ```
 
@@ -192,6 +213,9 @@ Query OK, 1 row affected
 
 A> RELEASE SAVEPOINT outer_sp;
 Query OK
+
+A> ROLLBACK TO SAVEPOINT outer_sp; -- the released savepoint no longer exists
+ERROR 1305 (42000): SAVEPOINT outer_sp does not exist
 
 A> COMMIT;
 Query OK
@@ -209,7 +233,7 @@ A> SELECT n FROM steps ORDER BY n;
 ## mysql/01-basics/savepoint-recovery.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: ROLLBACK TO SAVEPOINT discards only the work done after the savepoint — the rest of the transaction commits normally.
+- claim: In this InnoDB INSERT branch, ROLLBACK TO SAVEPOINT removes the successful branch INSERT after a 1062 error, preserves the earlier INSERT, and allows the replacement branch to commit.
 
 ```transcript
 A> BEGIN;
@@ -232,11 +256,18 @@ A> INSERT INTO items VALUES (4, 'widget'); -- ER_DUP_ENTRY
 ERROR 1062 (23000): Duplicate entry 'widget' for key 'items.name'
 ```
 
-*The transaction is still alive — but the branch is half-done. Rewind all of it in one go.*
+*The transaction is still alive; but the branch is half-done. Rewind all of it in one go.*
 
 ```transcript
 A> ROLLBACK TO SAVEPOINT before_risky;
 Query OK
+
+A> SELECT id, name FROM items ORDER BY id;
+ id |  name  
+----+--------
+  1 | widget 
+  2 | gadget 
+(2 rows)
 
 A> INSERT INTO items VALUES (3, 'doohickey');
 Query OK, 1 row affected
@@ -244,7 +275,7 @@ Query OK, 1 row affected
 A> COMMIT;
 Query OK
 
-A> SELECT id, name FROM items ORDER BY id; -- survived — it predates the savepoint; 'gizmo' is gone with the branch
+A> SELECT id, name FROM items ORDER BY id; -- survived; it predates the savepoint; 'gizmo' is gone with the branch
  id |   name    
 ----+-----------
   1 | widget    
@@ -258,18 +289,18 @@ A> SELECT id, name FROM items ORDER BY id; -- survived — it predates the savep
 ## mysql/02-isolation/circular-information-flow.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: At READ UNCOMMITTED two concurrent transactions can each read the other's uncommitted write (Adya's G1c, "circular information flow") — an exchange no serial order can explain. READ COMMITTED makes it impossible.
+- claim: At READ UNCOMMITTED two concurrent transactions can each read the other's uncommitted write (Adya's G1c, "circular information flow"); an exchange no serial order can explain. The repeated READ COMMITTED schedule excludes those dirty cross-reads, but its two old reads do not prove serializability.
 
 ```timeline
 A: UPDATE alice = 111 (uncommitted)
 B: UPDATE bob = 222 (uncommitted)
 A: read bob → 222 (B's uncommitted)
 B: read alice → 111 (A's uncommitted)
-A: ROLLBACK
-B: ROLLBACK
+A: COMMIT
+B: COMMIT
 ```
 
-*A adjusts alice while B adjusts bob — then each peeks at the other's row. In any serial order, at most one of them can see the other's write.*
+*A adjusts alice while B adjusts bob; then each peeks at the other's row. In any serial order, at most one of them can see the other's write.*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -303,17 +334,27 @@ B> SELECT balance FROM accounts WHERE id = 1; -- …and B sees A's. Information 
 (1 row)
 ```
 
-*Neither value was committed when it was read — if either side now rolls back, the other has computed on data that never existed. Both roll back:*
+*Both dirty cross-reads are asserted, then both writers commit. No serial order of these two transactions gives both new values to the readers. No external application arithmetic is executed.*
 
 ```transcript
-A> ROLLBACK;
+A> COMMIT;
 Query OK
 
-B> ROLLBACK;
+B> COMMIT;
 Query OK
+
+A> SELECT id, balance FROM accounts ORDER BY id;
+ id | balance 
+----+---------
+  1 |     111 
+  2 |     222 
+(2 rows)
+
+A> UPDATE accounts SET balance = 100;
+Query OK, 2 rows affected
 ```
 
-*The same dance at READ COMMITTED: each sees the world before the other.*
+*After resetting both balances, READ COMMITTED excludes these dirty cross-reads. The two old reads still do not form a serial execution.*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -358,18 +399,21 @@ Query OK
 ## mysql/02-isolation/current-reads.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: A REPEATABLE READ transaction's UPDATE operates on the CURRENT committed row, not on its snapshot — and afterwards the transaction sees its own write, so the 'repeatable' read changes.
+- claim: In this InnoDB REPEATABLE READ schedule, A's UPDATE computes from B's committed 150, not its snapshot's 100, and A reads its own result 200. In the second attempt A waits for B's commit of 300 and produces 350.
 
 ```timeline
 A: SELECT balance → 100 (snapshot)
 B: UPDATE balance = 150 (committed)
 A: SELECT balance → 100 (snapshot holds)
 A: UPDATE +50 (current read of 150)
-A: SELECT balance → 200 (150 + 50 — the hole)
+A: SELECT balance → 200 (150 + 50; the hole)
 A: COMMIT
 ```
 
 ```transcript
+A> SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
 A> BEGIN;
 Query OK
 
@@ -399,7 +443,7 @@ A> SELECT balance FROM accounts WHERE id = 1;
 A> UPDATE accounts SET balance = balance + 50 WHERE id = 1;
 Query OK, 1 row affected
 
-A> SELECT balance FROM accounts WHERE id = 1; -- 150 + 50 — and now A sees it: the snapshot has a hole
+A> SELECT balance FROM accounts WHERE id = 1; -- 150 + 50; and now A sees it: the snapshot has a hole
  balance 
 ---------
      200 
@@ -409,7 +453,7 @@ A> COMMIT;
 Query OK
 ```
 
-*PostgreSQL would have aborted A's UPDATE with 40001 instead. MySQL quietly switches world views.*
+*A's own write is visible to its later consistent SELECT. The PostgreSQL comparison is in its concurrent-update lesson.*
 
 *If the competing write is NOT yet committed, A first waits on the row lock…*
 
@@ -457,12 +501,12 @@ Query OK
 ## mysql/02-isolation/dirty-read.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: At READ UNCOMMITTED, MySQL serves other transactions' uncommitted changes — including values that are later rolled back and thus never existed.
+- claim: At READ UNCOMMITTED, MySQL serves other transactions' uncommitted changes including the asserted 999 that A later rolls back. The value existed uncommitted, but never became part of committed history.
 
 ```timeline
 A: UPDATE balance = 999 (uncommitted)
 B: SELECT balance → 999 (dirty read)
-A: ROLLBACK — 999 never existed
+A: ROLLBACK; 999 never committed
 B: SELECT balance → 100 (the real value)
 ```
 
@@ -474,7 +518,7 @@ A> UPDATE accounts SET balance = 999 WHERE id = 1;
 Query OK, 1 row affected
 ```
 
-*B opts into READ UNCOMMITTED — and sees A's uncommitted 999.*
+*B opts into READ UNCOMMITTED; and sees A's uncommitted 999.*
 
 ```transcript
 B> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -489,14 +533,14 @@ B> SELECT @@transaction_isolation AS isolation;
  READ-UNCOMMITTED 
 (1 row)
 
-B> SELECT balance FROM accounts WHERE id = 1; -- a dirty read — A never committed this
+B> SELECT balance FROM accounts WHERE id = 1; -- a dirty read; A never committed this
  balance 
 ---------
      999 
 (1 row)
 ```
 
-*A rolls back. The 999 B just read never existed.*
+*A rolls back. The 999 B read never became committed.*
 
 ```transcript
 A> ROLLBACK;
@@ -517,7 +561,7 @@ Query OK
 ## mysql/02-isolation/dirty-write.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: InnoDB always takes exclusive row locks for writes, so two transactions repricing the same rows cannot interleave their writes (Adya's G0, "dirty write") at any isolation level — even the one that allows dirty reads.
+- claim: In this InnoDB READ UNCOMMITTED schedule, B's UPDATE of A's uncommitted row waits until A commits. Both of B's later prices are asserted after B commits. All-level dirty-write exclusion needs the row-lock contract.
 
 ```timeline
 A: UPDATE mug = 11
@@ -527,10 +571,10 @@ A: COMMIT
 B: ⏵ UPDATE mug = 12 → completes
 B: UPDATE cap = 22
 B: COMMIT
-A: SELECT → 12, 22 (all B, never mixed)
+A: SELECT → 12, 22 (both B)
 ```
 
-*Two batch jobs reprice the whole catalog concurrently — at READ UNCOMMITTED, the weakest level MySQL has. A mix of their prices (A's mug with B's cap) would be a dirty write: a state no serial order could produce.*
+*Two batch jobs reprice the whole catalog concurrently at READ UNCOMMITTED. The dirty-write event would be overwriting A's uncommitted row; a mixed final state is not its definition.*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -549,7 +593,7 @@ A> UPDATE items SET price = 11 WHERE id = 1;
 Query OK, 1 row affected
 ```
 
-*B may READ A's uncommitted rows at this level — but it may not overwrite them.*
+*B may READ A's uncommitted rows at this level; but it may not overwrite them.*
 
 ```transcript
 B> UPDATE items SET price = 12 WHERE id = 1;
@@ -570,7 +614,7 @@ Query OK, 1 row affected
 B> COMMIT;
 Query OK
 
-A> SELECT id, price FROM items ORDER BY id; -- all B — as if B ran after A. Never 12/21 or 11/22.
+A> SELECT id, price FROM items ORDER BY id; -- both of B's prices in this schedule
  id | price 
 ----+-------
   1 |    12 
@@ -583,14 +627,14 @@ A> SELECT id, price FROM items ORDER BY id; -- all B — as if B ran after A. Ne
 ## mysql/02-isolation/intermediate-read.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: At READ UNCOMMITTED a reader can observe an intermediate value the writer later overwrites before committing (Adya's G1b, "intermediate read") — a number that is never part of any committed state. READ COMMITTED stops this.
+- claim: At READ UNCOMMITTED a reader can observe an intermediate value the writer later overwrites before committing (Adya's G1b, "intermediate read"); a number absent from committed history. In the repeated READ COMMITTED schedule, B reads 110 while A's draft 555 is uncommitted.
 
 ```timeline
 A: UPDATE balance = 999 (a draft)
 B: SELECT balance → 999 (reads the draft)
 A: UPDATE balance = 110 (final value)
 A: COMMIT
-B: SELECT balance → 110 (999 was never real)
+B: SELECT balance → 110 (999 never committed)
 ```
 
 *A recalculates alice's balance in two steps. B watches at READ UNCOMMITTED.*
@@ -605,7 +649,7 @@ Query OK
 A> BEGIN;
 Query OK
 
-A> UPDATE accounts SET balance = 999 WHERE id = 1; -- a working draft — A isn't done yet
+A> UPDATE accounts SET balance = 999 WHERE id = 1; -- a working draft; A isn't done yet
 Query OK, 1 row affected
 
 B> SELECT balance FROM accounts WHERE id = 1; -- B just read a draft
@@ -630,7 +674,7 @@ B> COMMIT;
 Query OK
 ```
 
-*The committed history is 100 → 110. The 999 B acted on was never true — not even for an instant of committed time. At READ COMMITTED the same watch shows only 100, then 110:*
+*The committed history is 100 → 110. B read 999 without executing any application action. At READ COMMITTED, B now excludes A's draft 555:*
 
 ```transcript
 B> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -672,7 +716,7 @@ A: UPDATE balance = 100 + 10
 A: COMMIT
 B: UPDATE balance = 100 + 10 (stale math)
 B: COMMIT
-A: SELECT balance → 110 — one deposit gone
+A: SELECT balance → 110; one deposit gone
 ```
 
 *Two app servers process a +10 deposit each: read the balance, add 10 in code, write it back.*
@@ -696,7 +740,7 @@ Query OK
 B> BEGIN;
 Query OK
 
-B> SELECT balance FROM accounts WHERE id = 1; -- B reads the same 100 — A hasn't committed
+B> SELECT balance FROM accounts WHERE id = 1; -- B reads the same 100; A hasn't committed
  balance 
 ---------
      100 
@@ -709,7 +753,7 @@ A> COMMIT;
 Query OK
 ```
 
-*B computed 100 + 10 from its stale read. Nothing stops the write — A's transaction is long gone.*
+*B uses its captured 100 plus 10 in this SQL UPDATE. A has committed; this stale replacement succeeds in the displayed schedule.*
 
 ```transcript
 B> UPDATE accounts SET balance = 100 + 10 WHERE id = 1;
@@ -725,28 +769,34 @@ A> SELECT balance FROM accounts WHERE id = 1; -- two +10 deposits, but only one 
 (1 row)
 ```
 
-*A's deposit vanished without any error. Fixes: atomic UPDATE or SELECT FOR UPDATE — see the lesson.*
+*A's deposit vanished without any error. Fixes: atomic UPDATE or SELECT FOR UPDATE; see the lesson.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-read-committed.yaml)</small>
 
 ## mysql/02-isolation/lost-update-repeatable-read.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: The interleaving that loses an update at READ COMMITTED loses it at REPEATABLE READ too — MySQL raises no error, unlike PostgreSQL's 40001. The fix must be a locking read or an atomic UPDATE.
+- claim: In this InnoDB REPEATABLE READ schedule, both transactions read 100 and commit writes of that value plus 10 without error; the final balance is 110, not 120. A stale literal write is not rejected merely for staleness.
 
 ```timeline
 A: SELECT balance → 100
 B: SELECT balance → 100 (same snapshot)
 A: UPDATE balance = 100 + 10
 A: COMMIT
-B: UPDATE balance = 100 + 10 — no error!
+B: UPDATE balance = 100 + 10; no error!
 B: COMMIT
-A: SELECT balance → 110 — deposit gone, silently
+A: SELECT balance → 110; deposit gone, silently
 ```
 
-*The same two +10 deposits — this time at REPEATABLE READ, MySQL's default.*
+*The same two +10 deposits; this time at REPEATABLE READ, MySQL's default.*
 
 ```transcript
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
+B> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
 A> BEGIN;
 Query OK
 
@@ -772,7 +822,7 @@ A> COMMIT;
 Query OK
 ```
 
-*B's snapshot predates A's commit — but MySQL's UPDATE acts on the CURRENT row and raises nothing.*
+*B's snapshot predates A's commit; but MySQL's UPDATE acts on the CURRENT row and raises nothing.*
 
 ```transcript
 B> UPDATE accounts SET balance = 100 + 10 WHERE id = 1;
@@ -781,26 +831,26 @@ Query OK, 0 rows affected
 B> COMMIT;
 Query OK
 
-A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is gone — silently, even at REPEATABLE READ
+A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is gone; silently, even at REPEATABLE READ
  balance 
 ---------
      110 
 (1 row)
 ```
 
-*PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not — don't port that assumption.*
+*PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not; don't port that assumption.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml)</small>
 
 ## mysql/02-isolation/non-repeatable-read.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: At READ COMMITTED, a transaction can read two different values for the same row — other transactions' commits become visible between its statements.
+- claim: At READ COMMITTED, a transaction can read two different values for the same row; other transactions' commits become visible between its statements.
 
 ```timeline
 A: SELECT balance → 100
 B: UPDATE balance = 200 (autocommit)
-A: SELECT balance → 200 — same txn, different answer
+A: SELECT balance → 200; same txn, different answer
 ```
 
 ```transcript
@@ -823,7 +873,7 @@ A> SELECT balance FROM accounts WHERE id = 1;
 B> UPDATE accounts SET balance = 200 WHERE id = 1;
 Query OK, 1 row affected
 
-A> SELECT balance FROM accounts WHERE id = 1; -- same query, same transaction — different answer
+A> SELECT balance FROM accounts WHERE id = 1; -- same query, same transaction; different answer
  balance 
 ---------
      200 
@@ -833,7 +883,7 @@ A> COMMIT;
 Query OK
 ```
 
-*Readers never block — but writers do. The same interleaving with UPDATEs makes B wait for A's row lock.*
+*These nonlocking SELECTs did not wait for row locks. The interleaving with UPDATEs makes B wait for A's row lock.*
 
 ```transcript
 A> BEGIN;
@@ -863,7 +913,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- B's write landed on top of A's 
 ## mysql/02-isolation/observed-transaction-vanishes.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: At READ UNCOMMITTED a reader can see a later transaction's uncommitted overwrite of one row while relying on the overwritten transaction's other row (Adya's OTV, "observed transaction vanishes") — the committed transaction is visible only in pieces. READ COMMITTED restores atomic visibility.
+- claim: At READ UNCOMMITTED a reader can see a later transaction's uncommitted overwrite of one row while relying on the overwritten transaction's other row (Adya's OTV, "observed transaction vanishes"); the committed transaction is visible only in pieces in this schedule. The repeated READ COMMITTED SELECTs exclude A's draft and see both rows after commit; separate statements do not have one shared snapshot.
 
 ```timeline
 A: id1 = 11
@@ -874,7 +924,7 @@ B: ⏵ UPDATE id1 = 12 → completes
 C: C reads → 12, 19 (A's 11 already gone)
 ```
 
-*A rewrites both balances and commits. B overwrites one of them. C watches — dirtily.*
+*A rewrites both balances and commits. B overwrites one of them. C reads at READ UNCOMMITTED.*
 
 ```transcript
 C> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -898,13 +948,13 @@ Query OK
 B> UPDATE accounts SET balance = 12 WHERE id = 1;
 ⏳ B is waiting for a lock…
 
-A> COMMIT; -- A is committed — its writes are 11 and 19
+A> COMMIT; -- A is committed; its writes are 11 and 19
 Query OK
 
 ⏵ B resumes:
 Query OK, 1 row affected
 
-C> SELECT id, balance FROM accounts ORDER BY id; -- 12 is B's uncommitted draft, 19 is A's commit — A's 11 already vanished
+C> SELECT id, balance FROM accounts ORDER BY id; -- 12 is B's uncommitted draft, 19 is A's commit; A's 11 already vanished
  id | balance 
 ----+---------
   1 |      12 
@@ -912,7 +962,7 @@ C> SELECT id, balance FROM accounts ORDER BY id; -- 12 is B's uncommitted draft,
 (2 rows)
 ```
 
-*C never saw the committed state {11, 19}. Half of A was overwritten before C ever observed it — as far as C can tell, A only ever wrote one row. B now finishes:*
+*C never saw the committed state {11, 19}. Half of A was overwritten before C observed it. C's returned rows combine B's draft with A's committed second row. B now finishes:*
 
 ```transcript
 B> UPDATE accounts SET balance = 18 WHERE id = 2;
@@ -932,7 +982,7 @@ C> COMMIT;
 Query OK
 ```
 
-*READ COMMITTED never shows a committed transaction in pieces:*
+*These READ COMMITTED SELECTs exclude A's uncommitted changes, then include its commit:*
 
 ```transcript
 C> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -950,7 +1000,7 @@ Query OK, 1 row affected
 A> UPDATE accounts SET balance = 59 WHERE id = 2;
 Query OK, 1 row affected
 
-C> SELECT id, balance FROM accounts ORDER BY id; -- all of the last committed state — nothing of A's draft
+C> SELECT id, balance FROM accounts ORDER BY id; -- all of the last committed state; nothing of A's draft
  id | balance 
 ----+---------
   1 |      12 
@@ -976,12 +1026,12 @@ Query OK
 ## mysql/02-isolation/phantom-read.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: At READ COMMITTED, re-running the same range query inside one transaction can return rows that weren't there before — phantoms.
+- claim: At READ COMMITTED, re-running the same range query inside one transaction can return rows that weren't there before; phantoms.
 
 ```timeline
 A: count(amount ≥ 100) → 2
 B: INSERT order 3 (autocommit)
-A: recount → 3, total 1500 — a phantom
+A: recount → 3, total 1500; a phantom
 ```
 
 *A computes a report twice inside one transaction: count first, then the total.*
@@ -1006,7 +1056,7 @@ A> SELECT count(*) AS n FROM orders WHERE amount >= 100;
 B> INSERT INTO orders VALUES (3, 700);
 Query OK, 1 row affected
 
-A> SELECT count(*) AS n, CAST(sum(amount) AS SIGNED) AS total FROM orders WHERE amount >= 100; -- a third row appeared out of nowhere — a phantom
+A> SELECT count(*) AS n, CAST(sum(amount) AS SIGNED) AS total FROM orders WHERE amount >= 100; -- a third row appeared out of nowhere; a phantom
  n | total 
 ---+-------
  3 |  1500 
@@ -1023,7 +1073,7 @@ Query OK
 ## mysql/02-isolation/read-skew.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: At READ COMMITTED, a transaction reading two rows around a concurrent transfer observes money that never existed (Adya's G-single, "read skew"); REPEATABLE READ's transaction-wide snapshot keeps plain SELECTs consistent.
+- claim: At READ COMMITTED, a transaction reading two rows around a concurrent transfer observes money that never existed (Adya's G-single, "read skew"); the repeated REPEATABLE READ schedule returns 25 and 75 from one snapshot, with no writes by the reader.
 
 ```timeline
 A: read alice → 50
@@ -1033,7 +1083,7 @@ B: COMMIT (transfer done)
 A: read bob → 75 (50 + 75 = 125!)
 ```
 
-*The invariant: alice + bob = 100 at every moment. A is an auditor summing the accounts row by row; B transfers 25 between them mid-audit.*
+*The rule: alice + bob = 100 in each committed state. A models an auditor reading the accounts row by row; B transfers 25 between them mid-audit.*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -1057,7 +1107,7 @@ Query OK, 1 row affected
 B> UPDATE accounts SET balance = balance + 25 WHERE owner = 'bob';
 Query OK, 1 row affected
 
-B> COMMIT; -- a perfectly correct transfer — atomic, invariant preserved
+B> COMMIT; -- a perfectly correct transfer; atomic, invariant preserved
 Query OK
 
 A> SELECT balance FROM accounts WHERE owner = 'bob'; -- 50 + 75 = 125. The auditor found 25 that never existed.
@@ -1070,7 +1120,7 @@ A> COMMIT;
 Query OK
 ```
 
-*Neither row was ever wrong — A read alice BEFORE the transfer and bob AFTER it. REPEATABLE READ pins every plain SELECT to one snapshot:*
+*Neither row was ever wrong; A read alice BEFORE the transfer and bob AFTER it. The repeated REPEATABLE READ consistent SELECTs use one snapshot; the reader makes no changes of its own:*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
@@ -1097,7 +1147,7 @@ Query OK, 1 row affected
 B> COMMIT;
 Query OK
 
-A> SELECT balance FROM accounts WHERE owner = 'bob'; -- 25 + 75 = 100 — one snapshot, one moment in time
+A> SELECT balance FROM accounts WHERE owner = 'bob'; -- 25 + 75 = 100; one snapshot, one moment in time
  balance 
 ---------
       75 
@@ -1112,34 +1162,40 @@ Query OK
 ## mysql/02-isolation/stable-snapshot.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: At REPEATABLE READ — MySQL's default — plain SELECTs use a single snapshot for the entire transaction: no non-repeatable reads and no phantoms.
+- claim: In this InnoDB REPEATABLE READ schedule, the first consistent SELECT includes a commit after BEGIN. Later consistent SELECTs exclude B's later UPDATE and INSERT, include A's own UPDATE, and refresh after A commits.
 
 ```timeline
-A: SELECT → 100, 50 (snapshot taken)
+A: SELECT → 120, 50 (snapshot taken)
 B: UPDATE id1 = 999 (committed)
 B: INSERT carol (committed)
-A: SELECT → 100, 50 — no 999, no carol
+A: SELECT → 120, 50; no 999, no carol
 A: COMMIT
 A: SELECT → 999 + carol (new snapshot)
 ```
 
 ```transcript
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
 A> BEGIN;
 Query OK
+
+B> UPDATE accounts SET balance = 120 WHERE id = 1;
+Query OK, 1 row affected
 ```
 
-*The snapshot is taken by the FIRST query, not by BEGIN.*
+*The first consistent table read includes B's commit after BEGIN.*
 
 ```transcript
 A> SELECT id, balance FROM accounts ORDER BY id;
  id | balance 
 ----+---------
-  1 |     100 
+  1 |     120 
   2 |      50 
 (2 rows)
 ```
 
-*B changes an existing row AND inserts a new one — both committed instantly.*
+*B changes an existing row AND inserts a new one; both committed instantly.*
 
 ```transcript
 B> UPDATE accounts SET balance = 999 WHERE id = 1;
@@ -1148,25 +1204,35 @@ Query OK, 1 row affected
 B> INSERT INTO accounts VALUES (3, 'carol', 300);
 Query OK, 1 row affected
 
-A> SELECT id, balance FROM accounts ORDER BY id; -- not 999 — no non-repeatable read; and no carol — no phantom
+A> SELECT id, balance FROM accounts ORDER BY id; -- not 999; no non-repeatable read; and no carol; no phantom
  id | balance 
 ----+---------
-  1 |     100 
+  1 |     120 
   2 |      50 
+(2 rows)
+
+A> UPDATE accounts SET balance = balance + 10 WHERE id = 2;
+Query OK, 1 row affected
+
+A> SELECT id, balance FROM accounts ORDER BY id; -- own write is visible alongside the snapshot's old row 1
+ id | balance 
+----+---------
+  1 |     120 
+  2 |      60 
 (2 rows)
 
 A> COMMIT;
 Query OK
 ```
 
-*Only a NEW transaction gets a new snapshot.*
+*After COMMIT, this standalone SELECT takes a fresh snapshot.*
 
 ```transcript
 A> SELECT id, balance FROM accounts ORDER BY id;
  id | balance 
 ----+---------
   1 |     999 
-  2 |      50 
+  2 |      60 
   3 |     300 
 (3 rows)
 ```
@@ -1176,12 +1242,12 @@ A> SELECT id, balance FROM accounts ORDER BY id;
 ## mysql/02-isolation/update-recheck.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: An UPDATE at READ COMMITTED that waited for a lock re-evaluates its WHERE clause against the new row version — rows that no longer match are silently skipped.
+- claim: An UPDATE at READ COMMITTED that waited for a lock re-evaluates its WHERE clause against the new row version; rows that no longer match are silently skipped.
 
 ```timeline
 A: UPDATE row1 → 20 (uncommitted)
 B: UPDATE WHERE value = 10 → ⏳ waits
-A: COMMIT — row1 is now 20
+A: COMMIT; row1 is now 20
 B: ⏵ UPDATE WHERE value = 10 → completes
 ```
 
@@ -1193,7 +1259,7 @@ A> UPDATE items SET value = value * 2 WHERE id = 1; -- row 1: 10 → 20, uncommi
 Query OK, 1 row affected
 ```
 
-*B targets WHERE value = 10. The latest committed version of row 1 still qualifies — but it's locked by A, so B waits.*
+*B targets WHERE value = 10. The latest committed version of row 1 still qualifies; but it's locked by A, so B waits.*
 
 ```transcript
 B> SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -1206,7 +1272,7 @@ B> UPDATE items SET value = 99 WHERE value = 10;
 ⏳ B is waiting for a lock…
 ```
 
-*A commits. B wakes up and re-checks the row it waited for — against the NEW version, where value is 20.*
+*A commits. B wakes up and re-checks the row it waited for against the NEW version, where value is 20.*
 
 ```transcript
 A> COMMIT;
@@ -1216,7 +1282,7 @@ Query OK
 Query OK, 0 rows affected
 ```
 
-*0 rows affected — the row slipped away.*
+*0 rows affected; the row slipped away.*
 
 ```transcript
 B> COMMIT;
@@ -1235,7 +1301,7 @@ B> SELECT id, value FROM items ORDER BY id;
 ## mysql/02-isolation/write-predicate-skew.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Under REPEATABLE READ a write's WHERE clause is evaluated against the CURRENT committed data while SELECTs keep showing the snapshot — so a transaction can "delete every row matching X", delete nothing, and still see rows matching X (Hermitage's G-single write-predicate anomaly).
+- claim: In this InnoDB REPEATABLE READ schedule, A's DELETE of balance=20 finds no current matching row after B commits 15/25, while A's consistent SELECT still returns snapshot balance 20. The DELETE affects zero rows.
 
 ```timeline
 A: SELECT → 10, 20 (snapshot)
@@ -1243,6 +1309,11 @@ B: +5 to every balance
 B: COMMIT (now 15, 25)
 A: DELETE balance = 20 → 0 rows
 A: SELECT balance = 20 → still sees bob
+```
+
+```transcript
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
 ```
 
 *A opens a snapshot. B then reshuffles every balance and commits.*
@@ -1268,7 +1339,7 @@ B> COMMIT; -- current data is now 15 and 25
 Query OK
 ```
 
-*A closes every account with balance 20 — its snapshot says that's bob. But the DELETE is a current read: it scans the committed 15 and 25, finds nothing, and deletes nothing.*
+*A closes every account with balance 20; its snapshot says that's bob. But the DELETE is a current read: it scans the committed 15 and 25, finds nothing, and deletes nothing.*
 
 ```transcript
 A> DELETE FROM accounts WHERE balance = 20;
@@ -1284,14 +1355,14 @@ A> COMMIT;
 Query OK
 ```
 
-*A's writes ran in one world, its reads in another. PostgreSQL's REPEATABLE READ aborts the DELETE with a serialization failure instead; on MySQL the cure is a locking read (FOR UPDATE) or SERIALIZABLE.*
+*A's DELETE used current rows while its consistent SELECT retained an older snapshot. A locking read must precede the decision and all relevant writers must coordinate; changing a later read alone is not a general repair. See the locking and SERIALIZABLE lessons.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-predicate-skew.yaml)</small>
 
 ## mysql/02-isolation/write-skew-rr.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Two REPEATABLE READ transactions can each validate an invariant against their snapshots, write to different rows, and both commit — leaving the invariant broken. This is write skew.
+- claim: Two REPEATABLE READ transactions can each validate an invariant against their snapshots, write to different rows, and both commit; leaving the invariant broken. This is write skew.
 
 ```timeline
 A: on-call count → 2
@@ -1300,7 +1371,15 @@ A: alice off call
 B: bob off call
 A: COMMIT
 B: COMMIT (both succeed)
-A: on-call count → 0 — invariant broken
+A: on-call count → 0; invariant broken
+```
+
+```transcript
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
+B> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
 ```
 
 *Hospital rule: at least one doctor must stay on call. Alice and Bob both want the night off.*
@@ -1312,13 +1391,13 @@ Query OK
 B> BEGIN;
 Query OK
 
-A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- "two of us — safe for me to leave"
+A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- "two of us; safe for me to leave"
  on_call 
 ---------
        2 
 (1 row)
 
-B> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- "two of us — safe for me to leave"
+B> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- "two of us; safe for me to leave"
  on_call 
 ---------
        2 
@@ -1340,21 +1419,21 @@ Query OK
 B> COMMIT; -- both succeed!
 Query OK
 
-A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- nobody is on call — the invariant is broken
+A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- nobody is on call; the invariant is broken
  on_call 
 ---------
        0 
 (1 row)
 ```
 
-*Each transaction was internally consistent; together they broke the rule. Only SERIALIZABLE catches this.*
+*Each transaction was internally consistent; together they broke the rule. SERIALIZABLE or suitable coordination by all relevant writers can protect it; the next Scenario executes the SERIALIZABLE schedule.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-rr.yaml)</small>
 
 ## mysql/02-isolation/write-skew-serializable.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Under MySQL's SERIALIZABLE, plain SELECTs take shared locks, so the write-skew interleaving deadlocks: one transaction is rolled back with errno 1213, and the invariant survives.
+- claim: In these explicit InnoDB SERIALIZABLE transactions with deadlock detection enabled, the count SELECTs take shared locks. This schedule rejects B's UPDATE with 1213, A commits, and a fresh B attempt sees one doctor and declines to leave. Other schedules need not select B as victim.
 
 ```timeline
 A: on-call count → 2 (takes shared locks)
@@ -1363,10 +1442,18 @@ A: alice off call → ⏳ waits
 B: bob off call ← 1213 Deadlock found when trying to get lock
 A: ⏵ alice off call → completes
 A: COMMIT
-A: on-call count → 1 — invariant survived
+A: on-call count → 1; invariant survived
 ```
 
-*Same story, same statements, same order — only the isolation level differs.*
+```transcript
+A> SELECT @@innodb_deadlock_detect AS deadlock_detect;
+ deadlock_detect 
+-----------------
+               1 
+(1 row)
+```
+
+*Same story, same statements, same order; only the isolation level differs.*
 
 ```transcript
 A> SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
@@ -1408,7 +1495,7 @@ B> UPDATE doctors SET on_call = false WHERE name = 'bob'; -- ER_LOCK_DEADLOCK
 ERROR 1213 (40001): Deadlock found when trying to get lock; try restarting transaction
 ```
 
-*B's rollback freed the locks — A's update proceeds.*
+*B's rollback freed the locks; A's update proceeds.*
 
 ```transcript
 ⏵ A resumes:
@@ -1424,7 +1511,81 @@ A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- the invariant survi
 (1 row)
 ```
 
-*PostgreSQL detects the same skew without blocking (SSI, at COMMIT). MySQL prevents it the classic way: locks and a deadlock victim.*
+*B starts a fresh SERIALIZABLE transaction and repeats the count. With only one doctor remaining, the application declines the update.*
+
+```transcript
+B> SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+Query OK
+
+B> BEGIN;
+Query OK
+
+B> SELECT count(*) AS on_call FROM doctors WHERE on_call;
+ on_call 
+---------
+       1 
+(1 row)
+
+B> COMMIT;
+Query OK
+
+A> SELECT name, on_call FROM doctors ORDER BY name;
+ name  | on_call 
+-------+---------
+ alice |       0 
+ bob   |       1 
+(2 rows)
+```
+
+*A standalone SERIALIZABLE SELECT with autocommit=1 is a nonlocking consistent read here.*
+
+```transcript
+A> SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+Query OK
+
+A> SELECT @@autocommit AS autocommit;
+ autocommit 
+------------
+          1 
+(1 row)
+
+B> BEGIN;
+Query OK
+
+B> UPDATE doctors SET on_call = false WHERE name = 'bob';
+Query OK, 1 row affected
+
+A> SELECT count(*) AS on_call FROM doctors WHERE on_call;
+ on_call 
+---------
+       1 
+(1 row)
+```
+
+*With autocommit=0, A's SERIALIZABLE SELECT instead waits for B's row lock.*
+
+```transcript
+A> SET autocommit = 0;
+Query OK
+
+A> SELECT count(*) AS on_call FROM doctors WHERE on_call;
+⏳ A is waiting for a lock…
+
+B> ROLLBACK;
+Query OK
+
+⏵ A resumes:
+ on_call 
+---------
+       1 
+(1 row)
+
+A> ROLLBACK;
+Query OK
+
+A> SET autocommit = 1;
+Query OK
+```
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-serializable.yaml)</small>
 

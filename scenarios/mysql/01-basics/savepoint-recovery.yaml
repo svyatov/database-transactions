@@ -1,9 +1,10 @@
 title: "Savepoints: discard a risky branch mid-transaction"
 claim: >-
-  ROLLBACK TO SAVEPOINT discards only the work done after the savepoint — the
-  rest of the transaction commits normally.
+  In this InnoDB INSERT branch, ROLLBACK TO SAVEPOINT removes the successful
+  branch INSERT after a 1062 error, preserves the earlier INSERT, and allows
+  the replacement branch to commit.
 setup: |
-  CREATE TABLE items (id int PRIMARY KEY, name varchar(50) NOT NULL UNIQUE);
+  CREATE TABLE items (id int PRIMARY KEY, name varchar(50) NOT NULL UNIQUE) ENGINE=InnoDB;
   INSERT INTO items VALUES (1, 'widget');
 sessions: [A]
 steps:
@@ -17,8 +18,10 @@ steps:
     error: "1062"
     comment: ER_DUP_ENTRY
 
-  - note: The transaction is still alive — but the branch is half-done. Rewind all of it in one go.
+  - note: The transaction is still alive; but the branch is half-done. Rewind all of it in one go.
   - A: ROLLBACK TO SAVEPOINT before_risky
+  - A: SELECT id, name FROM items ORDER BY id
+    expect: [{ id: 1, name: widget }, { id: 2, name: gadget }]
   - A: INSERT INTO items VALUES (3, 'doohickey')
   - A: COMMIT
 
@@ -27,4 +30,4 @@ steps:
       - { id: 1, name: widget }
       - { id: 2, name: gadget }
       - { id: 3, name: doohickey }
-    comment: survived — it predates the savepoint; 'gizmo' is gone with the branch
+    comment: survived; it predates the savepoint; 'gizmo' is gone with the branch

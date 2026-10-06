@@ -1,11 +1,11 @@
 title: Non-repeatable read under READ COMMITTED
 claim: >-
   At READ COMMITTED, a transaction can read two different values for the same
-  row — other transactions' commits become visible between its statements.
+  row; other transactions' commits become visible between its statements.
 anomaly: P2
 isolation: READ COMMITTED
 setup: |
-  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL) ENGINE=InnoDB;
   INSERT INTO accounts VALUES (1, 'alice', 100);
 sessions: [A, B]
 steps:
@@ -21,12 +21,12 @@ steps:
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 200 }]
-    comment: same query, same transaction — different answer
-    tl: SELECT balance → 200 — same txn, different answer
+    comment: same query, same transaction; different answer
+    tl: SELECT balance → 200; same txn, different answer
   - A: COMMIT
 
   - note: >-
-      Readers never block — but writers do. The same interleaving with UPDATEs
+      These nonlocking SELECTs did not wait for row locks. The interleaving with UPDATEs
       makes B wait for A's row lock.
   - A: BEGIN
   - A: UPDATE accounts SET balance = 300 WHERE id = 1
@@ -37,6 +37,7 @@ steps:
   - A: COMMIT
     comment: releases the row lock
   - success: p1
+    affected: 1
 
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 400 }]

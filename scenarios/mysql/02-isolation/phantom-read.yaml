@@ -1,11 +1,11 @@
 title: Phantom read under READ COMMITTED
 claim: >-
   At READ COMMITTED, re-running the same range query inside one transaction
-  can return rows that weren't there before — phantoms.
+  can return rows that weren't there before; phantoms.
 anomaly: PMP
 isolation: READ COMMITTED
 setup: |
-  CREATE TABLE orders (id int PRIMARY KEY, amount int NOT NULL);
+  CREATE TABLE orders (id int PRIMARY KEY, amount int NOT NULL) ENGINE=InnoDB;
   INSERT INTO orders VALUES (1, 500), (2, 300);
 sessions: [A, B]
 steps:
@@ -25,8 +25,8 @@ steps:
 
   - A: SELECT count(*) AS n, CAST(sum(amount) AS SIGNED) AS total FROM orders WHERE amount >= 100
     expect: [{ n: 3, total: 1500 }]
-    comment: a third row appeared out of nowhere — a phantom
-    tl: recount → 3, total 1500 — a phantom
+    comment: a third row appeared out of nowhere; a phantom
+    tl: recount → 3, total 1500; a phantom
 
   - A: COMMIT
   - note: A's report now says '2 orders' in one place and '3 orders, total 1500' in another.

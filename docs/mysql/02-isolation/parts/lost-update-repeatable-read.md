@@ -5,14 +5,20 @@ A: SELECT balance → 100
 B: SELECT balance → 100 (same snapshot)
 A: UPDATE balance = 100 + 10
 A: COMMIT
-B: UPDATE balance = 100 + 10 — no error!
+B: UPDATE balance = 100 + 10; no error!
 B: COMMIT
-A: SELECT balance → 110 — deposit gone, silently
+A: SELECT balance → 110; deposit gone, silently
 ```
 
-*The same two +10 deposits — this time at REPEATABLE READ, MySQL's default.*
+*The same two +10 deposits; this time at REPEATABLE READ, MySQL's default.*
 
 ```transcript
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
+B> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
 A> BEGIN;
 Query OK
 
@@ -38,7 +44,7 @@ A> COMMIT;
 Query OK
 ```
 
-*B's snapshot predates A's commit — but MySQL's UPDATE acts on the CURRENT row and raises nothing.*
+*B's snapshot predates A's commit; but MySQL's UPDATE acts on the CURRENT row and raises nothing.*
 
 ```transcript
 B> UPDATE accounts SET balance = 100 + 10 WHERE id = 1;
@@ -47,13 +53,13 @@ Query OK, 0 rows affected
 B> COMMIT;
 Query OK
 
-A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is gone — silently, even at REPEATABLE READ
+A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is gone; silently, even at REPEATABLE READ
  balance 
 ---------
      110 
 (1 row)
 ```
 
-*PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not — don't port that assumption.*
+*PostgreSQL refuses B's write here (SQLSTATE 40001). MySQL does not; don't port that assumption.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-repeatable-read.yaml)</small>

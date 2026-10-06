@@ -3,7 +3,7 @@
 ```timeline
 A: SELECT balance → 100
 B: UPDATE balance = 200 (autocommit)
-A: SELECT balance → 200 — same txn, different answer
+A: SELECT balance → 200; same txn, different answer
 ```
 
 ```transcript
@@ -26,7 +26,7 @@ A> SELECT balance FROM accounts WHERE id = 1;
 B> UPDATE accounts SET balance = 200 WHERE id = 1;
 Query OK, 1 row affected
 
-A> SELECT balance FROM accounts WHERE id = 1; -- same query, same transaction — different answer
+A> SELECT balance FROM accounts WHERE id = 1; -- same query, same transaction; different answer
  balance 
 ---------
      200 
@@ -36,7 +36,7 @@ A> COMMIT;
 Query OK
 ```
 
-*Readers never block — but writers do. The same interleaving with UPDATEs makes B wait for A's row lock.*
+*These nonlocking SELECTs did not wait for row locks. The interleaving with UPDATEs makes B wait for A's row lock.*
 
 ```transcript
 A> BEGIN;

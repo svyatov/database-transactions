@@ -3,7 +3,7 @@
 ```timeline
 A: count(amount ≥ 100) → 2
 B: INSERT order 3 (autocommit)
-A: recount → 3, total 1500 — a phantom
+A: recount → 3, total 1500; a phantom
 ```
 
 *A computes a report twice inside one transaction: count first, then the total.*
@@ -28,7 +28,7 @@ A> SELECT count(*) AS n FROM orders WHERE amount >= 100;
 B> INSERT INTO orders VALUES (3, 700);
 Query OK, 1 row affected
 
-A> SELECT count(*) AS n, CAST(sum(amount) AS SIGNED) AS total FROM orders WHERE amount >= 100; -- a third row appeared out of nowhere — a phantom
+A> SELECT count(*) AS n, CAST(sum(amount) AS SIGNED) AS total FROM orders WHERE amount >= 100; -- a third row appeared out of nowhere; a phantom
  n | total 
 ---+-------
  3 |  1500 

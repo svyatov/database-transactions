@@ -20,13 +20,13 @@ A> INSERT INTO steps VALUES (3);
 Query OK, 1 row affected
 ```
 
-*Rolling back to the OUTER savepoint discards rows 2 and 3 — and inner_sp itself.*
+*Rolling back to the OUTER savepoint discards rows 2 and 3; and inner_sp itself.*
 
 ```transcript
 A> ROLLBACK TO SAVEPOINT outer_sp;
 Query OK
 
-A> ROLLBACK TO SAVEPOINT inner_sp; -- SAVEPOINT inner_sp does not exist — destroyed by the outer rollback
+A> ROLLBACK TO SAVEPOINT inner_sp; -- SAVEPOINT inner_sp does not exist; destroyed by the outer rollback
 ERROR 1305 (42000): SAVEPOINT inner_sp does not exist
 ```
 
@@ -38,6 +38,9 @@ Query OK, 1 row affected
 
 A> RELEASE SAVEPOINT outer_sp;
 Query OK
+
+A> ROLLBACK TO SAVEPOINT outer_sp; -- the released savepoint no longer exists
+ERROR 1305 (42000): SAVEPOINT outer_sp does not exist
 
 A> COMMIT;
 Query OK

@@ -1,16 +1,17 @@
 title: Circular information flow at READ UNCOMMITTED
 claim: >-
   At READ UNCOMMITTED two concurrent transactions can each read the other's
-  uncommitted write (Adya's G1c, "circular information flow") — an exchange no
-  serial order can explain. READ COMMITTED makes it impossible.
+  uncommitted write (Adya's G1c, "circular information flow"); an exchange no
+  serial order can explain. The repeated READ COMMITTED schedule excludes
+  those dirty cross-reads, but its two old reads do not prove serializability.
 anomaly: G1c
 setup: |
-  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL) ENGINE=InnoDB;
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
 sessions: [A, B]
 steps:
   - note: >-
-      A adjusts alice while B adjusts bob — then each peeks at the other's row.
+      A adjusts alice while B adjusts bob; then each peeks at the other's row.
       In any serial order, at most one of them can see the other's write.
   - A: SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
   - B: SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
@@ -31,14 +32,18 @@ steps:
     tl: read alice → 111 (A's uncommitted)
 
   - note: >-
-      Neither value was committed when it was read — if either side now rolls
-      back, the other has computed on data that never existed. Both roll back:
-  - A: ROLLBACK
-    tl: ROLLBACK
-  - B: ROLLBACK
-    tl: ROLLBACK
+      Both dirty cross-reads are asserted, then both writers commit. No serial
+      order of these two transactions gives both new values to the readers.
+      No external application arithmetic is executed.
+  - A: COMMIT
+    tl: COMMIT
+  - B: COMMIT
+    tl: COMMIT
+  - A: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 111 }, { id: 2, balance: 222 }]
+  - A: UPDATE accounts SET balance = 100
 
-  - note: "The same dance at READ COMMITTED: each sees the world before the other."
+  - note: "After resetting both balances, READ COMMITTED excludes these dirty cross-reads. The two old reads still do not form a serial execution."
   - A: SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED
   - B: SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED
   - A: BEGIN

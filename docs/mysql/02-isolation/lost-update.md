@@ -1,9 +1,9 @@
 # Lost updates
 
-Two clients read a value, compute a new one in application code, and write it back. One
-update silently erases the other. Why the read-modify-write pattern loses data is
-[Concepts: the lost update problem](/concepts/lost-update); this page is about what makes
-MySQL's version of it uniquely dangerous.
+Two clients can read the same value, compute a replacement, and overwrite one
+another. The following InnoDB schedules run on MySQL 8.4.11 with reads **inside
+the updating transactions**. Each reads 100 and writes that saved value plus 10.
+Both commit without error, but the final balance is 110 rather than 120.
 
 ## At READ COMMITTED
 
@@ -11,35 +11,37 @@ MySQL's version of it uniquely dangerous.
 
 ## REPEATABLE READ does *not* save you
 
-This is the sharpest MySQL/PostgreSQL divergence in the whole chapter. PostgreSQL's
-REPEATABLE READ [detects the stale write and aborts it](/postgres/02-isolation/lost-update)
-with `40001`. MySQL's UPDATE is a [current read](/mysql/02-isolation/repeatable-read): it
-applies your stale arithmetic to the newest row version and raises nothing:
+InnoDB UPDATE uses the current target row. It does not reject this stale literal
+replacement merely because B's earlier consistent read saw an older version.
+PostgreSQL's [REPEATABLE READ example](/postgres/02-isolation/lost-update) rejects
+that post-snapshot target change with 40001. Neither example establishes detection
+of every stale value read outside the updating transaction.
 
-::: warning The isolation knob will not fix this
-Every ORM `save()` that reads, computes, and writes back has this bug at MySQL's default
-level. The fix is structural (atomic SQL, a locking read, or a version column), not a
-`SET TRANSACTION` away.
+::: warning Protect the read-modify-write operation
+Moving this unprotected schedule from READ COMMITTED to REPEATABLE READ does not
+repair it. An ORM operation that uses locks, a version check, or atomic arithmetic
+has different protection; not every ORM save has this race.
 :::
 
 <!--@include: ./parts/lost-update-repeatable-read.md-->
 
 ## The fixes
 
-Raising the isolation level is not one of them (short of SERIALIZABLE). On MySQL you fix
-lost updates *structurally*: atomic UPDATEs, `SELECT … FOR UPDATE`
-([chapter 3](/mysql/03-locking/row-locks)), or an optimistic version column checked via
-`affectedRows`. The three patterns are defined in
-[the concept page](/concepts/lost-update#the-fixes) and each proven with a transcript in
-[fixing lost updates](/mysql/05-patterns/fixing-lost-updates).
+The existing [fixing lost updates](/mysql/05-patterns/fixing-lost-updates) Scenarios
+execute atomic SQL arithmetic, a locking read before the decision, and a checked
+version-column UPDATE. Their assumptions and conflict responses belong to those
+examples. Atomic arithmetic fits increments; it is not a general repair for every
+replacement or business rule. All participating writers must respect the chosen
+protection, and an unmet version check needs explicit conflict handling.
 
-A lost update is silent: the transcript above ends with `110` where two +10 deposits on
-`100` should have produced `120`, and nothing errored. Nothing short of SERIALIZABLE stops it
-on MySQL: if your app reads a value, computes from it, and writes it back, the bug is there
-until you apply one of the three fixes. If you're porting from PostgreSQL, code that leaned on
-its REPEATABLE READ conflict detection loses that protection the moment it runs here.
+SERIALIZABLE explicit transactions also change this race by locking the reads,
+with possible deadlocks or waits. That is a Documented contract and an inference
+from the [locking-read rules](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+and [SERIALIZABLE contract](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html#isolevel_serializable),
+not a SERIALIZABLE execution of these two lost-update Scenarios. A standalone
+autocommit SELECT followed by a separate UPDATE does not retain that read lock.
 
 ## Further reading
 
-- [MySQL docs: Locking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+- [Concepts: lost updates](/concepts/lost-update)
 - [The same lesson on PostgreSQL](/postgres/02-isolation/lost-update)

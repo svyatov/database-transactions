@@ -8,10 +8,10 @@ A: COMMIT
 B: ⏵ UPDATE mug = 12 → completes
 B: UPDATE cap = 22
 B: COMMIT
-A: SELECT → 12, 22 (all B, never mixed)
+A: SELECT → 12, 22 (both B)
 ```
 
-*Two batch jobs reprice the whole catalog concurrently — at READ UNCOMMITTED, the weakest level MySQL has. A mix of their prices (A's mug with B's cap) would be a dirty write: a state no serial order could produce.*
+*Two batch jobs reprice the whole catalog concurrently at READ UNCOMMITTED. The dirty-write event would be overwriting A's uncommitted row; a mixed final state is not its definition.*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -30,7 +30,7 @@ A> UPDATE items SET price = 11 WHERE id = 1;
 Query OK, 1 row affected
 ```
 
-*B may READ A's uncommitted rows at this level — but it may not overwrite them.*
+*B may READ A's uncommitted rows at this level; but it may not overwrite them.*
 
 ```transcript
 B> UPDATE items SET price = 12 WHERE id = 1;
@@ -51,7 +51,7 @@ Query OK, 1 row affected
 B> COMMIT;
 Query OK
 
-A> SELECT id, price FROM items ORDER BY id; -- all B — as if B ran after A. Never 12/21 or 11/22.
+A> SELECT id, price FROM items ORDER BY id; -- both of B's prices in this schedule
  id | price 
 ----+-------
   1 |    12 

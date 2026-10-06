@@ -1,19 +1,19 @@
-title: Dirty writes are impossible — even at READ UNCOMMITTED
+title: A second writer waits at READ UNCOMMITTED
 claim: >-
-  InnoDB always takes exclusive row locks for writes, so two transactions
-  repricing the same rows cannot interleave their writes (Adya's G0, "dirty
-  write") at any isolation level — even the one that allows dirty reads.
+  In this InnoDB READ UNCOMMITTED schedule, B's UPDATE of A's uncommitted
+  row waits until A commits. Both of B's later prices are asserted after
+  B commits. All-level dirty-write exclusion needs the row-lock contract.
 anomaly: G0
 isolation: READ UNCOMMITTED
 setup: |
-  CREATE TABLE items (id int PRIMARY KEY, name varchar(20) NOT NULL, price int NOT NULL);
+  CREATE TABLE items (id int PRIMARY KEY, name varchar(20) NOT NULL, price int NOT NULL) ENGINE=InnoDB;
   INSERT INTO items VALUES (1, 'mug', 10), (2, 'cap', 20);
 sessions: [A, B]
 steps:
   - note: >-
-      Two batch jobs reprice the whole catalog concurrently — at READ
-      UNCOMMITTED, the weakest level MySQL has. A mix of their prices (A's mug
-      with B's cap) would be a dirty write: a state no serial order could produce.
+      Two batch jobs reprice the whole catalog concurrently at READ
+      UNCOMMITTED. The dirty-write event would be overwriting A's uncommitted
+      row; a mixed final state is not its definition.
   - A: SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
   - B: SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
   - A: BEGIN
@@ -21,7 +21,7 @@ steps:
   - A: UPDATE items SET price = 11 WHERE id = 1
     tl: UPDATE mug = 11
 
-  - note: B may READ A's uncommitted rows at this level — but it may not overwrite them.
+  - note: B may READ A's uncommitted rows at this level; but it may not overwrite them.
   - B: UPDATE items SET price = 12 WHERE id = 1
     blocks: p1
     tl: UPDATE mug = 12
@@ -40,5 +40,5 @@ steps:
 
   - A: SELECT id, price FROM items ORDER BY id
     expect: [{ id: 1, price: 12 }, { id: 2, price: 22 }]
-    comment: all B — as if B ran after A. Never 12/21 or 11/22.
-    tl: SELECT → 12, 22 (all B, never mixed)
+    comment: both of B's prices in this schedule
+    tl: SELECT → 12, 22 (both B)

@@ -1,16 +1,19 @@
-title: SERIALIZABLE catches write skew — with locks
+title: SERIALIZABLE catches write skew; with locks
 claim: >-
-  Under MySQL's SERIALIZABLE, plain SELECTs take shared locks, so the
-  write-skew interleaving deadlocks: one transaction is rolled back with errno
-  1213, and the invariant survives.
-anomaly: G2
+  In these explicit InnoDB SERIALIZABLE transactions with deadlock detection
+  enabled, the count SELECTs take shared locks. This schedule rejects B's
+  UPDATE with 1213, A commits, and a fresh B attempt sees one doctor and
+  declines to leave. Other schedules need not select B as victim.
+anomaly: G2-item
 isolation: SERIALIZABLE
 setup: |
-  CREATE TABLE doctors (name varchar(20) PRIMARY KEY, on_call boolean NOT NULL);
+  CREATE TABLE doctors (name varchar(20) PRIMARY KEY, on_call boolean NOT NULL) ENGINE=InnoDB;
   INSERT INTO doctors VALUES ('alice', true), ('bob', true);
 sessions: [A, B]
 steps:
-  - note: Same story, same statements, same order — only the isolation level differs.
+  - A: SELECT @@innodb_deadlock_detect AS deadlock_detect
+    expect: [{ deadlock_detect: 1 }]
+  - note: Same story, same statements, same order; only the isolation level differs.
   - A: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE
   - B: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE
   - A: BEGIN
@@ -35,7 +38,7 @@ steps:
     comment: ER_LOCK_DEADLOCK
     tl: bob off call
 
-  - note: B's rollback freed the locks — A's update proceeds.
+  - note: B's rollback freed the locks; A's update proceeds.
   - success: p1
   - A: COMMIT
     tl: COMMIT
@@ -43,8 +46,34 @@ steps:
   - A: SELECT count(*) AS on_call FROM doctors WHERE on_call
     expect: [{ on_call: 1 }]
     comment: the invariant survived
-    tl: on-call count → 1 — invariant survived
+    tl: on-call count → 1; invariant survived
 
   - note: >-
-      PostgreSQL detects the same skew without blocking (SSI, at COMMIT). MySQL
-      prevents it the classic way: locks and a deadlock victim.
+      B starts a fresh SERIALIZABLE transaction and repeats the count.
+      With only one doctor remaining, the application declines the update.
+  - B: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE
+  - B: BEGIN
+  - B: SELECT count(*) AS on_call FROM doctors WHERE on_call
+    expect: [{ on_call: 1 }]
+  - B: COMMIT
+  - A: SELECT name, on_call FROM doctors ORDER BY name
+    expect: [{ name: alice, on_call: 0 }, { name: bob, on_call: 1 }]
+
+  - note: A standalone SERIALIZABLE SELECT with autocommit=1 is a nonlocking consistent read here.
+  - A: SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE
+  - A: SELECT @@autocommit AS autocommit
+    expect: [{ autocommit: 1 }]
+  - B: BEGIN
+  - B: UPDATE doctors SET on_call = false WHERE name = 'bob'
+  - A: SELECT count(*) AS on_call FROM doctors WHERE on_call
+    expect: [{ on_call: 1 }]
+
+  - note: With autocommit=0, A's SERIALIZABLE SELECT instead waits for B's row lock.
+  - A: SET autocommit = 0
+  - A: SELECT count(*) AS on_call FROM doctors WHERE on_call
+    blocks: p2
+  - B: ROLLBACK
+  - success: p2
+    expect: [{ on_call: 1 }]
+  - A: ROLLBACK
+  - A: SET autocommit = 1
