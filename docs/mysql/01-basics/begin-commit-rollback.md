@@ -16,9 +16,9 @@ UNCOMMITTED can see uncommitted changes. COMMIT does not refresh every reader's 
 
 <!--@include: ./parts/autocommit-visibility.md-->
 
-## An error does NOT abort the transaction
+## Duplicate-key error without IGNORE preserves the transaction {#an-error-does-not-abort-the-transaction}
 
-More precisely: **this duplicate-key INSERT error does not abort this transaction**.
+The demonstrated **duplicate-key INSERT error does not abort this transaction**.
 The [InnoDB error-handling contract](https://dev.mysql.com/doc/refman/8.4/en/innodb-error-handling.html)
 documents statement rollback for duplicate-key errors without IGNORE. The Scenario
 asserts the earlier and later successful INSERTs after COMMIT.
