@@ -1020,7 +1020,7 @@ C1018	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:7	setup	CREATE TA
 C1019	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:12	A	BEGIN	P22	Replaced or removed; resolved current scenarios/postgres/02-isolation/no-dirty-reads.yaml (A); see corresponding current units and audit decisions
 C1020	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:13	A	UPDATE accounts SET balance = 999 WHERE id = 1	P22	Retained; current scenarios/postgres/02-isolation/no-dirty-reads.yaml:12
 C1021	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:14	tl	UPDATE balance = 999 (uncommitted)	P22	Retained; current scenarios/postgres/02-isolation/no-dirty-reads.yaml:13
-C1022	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:16	note	B explicitly requests READ UNCOMMITTED — the one level that would permit dirty reads.	P22	Retained; current scenarios/postgres/02-isolation/no-dirty-reads.yaml:15
+C1022	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:16	note	B explicitly requests READ UNCOMMITTED — the one level that would permit dirty reads.	P22	Narrowed SQL-standard allowance versus PostgreSQL mapping; current scenarios/postgres/02-isolation/no-dirty-reads.yaml:15
 C1023	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:19	B	BEGIN ISOLATION LEVEL READ UNCOMMITTED	P22	Retained; current scenarios/postgres/02-isolation/no-dirty-reads.yaml:18
 C1024	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:20	B	SELECT current_setting('transaction_isolation') AS isolation	P22	Retained; current scenarios/postgres/02-isolation/no-dirty-reads.yaml:19
 C1025	base	scenarios/postgres/02-isolation/no-dirty-reads.yaml:21	expect	"[{ isolation: ""read uncommitted"" }]"	P22	Retained; current scenarios/postgres/02-isolation/no-dirty-reads.yaml:20
@@ -1040,7 +1040,7 @@ C1038	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:6	setup	CREATE
 C1039	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:11	A	BEGIN ISOLATION LEVEL READ COMMITTED	P22	Executed SQL/assertion
 C1040	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:12	A	UPDATE accounts SET balance = 999 WHERE id = 1	P22	Executed SQL/assertion
 C1041	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:13	tl	UPDATE balance = 999 (uncommitted)	P22	Demonstrated schedule explanation
-C1042	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:15	note	B explicitly requests READ UNCOMMITTED — the one level that would permit dirty reads.	P22	Demonstrated schedule explanation
+C1042	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:15	note	The SQL standard permits dirty reads at READ UNCOMMITTED; PostgreSQL maps that request to READ COMMITTED behavior.	P22	Documented PostgreSQL 18 mapping; demonstrated committed-row result
 C1043	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:18	B	BEGIN ISOLATION LEVEL READ UNCOMMITTED	P22	Executed SQL/assertion
 C1044	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:19	B	SELECT current_setting('transaction_isolation') AS isolation	P22	Executed SQL/assertion
 C1045	current	scenarios/postgres/02-isolation/no-dirty-reads.yaml:20	expect	"[{ isolation: ""read uncommitted"" }]"	P22	Executed SQL/assertion

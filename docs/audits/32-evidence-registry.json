@@ -214,7 +214,7 @@
     "id": "P22",
     "path": "scenarios/postgres/02-isolation/no-dirty-reads.yaml",
     "scope": "PostgreSQL 18.6; READ COMMITTED/READ UNCOMMITTED; CREATE/INSERT/BEGIN/UPDATE/SELECT/COMMIT/ROLLBACK; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
-    "evidence": "scenarios/postgres/02-isolation/no-dirty-reads.yaml; docs/postgres/02-isolation/parts/no-dirty-reads.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/no-dirty-reads.yaml; docs/public/llms-full.txt section=postgres/02-isolation/no-dirty-reads.yaml",
+    "evidence": "scenarios/postgres/02-isolation/no-dirty-reads.yaml; docs/postgres/02-isolation/parts/no-dirty-reads.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/no-dirty-reads.yaml; docs/public/llms-full.txt section=postgres/02-isolation/no-dirty-reads.yaml; https://www.postgresql.org/docs/18/transaction-iso.html (SQL-standard allowance versus PostgreSQL READ UNCOMMITTED mapping)",
     "assertions": [
       "scenarios/postgres/02-isolation/no-dirty-reads.yaml:20",
       "scenarios/postgres/02-isolation/no-dirty-reads.yaml:24"
