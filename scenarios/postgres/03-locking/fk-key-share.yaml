@@ -1,8 +1,8 @@
 title: Foreign keys take row locks for you
 claim: >-
-  INSERTing a child row locks the referenced parent row with FOR KEY SHARE:
-  updating the parent's other columns still works, but deleting it blocks —
-  and then fails the moment the child commits.
+  In this immediate foreign-key insert schedule, B's non-key parent UPDATE
+  succeeds, its DELETE waits for A, and after A commits the DELETE fails
+  with 23503. This conflict signature is consistent with FOR KEY SHARE.
 setup: |
   CREATE TABLE customers (id int PRIMARY KEY, name text NOT NULL, balance int NOT NULL);
   CREATE TABLE orders (id int PRIMARY KEY, customer_id int NOT NULL REFERENCES customers);

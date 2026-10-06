@@ -63,7 +63,7 @@ A> SELECT (pg_relation_size('bloat') / 8192)::int AS pages;
 (1 row)
 ```
 
-*One UPDATE of every row = a full second copy of the table.*
+*This UPDATE of all 1000 rows grows the heap from 5 to 9 pages, not an exact doubling.*
 
 ```transcript
 A> UPDATE bloat SET filler = 'y';

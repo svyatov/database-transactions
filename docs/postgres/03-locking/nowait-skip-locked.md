@@ -1,13 +1,12 @@
 # NOWAIT, lock_timeout, SKIP LOCKED
 
-Waiting in the [lock queue](/postgres/03-locking/lock-queues) is the default, not the law.
-PostgreSQL gives you three ways out, and they answer three different questions:
+These PostgreSQL 18 controls change different parts of lock waiting:
 
 | Escape hatch | The question it answers |
 |---|---|
-| `NOWAIT` | "Is it free *right now*? If not, I'll do something else." |
-| `lock_timeout` | "I'll wait a little, but I refuse to wait forever." |
-| `SKIP LOCKED` | "Give me *any* free row; pretend the locked ones don't exist." |
+| `NOWAIT` | Can this locking read acquire the required row locks without waiting? A conflicting row lock raises `55P03`. |
+| `lock_timeout` | Has an individual lock acquisition waited longer than the configured nonzero limit? The demonstrated expiry raises `55P03`. |
+| `SKIP LOCKED` | Which selected rows can this locking read lock now? Conflicting row locks are skipped. |
 
 ## NOWAIT: fail fast
 
@@ -17,31 +16,18 @@ PostgreSQL gives you three ways out, and they answer three different questions:
 
 <!--@include: ./parts/lock-timeout.md-->
 
+[`lock_timeout`](https://www.postgresql.org/docs/18/runtime-config-client.html#GUC-LOCK-TIMEOUT) applies separately to each acquisition, not to total statement time. If a shorter `statement_timeout` applies, it can fire first. Here B runs standalone statements, so its failed statement ends its implicit transaction. Inside an explicit transaction an error requires rollback or recovery through a previously established savepoint before ordinary commands can continue. Retry with fresh decisions only when the application permits it.
+
 ## SKIP LOCKED: the job-queue primitive
 
 <!--@include: ./parts/skip-locked.md-->
 
-All three of these speak the same SQLSTATE, `55P03` (`lock_not_available`): `NOWAIT` raises it
-the instant the row is taken, `lock_timeout` raises it once your patience runs out. Handle it the
-way you'd handle a `40001` serialization failure: back off and retry. `lock_timeout` in
-particular applies
-[separately to each lock the statement tries to acquire](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT),
-which is what makes it the seatbelt every [migration](/postgres/03-locking/table-locks-and-ddl)
-should wear.
+The [SELECT contract](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE) scopes NOWAIT and SKIP LOCKED to row locks. The required table-level `ROW SHARE` lock is still acquired normally; other waits and errors remain possible. SKIP LOCKED does not itself raise `55P03` for a skipped row. It produces an inconsistent view suitable for queue-like consumers, not general reporting.
 
-`SKIP LOCKED` is the odd one out, because it doesn't fail at all: it lies by omission. The
-manual is upfront that this is deliberate: "Skipping locked rows provides an inconsistent view of
-the data, so this is not suitable for general purpose work, but can be used to avoid lock
-contention with multiple consumers accessing a queue-like table."
-([SELECT: The Locking Clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE).)
-That inconsistency is exactly what a job queue wants: each worker grabs a different free row and
-never blocks, and a worker that rolls back puts its row straight back for the next taker, so you
-get crash safety for free. The patterns chapter builds a [full worker queue](/postgres/05-patterns/job-queue)
-on precisely this.
+The workers' overlapping transactions are scheduled one after another, not dispatched simultaneously. They assert jobs 1, 2, 3 and then no available row. Explicit rollback releases A's lock, after which D asserts job 1 again. This establishes database-local row availability, not process-crash testing, fairness, duplicate-free external execution, or universal no-wait behavior. The [worker-queue lesson](/postgres/05-patterns/job-queue) builds on this boundary.
 
 ## Further reading
 
-- [PostgreSQL docs: SELECT: The Locking Clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE),
-  NOWAIT and SKIP LOCKED semantics
-- [PostgreSQL docs: `lock_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT)
+- [PostgreSQL 18: SELECT locking clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)
+- [PostgreSQL 18: lock_timeout](https://www.postgresql.org/docs/18/runtime-config-client.html#GUC-LOCK-TIMEOUT)
 - [The same lesson on MySQL](/mysql/03-locking/nowait-skip-locked)

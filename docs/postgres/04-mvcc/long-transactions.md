@@ -1,30 +1,18 @@
 # Long transactions block VACUUM
 
-Everything in this chapter converges here. Old row versions must be kept as long as any snapshot
-might still read them, so one forgotten transaction, holding one old snapshot, pins garbage
-collection for the *whole database*. Not only the tables it read: every table, because PostgreSQL
-tracks "this backend's snapshot needs xids from here back", not which rows it will touch.
+An old snapshot can prevent reclamation of obsolete versions. PostgreSQL 18's [vacuum contract](https://www.postgresql.org/docs/18/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY) preserves versions that might still be visible to another transaction. This schedule holds a Repeatable Read snapshot over three updates to one jobs row.
 
 ## VACUUM ran, cleaned nothing
 
 <!--@include: ./parts/long-transactions.md-->
 
-The first VACUUM is the quiet failure mode: it succeeds. No error, no warning in your terminal,
-and the heap page is byte-for-byte unchanged, because the manual's rule is that
-["the row version must not be deleted while it is still potentially visible to other transactions"](https://www.postgresql.org/docs/current/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY),
-and A's Repeatable Read snapshot, taken before all three updates, can still see every one of them
-(the scenario proves it: A still reads `'new'`). The instant A commits, the identical command
-clears the page.
+The first VACUUM completes but the inspected `lp`, `t_xmin`, `t_xmax` and `t_ctid` fields remain unchanged. This is not a byte-for-byte comparison of the whole page, nor proof that VACUUM did no other work. A still reads only the original status `new`; its snapshot does not see each intermediate version. After A commits, the second VACUUM's asserted page fields show one redirect, two unused slots and the current tuple.
 
-Autovacuum hits the same wall. A dashboard that shows autovacuum running on schedule can sit right
-next to a table that's ballooning, the vacuums are running and *keeping nothing*, while every
-UPDATE adds another [dead tuple](/postgres/04-mvcc/dead-tuples-and-bloat) behind the pinned horizon.
+† A retained snapshot's removal horizon can constrain reclamation in other tables of the same database, even tables not read by that transaction. This inference follows PostgreSQL 18's [backend_xmin horizon](https://www.postgresql.org/docs/18/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW) and vacuum's visibility requirement. The single-table transcript does not execute this cross-table guarantee. It does not imply all VACUUM or autovacuum work stops, or that every long transaction holds a transaction-wide old snapshot.
 
 ## Spotting the offender
 
-The horizon is visible in `pg_stat_activity.backend_xmin`, the oldest xid each backend's snapshot
-still needs. The classic triage query (illustrative here; the production chapter turns it into
-monitoring):
+This diagnostic query is illustrative; its columns are [Documented contracts](https://www.postgresql.org/docs/18/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW), not a new Scenario result:
 
 ```sql
 SELECT pid, state, application_name,
@@ -35,27 +23,12 @@ WHERE backend_xmin IS NOT NULL
 ORDER BY age(backend_xmin) DESC;
 ```
 
-The usual suspects: an app that did `BEGIN` and went idle
-(`state = 'idle in transaction'`, the same villain as in the
-[DDL outage](/postgres/03-locking/table-locks-and-ddl)), a many-hour analytics query against the
-primary, a stuck migration. Guardrails exist for each:
+Inspect application state as well as age. An idle Read Committed transaction does not necessarily retain a Repeatable Read snapshot. Replication slots and prepared transactions can also constrain maintenance. Monitoring other sessions' details requires appropriate privileges.
 
-- [`idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT):
-  kills sessions that hold a transaction open while doing nothing;
-- [`transaction_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT)
-  (PostgreSQL 17+): a hard ceiling on total transaction duration;
-- [`statement_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT):
-  bounds any single query.
-
-The lesson underneath all three is that a long transaction is a database-wide tax, even when it's
-read-only and touches one tiny table. The snapshot is what's expensive, not the query. The cost
-is the time you hold one open. And the failure is silent: VACUUM and autovacuum degrade to no-ops
-behind an old snapshot, invisible until the bloat itself becomes visible. So keep transactions
-short by design and set `idle_in_transaction_session_timeout` as a seatbelt; chapter 8 builds the
-[alerting version of the query above](/postgres/08-production/long-and-idle-transactions).
+The PostgreSQL 18 [client-setting contracts](https://www.postgresql.org/docs/18/runtime-config-client.html) document idle_in_transaction_session_timeout for idle open transactions, transaction_timeout for session transaction duration (introduced in 17, excluding prepared transactions), and statement_timeout for individual statement duration. Defaults are disabled for these timeouts; their interactions and suitable limits need application decisions. No timeout execution occurs in this chapter. [Chapter 8](/postgres/08-production/long-and-idle-transactions) supplies the operational follow-up.
 
 ## Further reading
 
-- [PostgreSQL docs: Recovering Disk Space](https://www.postgresql.org/docs/current/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY)
-- [PostgreSQL docs: `pg_stat_activity`](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW)
+- [PostgreSQL 18: Recovering Disk Space](https://www.postgresql.org/docs/18/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY)
+- [PostgreSQL 18: pg_stat_activity](https://www.postgresql.org/docs/18/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW)
 - [The same lesson on MySQL](/mysql/04-mvcc/history-list-length)

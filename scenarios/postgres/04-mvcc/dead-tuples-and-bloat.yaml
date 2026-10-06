@@ -1,7 +1,9 @@
 title: Dead tuples and bloat
 claim: >-
-  Every UPDATE leaves a dead tuple behind and every DELETE leaves the row on
-  disk — so a table's file only ever grows, no matter how much data you delete.
+  In this setup three updates leave four inspected tuple versions and one
+  live value. Updating 1000 rows grows the heap from 5 to 9 pages; deleting
+  them leaves zero live rows and 9 pages at the next observation.
+  Reuse, pruning and vacuum can change later size.
 setup: |
   CREATE EXTENSION pageinspect;
   CREATE TABLE counters (id int PRIMARY KEY, n int NOT NULL);
@@ -20,6 +22,7 @@ steps:
 
   - note: SELECT sees one row. The page holds four tuples — a version chain, three of them dead.
   - A: SELECT n FROM counters
+    expect: [{ n: 3 }]
   - A: |
       SELECT lp, t_xmin, t_xmax, t_ctid
       FROM heap_page_items(get_raw_page('counters', 0)) ORDER BY lp
@@ -34,7 +37,7 @@ steps:
   - A: SELECT (pg_relation_size('bloat') / 8192)::int AS pages
     expect: [{ pages: 5 }]
 
-  - note: One UPDATE of every row = a full second copy of the table.
+  - note: This UPDATE of all 1000 rows grows the heap from 5 to 9 pages, not an exact doubling.
   - A: UPDATE bloat SET filler = 'y'
   - A: SELECT (pg_relation_size('bloat') / 8192)::int AS pages
     expect: [{ pages: 9 }]

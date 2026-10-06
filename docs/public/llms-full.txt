@@ -5375,7 +5375,7 @@ A> SELECT name, on_call FROM doctors ORDER BY name;
 ## postgres/03-locking/alter-table-outage.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: An ALTER TABLE queued behind one long transaction blocks every later query on that table — even plain SELECTs — because they must queue behind its ACCESS EXCLUSIVE request.
+- claim: In this schedule ALTER TABLE ADD COLUMN waits behind A's retained ACCESS SHARE, and C's new SELECT waits behind the queued ACCESS EXCLUSIVE request. Both complete after A commits; this is not a universal queue-order guarantee.
 
 ```timeline
 A: SELECT (a long-lived transaction)
@@ -5386,7 +5386,7 @@ B: ⏵ ALTER TABLE … ADD COLUMN → completes
 C: ⏵ SELECT — just a read! → completes
 ```
 
-*A is any long-lived transaction that has touched the table — a report, a stuck job…*
+*A reads accounts inside an explicit transaction and retains its table lock.*
 
 ```transcript
 A> BEGIN;
@@ -5406,7 +5406,7 @@ B> ALTER TABLE accounts ADD COLUMN note text;
 ⏳ B is waiting for a lock…
 ```
 
-*— every new query on the table queues behind the *waiting* ALTER. This is the outage.*
+*C's new SELECT now waits behind the queued ALTER request.*
 
 ```transcript
 C> SELECT balance FROM accounts WHERE id = 1;
@@ -5424,7 +5424,7 @@ M> SELECT waiter.application_name AS waiter, blocker.application_name AS blocker
 (2 rows)
 ```
 
-*Only when A ends does the pile-up drain — migration first, then the reads.*
+*A commits; B's standalone ALTER and C's read then complete.*
 
 ```transcript
 A> COMMIT;
@@ -5445,14 +5445,14 @@ ALTER TABLE
 ## postgres/03-locking/ddl-lock-timeout.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: With lock_timeout set, a migration that can't get its lock fails fast (55P03) instead of queueing — and other sessions' queries are never blocked behind it.
+- claim: B's standalone ALTER waits for a lock and fails with 55P03 under a 100ms lock_timeout. C reads successfully after that request leaves the queue; B's retry after A commits adds the column.
 
 ```timeline
 A: SELECT (long-lived txn) → holds ACCESS SHARE
 B: ALTER TABLE … → gives up after 100ms ← 55P03 canceling statement due to lock timeout
-C: SELECT → instant, nothing queued behind the ALTER
+C: SELECT after ALTER timeout → 100
 A: COMMIT
-B: ALTER TABLE … (retry sails through)
+B: ALTER TABLE … (retry completes)
 ```
 
 ```transcript
@@ -5476,7 +5476,7 @@ B> ALTER TABLE accounts ADD COLUMN note text;
 ERROR:  55P03: canceling statement due to lock timeout
 ```
 
-*No waiting ALTER in the queue means no outage: C's read is instant.*
+*After B's timeout removes its request, C's read returns 100. No read during B's wait is tested.*
 
 ```transcript
 C> SELECT balance FROM accounts WHERE id = 1;
@@ -5494,6 +5494,12 @@ COMMIT
 ```transcript
 B> ALTER TABLE accounts ADD COLUMN note text;
 ALTER TABLE
+
+C> SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'accounts' AND column_name = 'note';
+ column_name 
+-------------
+ note        
+(1 row)
 ```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/03-locking/ddl-lock-timeout.yaml)</small>
@@ -5501,7 +5507,7 @@ ALTER TABLE
 ## postgres/03-locking/deadlock-avoidance.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: The same two opposite-direction transfers cannot deadlock if both transactions lock the rows in the same (id) order first — the second simply waits its turn.
+- claim: In this two-row schedule both transfers lock rows in id order first. B waits for A, then both commit, leaving balances 115 and 85. Other resources and schedules are not tested.
 
 ```timeline
 A: SELECT id IN (1,2) … FOR UPDATE → locks both, in id order
@@ -5558,7 +5564,7 @@ UPDATE 1
 B> COMMIT;
 COMMIT
 
-A> SELECT owner, balance FROM accounts ORDER BY id; -- both transfers landed — same workload, zero deadlocks
+A> SELECT owner, balance FROM accounts ORDER BY id; -- both transfers committed in this schedule
  owner | balance 
 -------+---------
  alice |     115 
@@ -5571,7 +5577,7 @@ A> SELECT owner, balance FROM accounts ORDER BY id; -- both transfers landed —
 ## postgres/03-locking/deadlock.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Two transactions locking the same rows in opposite order deadlock; PostgreSQL detects the cycle and aborts one of them with SQLSTATE 40P01 so the other can finish.
+- claim: In this opposite-order two-row schedule, with B's detection timeout shorter than A's, B gets 40P01, A completes and commits, and the asserted balances retain only A's transfer. General victim choice is not guaranteed.
 
 ```timeline
 A: locks alice (id=1)
@@ -5582,7 +5588,7 @@ A: ⏵ needs bob (id=2) → completes
 ```
 
 ```transcript
-A> SET deadlock_timeout = '10s'; -- In production the victim is effectively arbitrary — whichever waiter's deadlock_timeout (default 1s) fires first runs the check and aborts itself. We pin it here so the transcript is reproducible: B checks first.
+A> SET deadlock_timeout = '10s'; -- General victim choice must not be relied on. These unequal detection timeouts make B the observed victim in this controlled schedule; no universal minimum cycle duration is asserted.
 SET
 
 B> SET deadlock_timeout = '50ms';
@@ -5631,7 +5637,7 @@ COMMIT
 B> ROLLBACK;
 ROLLBACK
 
-A> SELECT owner, balance FROM accounts ORDER BY id; -- A's transfer survived; B's evaporated — retry it
+A> SELECT owner, balance FROM accounts ORDER BY id; -- A's transfer committed; B's database changes did not commit
  owner | balance 
 -------+---------
  alice |      90 
@@ -5644,7 +5650,7 @@ A> SELECT owner, balance FROM accounts ORDER BY id; -- A's transfer survived; B'
 ## postgres/03-locking/fk-key-share.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: INSERTing a child row locks the referenced parent row with FOR KEY SHARE: updating the parent's other columns still works, but deleting it blocks — and then fails the moment the child commits.
+- claim: In this immediate foreign-key insert schedule, B's non-key parent UPDATE succeeds, its DELETE waits for A, and after A commits the DELETE fails with 23503. This conflict signature is consistent with FOR KEY SHARE.
 
 ```timeline
 A: INSERT child → FK locks parent FOR KEY SHARE
@@ -5697,11 +5703,11 @@ B> SELECT balance FROM customers WHERE id = 1; -- the parent survived, with B's 
 ## postgres/03-locking/for-update-blocks.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A row locked with SELECT FOR UPDATE can still be read by everyone, but any write to it waits until the locking transaction ends.
+- claim: In this Read Committed schedule B's ordinary SELECT reads 100 while A holds FOR UPDATE; B's UPDATE waits, then uses A's committed 150 to leave 140. Locking reads can conflict; table-lock waits are not excluded.
 
 ```timeline
 A: SELECT … FOR UPDATE (locks the row)
-B: SELECT balance → 100 (readers don't block)
+B: ordinary SELECT → 100
 B: UPDATE -10 → ⏳ waits
 A: COMMIT (releases the lock)
 B: ⏵ UPDATE -10 → completes
@@ -5718,7 +5724,7 @@ A> SELECT * FROM accounts WHERE id = 1 FOR UPDATE;
 (1 row)
 ```
 
-*Reading the locked row costs B nothing — MVCC readers don't take row locks.*
+*B's ordinary SELECT reads the row without a conflicting row-lock request; cost is not measured.*
 
 ```transcript
 B> SELECT balance FROM accounts WHERE id = 1;
@@ -5755,7 +5761,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- B's -10 applied on top of A's c
 ## postgres/03-locking/lock-mode-matrix.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: FOR KEY SHARE < FOR SHARE < FOR NO KEY UPDATE < FOR UPDATE: two share-mode locks coexist, but a share lock still stops writers, and FOR UPDATE stops everything.
+- claim: This schedule asserts SHARE/SHARE coexistence, SHARE blocking a non-key UPDATE, KEY SHARE coexisting with that UPDATE, and FOR UPDATE waiting for it. The complete compatibility matrix is a manual contract.
 
 ```timeline
 A: SELECT … FOR SHARE (A)
@@ -5845,7 +5851,7 @@ COMMIT
 ## postgres/03-locking/lock-queue-fifo.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Sessions waiting for the same row lock queue up: when the holder commits, the lock goes to the first waiter, and everyone else keeps waiting behind it.
+- claim: In this single-row update schedule B completes after A commits while C remains waiting; after B commits C completes, and the balance is 211. This observation does not establish universal FIFO fairness.
 
 ```timeline
 A: UPDATE +1 (takes the row lock)
@@ -5889,7 +5895,7 @@ M> SELECT application_name AS waiting, pg_blocking_pids(pid) AS blocked_by
 (2 rows)
 ```
 
-*A commits. The lock goes to B — the head of the queue — not to C.*
+*A commits. B completes while C is observed waiting again.*
 
 ```transcript
 A> COMMIT;
@@ -5926,7 +5932,7 @@ C> SELECT balance FROM accounts WHERE id = 1; -- 100 + 1 + 10 + 100 — every up
 ## postgres/03-locking/lock-timeout.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: With lock_timeout set, a statement waits for a lock only that long, then fails with SQLSTATE 55P03 — the same code NOWAIT raises immediately.
+- claim: B's standalone UPDATE fails with 55P03 under a 100ms lock_timeout while A holds the row lock. After A commits, B retries successfully and reads 300. lock_timeout limits each acquisition, not total statement time.
 
 ```timeline
 A: UPDATE 200 (locks row 1)
@@ -5953,7 +5959,7 @@ B> UPDATE accounts SET balance = 300 WHERE id = 1; -- lock_not_available, raised
 ERROR:  55P03: canceling statement due to lock timeout
 ```
 
-*The failure canceled only B's statement — a retry after A commits works.*
+*B's failed standalone statement ends its implicit transaction; a fresh attempt after A commits works here.*
 
 ```transcript
 A> COMMIT;
@@ -5974,7 +5980,7 @@ B> SELECT balance FROM accounts WHERE id = 1;
 ## postgres/03-locking/monitoring-locks.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: pg_locks shows every lock a transaction holds — a single-row UPDATE takes four — and a waiter shows up as granted = false, findable via pg_blocking_pids().
+- claim: For this table and primary index, M asserts four pg_locks entries for A's UPDATE, B's ungranted transaction-id ShareLock, and B's direct blocker A. Ordinary on-disk row locks normally do not appear directly in pg_locks.
 
 ```timeline
 A: UPDATE (takes the row lock)
@@ -5991,7 +5997,7 @@ A> UPDATE accounts SET balance = 200 WHERE id = 1;
 UPDATE 1
 ```
 
-*One innocent UPDATE = four locks: table, index, its own xid, its own virtual xid.*
+*This UPDATE's inspected lock entries: table, index, assigned xid and virtual xid.*
 
 ```transcript
 M> SELECT l.locktype, l.relation::regclass AS relation, l.mode, l.granted
@@ -6047,7 +6053,7 @@ UPDATE 1
 ## postgres/03-locking/nowait.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: SELECT ... FOR UPDATE NOWAIT refuses to wait: if the row is locked it fails immediately with SQLSTATE 55P03 instead of joining the lock queue.
+- claim: B's FOR UPDATE NOWAIT gets 55P03 while A holds a conflicting row lock; after A commits, B's standalone retry returns row 1. NOWAIT concerns row locks and does not eliminate table-lock waits or other errors.
 
 ```timeline
 A: SELECT … FOR UPDATE (locks row 1)
@@ -6066,7 +6072,7 @@ A> SELECT id FROM accounts WHERE id = 1 FOR UPDATE;
   1 
 (1 row)
 
-B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- lock_not_available — instantly, no waiting
+B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- lock_not_available from the conflicting row-lock request
 ERROR:  55P03: could not obtain lock on row in relation "accounts"
 ```
 
@@ -6088,7 +6094,7 @@ B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
 ## postgres/03-locking/skip-locked.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: SELECT ... FOR UPDATE SKIP LOCKED silently skips locked rows, so concurrent workers each grab a different row without ever waiting — the backbone of Postgres job queues.
+- claim: In overlapping transactions, the scheduled FOR UPDATE SKIP LOCKED reads return jobs 1, 2 and 3, then no available row. After A explicitly rolls back, D reads job 1 again. No external execution or universal no-wait guarantee is established.
 
 ```timeline
 A: SKIP LOCKED → job 1
@@ -6099,7 +6105,7 @@ A: ROLLBACK → job 1 back on the queue
 D: SKIP LOCKED → job 1
 ```
 
-*Four workers run the exact same query at the same time.*
+*Four sessions run the same query in the listed order with overlapping transactions.*
 
 ```transcript
 A> BEGIN;
@@ -6130,14 +6136,14 @@ C> SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (1 row)
 ```
 
-*Worker D finds the queue empty — an instant answer, not a wait.*
+*D finds no lockable row in this query; three rows still exist.*
 
 ```transcript
 D> SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (0 rows)
 ```
 
-*A worker crash (rollback) puts its job straight back on the queue.*
+*Explicit ROLLBACK releases A's row lock; a process crash is not injected.*
 
 ```transcript
 A> ROLLBACK;
@@ -6161,7 +6167,7 @@ COMMIT
 ## postgres/04-mvcc/dead-tuples-and-bloat.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Every UPDATE leaves a dead tuple behind and every DELETE leaves the row on disk — so a table's file only ever grows, no matter how much data you delete.
+- claim: In this setup three updates leave four inspected tuple versions and one live value. Updating 1000 rows grows the heap from 5 to 9 pages; deleting them leaves zero live rows and 9 pages at the next observation. Reuse, pruning and vacuum can change later size.
 
 ```transcript
 A> INSERT INTO counters VALUES (1, 0) RETURNING xmin, n;
@@ -6226,7 +6232,7 @@ A> SELECT (pg_relation_size('bloat') / 8192)::int AS pages;
 (1 row)
 ```
 
-*One UPDATE of every row = a full second copy of the table.*
+*This UPDATE of all 1000 rows grows the heap from 5 to 9 pages, not an exact doubling.*
 
 ```transcript
 A> UPDATE bloat SET filler = 'y';
@@ -6263,7 +6269,7 @@ A> SELECT (pg_relation_size('bloat') / 8192)::int AS pages;
 ## postgres/04-mvcc/long-transactions.ts
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: VACUUM can only remove tuples no snapshot can still see — one long-running transaction holds the horizon back for every table, and VACUUM silently reclaims nothing until it ends.
+- claim: With A holding an old Repeatable Read snapshot, VACUUM leaves the inspected jobs tuple-chain fields unchanged and A still reads new. After A commits, a second VACUUM reclaims the three obsolete versions. Other tables and other VACUUM work are not observed.
 
 *A opens a long report transaction — one query, then it sits there idle.*
 
@@ -6313,7 +6319,7 @@ B> VACUUM jobs;
 VACUUM
 ```
 
-*VACUUM ran, reported success — and removed nothing. A's snapshot might still need every one of those versions.*
+*VACUUM completed. The following assertion checks unchanged tuple-chain fields while A retains its old snapshot.*
 
 ```transcript
 B> SELECT lp, t_xmin, t_xmax, t_ctid
@@ -6362,9 +6368,9 @@ B> SELECT lp, lp_flags, t_xmin, t_xmax, t_ctid
 ## postgres/04-mvcc/row-versions.ts
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: UPDATE never modifies a row in place — it writes a new version stamped with its xid (xmin) and stamps the old one's xmax; DELETE only stamps xmax. Both versions stay on disk, visible with pageinspect.
+- claim: In this setup UPDATE creates a new tuple at (0,2), while B's old Repeatable Read snapshot still reads the original balance at (0,1). After DELETE there are zero live rows but both tuple versions remain in the inspected page. This is not a promise of permanent physical retention.
 
-*Every row carries hidden system columns: xmin = the transaction that created this version, xmax = the one that deleted or replaced it (0 = nobody yet), ctid = its physical address (page, slot).*
+*Inspect this tuple version: xmin identifies its inserting transaction, ctid its physical location. xmax can record deletion or row locking; this schedule follows the update/delete case.*
 
 ```transcript
 A> SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1;
@@ -6383,7 +6389,7 @@ B> SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1;
 (1 row)
 ```
 
-*A's UPDATE doesn't touch that version — it writes a brand-new one at a new ctid.*
+*A's UPDATE creates a new tuple version and changes the old version's xmax and successor pointer.*
 
 ```transcript
 A> UPDATE accounts SET balance = 200 WHERE id = 1
@@ -6425,7 +6431,7 @@ A> SELECT lp, t_xmin, t_xmax, t_ctid
 (2 rows)
 ```
 
-*DELETE doesn't erase anything either — it only stamps xmax on the current version.*
+*DELETE marks the current version deleted; the following page inspection checks that its tuple body remains here.*
 
 ```transcript
 A> DELETE FROM accounts WHERE id = 1 RETURNING xmin, xmax, ctid;
@@ -6458,9 +6464,9 @@ A> SELECT lp, t_xmin, t_xmax, t_ctid
 ## postgres/04-mvcc/snapshots-under-the-hood.ts
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A snapshot is three numbers — xmin, xmax, and the in-progress list — and visibility is pure arithmetic on them: committed before xmax and not in xip = visible. Commit order doesn't matter; the snapshot already decided.
+- claim: C's Repeatable Read snapshot records A as in progress and B as completed. C reads A's old value and B's committed value, repeats that view after A commits, then sees A's new value in a fresh transaction. The exposed snapshot components are not the complete tuple-visibility algorithm.
 
-*Transaction ids are handed out lazily — a transaction that only reads never gets one.*
+*A's initial ordinary read does not assign an xid; pg_current_xact_id() could assign one without a table write.*
 
 ```transcript
 A> BEGIN;
@@ -6498,7 +6504,7 @@ B> UPDATE accounts SET balance = 200 WHERE id = 2 RETURNING xmin, balance;
 (1 row)
 ```
 
-*C opens a transaction and inspects its own snapshot: the three numbers that decide all visibility.*
+*C inspects its retained snapshot bounds; commit status and tuple metadata also matter for visibility.*
 
 ```transcript
 C> BEGIN ISOLATION LEVEL REPEATABLE READ;
@@ -6550,7 +6556,7 @@ C> COMMIT;
 COMMIT
 ```
 
-*Only a NEW snapshot changes the verdict.*
+*C's fresh transaction now reads A's committed value; own-write visibility is a separate rule.*
 
 ```transcript
 C> SELECT id, owner, balance FROM accounts ORDER BY id;
@@ -6566,7 +6572,7 @@ C> SELECT id, owner, balance FROM accounts ORDER BY id;
 ## postgres/04-mvcc/vacuum.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: VACUUM turns dead tuples into reusable free space inside the table's file — new rows land in the freed slots — but it does not shrink the file; only VACUUM FULL rewrites the table to its minimal size.
+- claim: In this setup VACUUM frees inspected counters slots and the next INSERT reuses slot 2. Standard VACUUM leaves bloat at 9 pages; VACUUM FULL compacts it to 5. Standard VACUUM can truncate empty trailing pages under suitable locking conditions, a variant not executed here.
 
 *Three updates leave three dead tuples on the page (the bloat lesson showed the chain).*
 
@@ -6611,7 +6617,7 @@ A> INSERT INTO counters VALUES (2, 0) RETURNING ctid, id;
 (1 row)
 ```
 
-*Same story at file level — 1000 rows in 5 pages, doubled to 9 by an UPDATE of every row.*
+*At file level this 1000-row heap grows from 5 to 9 pages after UPDATE.*
 
 ```transcript
 A> SELECT (pg_relation_size('bloat') / 8192)::int AS pages;
@@ -6633,7 +6639,7 @@ A> VACUUM bloat;
 VACUUM
 ```
 
-*VACUUM cleaned 1000 dead tuples — and the file is still 9 pages. The space is free *inside* the file.*
+*Standard VACUUM completes and the asserted file size remains 9 pages. This size observation does not count reclaimed tuples or reusable bytes.*
 
 ```transcript
 A> SELECT (pg_relation_size('bloat') / 8192)::int AS pages;

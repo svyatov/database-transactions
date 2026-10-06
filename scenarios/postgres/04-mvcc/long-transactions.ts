@@ -3,7 +3,7 @@ import { eq, scenario } from "../../../harness/scenario";
 export default scenario({
   title: "Long transactions block VACUUM",
   claim:
-    "VACUUM can only remove tuples no snapshot can still see — one long-running transaction holds the horizon back for every table, and VACUUM silently reclaims nothing until it ends.",
+    "With A holding an old Repeatable Read snapshot, VACUUM leaves the inspected jobs tuple-chain fields unchanged and A still reads new. After A commits, a second VACUUM reclaims the three obsolete versions. Other tables and other VACUUM work are not observed.",
   setup: `
     CREATE EXTENSION pageinspect;
     CREATE TABLE jobs (id int PRIMARY KEY, status text NOT NULL);
@@ -35,12 +35,12 @@ export default scenario({
 
     await B`VACUUM jobs`;
     t.note(
-      "VACUUM ran, reported success — and removed nothing. A's snapshot might still need every one of those versions.",
+      "VACUUM completed. The following assertion checks unchanged tuple-chain fields while A retains its old snapshot.",
     );
     const after = await B`
       SELECT lp, t_xmin, t_xmax, t_ctid
       FROM heap_page_items(get_raw_page('jobs', 0)) ORDER BY lp`;
-    eq(after, chain, "the heap page is byte-for-byte the same");
+    eq(after, chain, "the inspected tuple-chain fields are unchanged");
 
     t.note("And indeed: A still reads the version from before all three updates.");
     const [stillNew] = await A`SELECT id, status FROM jobs`;

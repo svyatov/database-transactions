@@ -3,7 +3,7 @@ import { eq, scenario } from "../../../harness/scenario";
 export default scenario({
   title: "Row versions: xmin, xmax, ctid",
   claim:
-    "UPDATE never modifies a row in place — it writes a new version stamped with its xid (xmin) and stamps the old one's xmax; DELETE only stamps xmax. Both versions stay on disk, visible with pageinspect.",
+    "In this setup UPDATE creates a new tuple at (0,2), while B's old Repeatable Read snapshot still reads the original balance at (0,1). After DELETE there are zero live rows but both tuple versions remain in the inspected page. This is not a promise of permanent physical retention.",
   setup: `
     CREATE EXTENSION pageinspect;
     CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
@@ -14,16 +14,16 @@ export default scenario({
   async run({ A, B }, t) {
     // #region demo
     t.note(
-      "Every row carries hidden system columns: xmin = the transaction that created this version, xmax = the one that deleted or replaced it (0 = nobody yet), ctid = its physical address (page, slot).",
+      "Inspect this tuple version: xmin identifies its inserting transaction, ctid its physical location. xmax can record deletion or row locking; this schedule follows the update/delete case.",
     );
     const [v1] = await A`SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1`;
     eq([v1!.xmax, v1!.ctid, v1!.balance], [0, "(0,1)", 100]);
 
     await B`BEGIN ISOLATION LEVEL REPEATABLE READ`;
     const [b1] = await B`SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1`;
-    eq(b1!.xmin, v1!.xmin);
+    eq([b1!.xmin, b1!.xmax, b1!.ctid, b1!.balance], [v1!.xmin, 0, "(0,1)", 100]);
 
-    t.note("A's UPDATE doesn't touch that version — it writes a brand-new one at a new ctid.");
+    t.note("A's UPDATE creates a new tuple version and changes the old version's xmax and successor pointer.");
     const [v2] = await A`
       UPDATE accounts SET balance = 200 WHERE id = 1
       RETURNING xmin, xmax, ctid, balance`;
@@ -36,7 +36,7 @@ export default scenario({
     await B`COMMIT`;
 
     const [b3] = await B`SELECT xmin, xmax, ctid, balance FROM accounts WHERE id = 1`;
-    eq(b3!.xmin, v2!.xmin, "a fresh snapshot sees the new version");
+    eq([b3!.xmin, b3!.ctid, b3!.balance], [v2!.xmin, "(0,2)", 200], "a fresh snapshot sees the new version");
 
     t.note("pageinspect shows both versions physically on page 0 — the old one points at its successor.");
     const heap = await A`
@@ -49,7 +49,9 @@ export default scenario({
     // #endregion demo
 
     // #region delete
-    t.note("DELETE doesn't erase anything either — it only stamps xmax on the current version.");
+    t.note(
+      "DELETE marks the current version deleted; the following page inspection checks that its tuple body remains here.",
+    );
     const [d] = await A`DELETE FROM accounts WHERE id = 1 RETURNING xmin, xmax, ctid`;
     eq(d!.xmin, v2!.xmin);
     eq(d!.xmax > 0, true, "the deleter's xid, stamped at delete time");

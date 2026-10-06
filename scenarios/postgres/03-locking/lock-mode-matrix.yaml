@@ -1,8 +1,8 @@
 title: The four row-lock modes, from friendly to exclusive
 claim: >-
-  FOR KEY SHARE < FOR SHARE < FOR NO KEY UPDATE < FOR UPDATE: two share-mode
-  locks coexist, but a share lock still stops writers, and FOR UPDATE stops
-  everything.
+  This schedule asserts SHARE/SHARE coexistence, SHARE blocking a non-key
+  UPDATE, KEY SHARE coexisting with that UPDATE, and FOR UPDATE waiting
+  for it. The complete compatibility matrix is a manual contract.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -24,6 +24,7 @@ steps:
   - A: COMMIT
     tl: COMMIT (releases A's FOR SHARE)
   - success: p1
+    affected: 1
 
   - note: The weakest lock, FOR KEY SHARE, even coexists with a running UPDATE…
   - A: BEGIN
@@ -39,3 +40,4 @@ steps:
   - A: COMMIT
     tl: COMMIT (releases A)
   - success: p2
+    expect: [{ id: 1 }]

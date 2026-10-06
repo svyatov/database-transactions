@@ -3,9 +3,9 @@
 ```timeline
 A: SELECT (long-lived txn) → holds ACCESS SHARE
 B: ALTER TABLE … → gives up after 100ms ← 55P03 canceling statement due to lock timeout
-C: SELECT → instant, nothing queued behind the ALTER
+C: SELECT after ALTER timeout → 100
 A: COMMIT
-B: ALTER TABLE … (retry sails through)
+B: ALTER TABLE … (retry completes)
 ```
 
 ```transcript
@@ -29,7 +29,7 @@ B> ALTER TABLE accounts ADD COLUMN note text;
 ERROR:  55P03: canceling statement due to lock timeout
 ```
 
-*No waiting ALTER in the queue means no outage: C's read is instant.*
+*After B's timeout removes its request, C's read returns 100. No read during B's wait is tested.*
 
 ```transcript
 C> SELECT balance FROM accounts WHERE id = 1;
@@ -47,6 +47,12 @@ COMMIT
 ```transcript
 B> ALTER TABLE accounts ADD COLUMN note text;
 ALTER TABLE
+
+C> SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'accounts' AND column_name = 'note';
+ column_name 
+-------------
+ note        
+(1 row)
 ```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/03-locking/ddl-lock-timeout.yaml)</small>

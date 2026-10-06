@@ -48,7 +48,7 @@ B> VACUUM jobs;
 VACUUM
 ```
 
-*VACUUM ran, reported success — and removed nothing. A's snapshot might still need every one of those versions.*
+*VACUUM completed. The following assertion checks unchanged tuple-chain fields while A retains its old snapshot.*
 
 ```transcript
 B> SELECT lp, t_xmin, t_xmax, t_ctid

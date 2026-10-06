@@ -15,7 +15,7 @@ A> UPDATE accounts SET balance = 200 WHERE id = 1;
 UPDATE 1
 ```
 
-*One innocent UPDATE = four locks: table, index, its own xid, its own virtual xid.*
+*This UPDATE's inspected lock entries: table, index, assigned xid and virtual xid.*
 
 ```transcript
 M> SELECT l.locktype, l.relation::regclass AS relation, l.mode, l.granted
