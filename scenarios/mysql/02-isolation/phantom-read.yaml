@@ -10,8 +10,8 @@ setup: |
 sessions: [A, B]
 steps:
   - note: >-
-      A computes a report twice inside one transaction: count first, then the
-      total.
+      A runs two SELECTs inside one transaction: a count first, then a count
+      and total.
   - A: SET TRANSACTION ISOLATION LEVEL READ COMMITTED
   - A: BEGIN
 
@@ -29,4 +29,4 @@ steps:
     tl: recount → 3, total 1500; a phantom
 
   - A: COMMIT
-  - note: A's report now says '2 orders' in one place and '3 orders, total 1500' in another.
+  - note: A's first SELECT returns count 2; the later SELECT returns count 3 and total 1500. No report publication is executed.

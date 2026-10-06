@@ -1034,7 +1034,7 @@ B: INSERT order 3 (autocommit)
 A: recount → 3, total 1500; a phantom
 ```
 
-*A computes a report twice inside one transaction: count first, then the total.*
+*A runs two SELECTs inside one transaction: a count first, then a count and total.*
 
 ```transcript
 A> SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -1066,7 +1066,7 @@ A> COMMIT;
 Query OK
 ```
 
-*A's report now says '2 orders' in one place and '3 orders, total 1500' in another.*
+*A's first SELECT returns count 2; the later SELECT returns count 3 and total 1500. No report publication is executed.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/phantom-read.yaml)</small>
 
