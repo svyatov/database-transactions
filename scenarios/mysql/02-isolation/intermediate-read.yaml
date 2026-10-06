@@ -1,11 +1,12 @@
-title: READ UNCOMMITTED serves drafts that never become true
+title: READ UNCOMMITTED serves drafts absent from committed history
 claim: >-
   At READ UNCOMMITTED a reader can observe an intermediate value the writer
-  later overwrites before committing (Adya's G1b, "intermediate read") — a
-  number that is never part of any committed state. READ COMMITTED stops this.
+  later overwrites before committing (Adya's G1b, "intermediate read"); a
+  number absent from committed history. In the repeated READ COMMITTED
+  schedule, B reads 110 while A's draft 555 is uncommitted.
 anomaly: G1b
 setup: |
-  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL) ENGINE=InnoDB;
   INSERT INTO accounts VALUES (1, 'alice', 100);
 sessions: [A, B]
 steps:
@@ -15,7 +16,7 @@ steps:
 
   - A: BEGIN
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
-    comment: a working draft — A isn't done yet
+    comment: a working draft; A isn't done yet
     tl: UPDATE balance = 999 (a draft)
 
   - B: SELECT balance FROM accounts WHERE id = 1
@@ -31,13 +32,12 @@ steps:
 
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 110 }]
-    tl: SELECT balance → 110 (999 was never real)
+    tl: SELECT balance → 110 (999 never committed)
   - B: COMMIT
 
   - note: >-
-      The committed history is 100 → 110. The 999 B acted on was never true —
-      not even for an instant of committed time. At READ COMMITTED the same
-      watch shows only 100, then 110:
+      The committed history is 100 → 110. B read 999 without executing any
+      application action. At READ COMMITTED, B now excludes A's draft 555:
   - B: SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED
   - B: BEGIN
   - A: BEGIN

@@ -21,11 +21,18 @@ A> INSERT INTO items VALUES (4, 'widget'); -- ER_DUP_ENTRY
 ERROR 1062 (23000): Duplicate entry 'widget' for key 'items.name'
 ```
 
-*The transaction is still alive — but the branch is half-done. Rewind all of it in one go.*
+*The transaction is still alive; but the branch is half-done. Rewind all of it in one go.*
 
 ```transcript
 A> ROLLBACK TO SAVEPOINT before_risky;
 Query OK
+
+A> SELECT id, name FROM items ORDER BY id;
+ id |  name  
+----+--------
+  1 | widget 
+  2 | gadget 
+(2 rows)
 
 A> INSERT INTO items VALUES (3, 'doohickey');
 Query OK, 1 row affected
@@ -33,7 +40,7 @@ Query OK, 1 row affected
 A> COMMIT;
 Query OK
 
-A> SELECT id, name FROM items ORDER BY id; -- survived — it predates the savepoint; 'gizmo' is gone with the branch
+A> SELECT id, name FROM items ORDER BY id; -- survived; it predates the savepoint; 'gizmo' is gone with the branch
  id |   name    
 ----+-----------
   1 | widget    

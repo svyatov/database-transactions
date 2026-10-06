@@ -7,10 +7,18 @@ A: alice off call → ⏳ waits
 B: bob off call ← 1213 Deadlock found when trying to get lock
 A: ⏵ alice off call → completes
 A: COMMIT
-A: on-call count → 1 — invariant survived
+A: on-call count → 1; invariant survived
 ```
 
-*Same story, same statements, same order — only the isolation level differs.*
+```transcript
+A> SELECT @@innodb_deadlock_detect AS deadlock_detect;
+ deadlock_detect 
+-----------------
+               1 
+(1 row)
+```
+
+*Same story, same statements, same order; only the isolation level differs.*
 
 ```transcript
 A> SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
@@ -52,7 +60,7 @@ B> UPDATE doctors SET on_call = false WHERE name = 'bob'; -- ER_LOCK_DEADLOCK
 ERROR 1213 (40001): Deadlock found when trying to get lock; try restarting transaction
 ```
 
-*B's rollback freed the locks — A's update proceeds.*
+*B's rollback freed the locks; A's update proceeds.*
 
 ```transcript
 ⏵ A resumes:
@@ -68,6 +76,80 @@ A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- the invariant survi
 (1 row)
 ```
 
-*PostgreSQL detects the same skew without blocking (SSI, at COMMIT). MySQL prevents it the classic way: locks and a deadlock victim.*
+*B starts a fresh SERIALIZABLE transaction and repeats the count. With only one doctor remaining, the application declines the update.*
+
+```transcript
+B> SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+Query OK
+
+B> BEGIN;
+Query OK
+
+B> SELECT count(*) AS on_call FROM doctors WHERE on_call;
+ on_call 
+---------
+       1 
+(1 row)
+
+B> COMMIT;
+Query OK
+
+A> SELECT name, on_call FROM doctors ORDER BY name;
+ name  | on_call 
+-------+---------
+ alice |       0 
+ bob   |       1 
+(2 rows)
+```
+
+*A standalone SERIALIZABLE SELECT with autocommit=1 is a nonlocking consistent read here.*
+
+```transcript
+A> SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+Query OK
+
+A> SELECT @@autocommit AS autocommit;
+ autocommit 
+------------
+          1 
+(1 row)
+
+B> BEGIN;
+Query OK
+
+B> UPDATE doctors SET on_call = false WHERE name = 'bob';
+Query OK, 1 row affected
+
+A> SELECT count(*) AS on_call FROM doctors WHERE on_call;
+ on_call 
+---------
+       1 
+(1 row)
+```
+
+*With autocommit=0, A's SERIALIZABLE SELECT instead waits for B's row lock.*
+
+```transcript
+A> SET autocommit = 0;
+Query OK
+
+A> SELECT count(*) AS on_call FROM doctors WHERE on_call;
+⏳ A is waiting for a lock…
+
+B> ROLLBACK;
+Query OK
+
+⏵ A resumes:
+ on_call 
+---------
+       1 
+(1 row)
+
+A> ROLLBACK;
+Query OK
+
+A> SET autocommit = 1;
+Query OK
+```
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-serializable.yaml)</small>

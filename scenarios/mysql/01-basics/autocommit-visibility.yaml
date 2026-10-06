@@ -1,13 +1,18 @@
 title: Autocommit and visibility
 claim: >-
-  Without BEGIN, every statement commits instantly and is immediately visible
-  to everyone; inside BEGIN, changes stay private until COMMIT.
+  With autocommit=1 on InnoDB, A's successful standalone UPDATE is visible
+  to B's later standalone SELECT. B excludes A's explicit-transaction UPDATE
+  until COMMIT; a pre-existing REPEATABLE READ snapshot need not refresh.
 setup: |
-  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL) ENGINE=InnoDB;
   INSERT INTO accounts VALUES (1, 'alice', 100);
 sessions: [A, B]
 steps:
-  - note: No BEGIN — the UPDATE is its own transaction, committed the instant it finishes.
+  - A: SELECT @@autocommit AS autocommit, @@transaction_isolation AS isolation, @@default_storage_engine AS engine
+    expect: [{ autocommit: 1, isolation: REPEATABLE-READ, engine: InnoDB }]
+  - B: SELECT @@autocommit AS autocommit
+    expect: [{ autocommit: 1 }]
+  - note: No BEGIN; the UPDATE is its own transaction, committed the instant it finishes.
   - A: UPDATE accounts SET balance = 150 WHERE id = 1
     tl: UPDATE balance = 150 (autocommit)
 
@@ -26,7 +31,7 @@ steps:
     comment: still the old value
     tl: SELECT balance → 150 (A's change hidden)
 
-  - note: …until A commits.
+  - note: B's next standalone SELECT takes a new snapshot after A commits.
   - A: COMMIT
     tl: COMMIT
 

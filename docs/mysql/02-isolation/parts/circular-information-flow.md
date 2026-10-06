@@ -5,11 +5,11 @@ A: UPDATE alice = 111 (uncommitted)
 B: UPDATE bob = 222 (uncommitted)
 A: read bob → 222 (B's uncommitted)
 B: read alice → 111 (A's uncommitted)
-A: ROLLBACK
-B: ROLLBACK
+A: COMMIT
+B: COMMIT
 ```
 
-*A adjusts alice while B adjusts bob — then each peeks at the other's row. In any serial order, at most one of them can see the other's write.*
+*A adjusts alice while B adjusts bob; then each peeks at the other's row. In any serial order, at most one of them can see the other's write.*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -43,17 +43,27 @@ B> SELECT balance FROM accounts WHERE id = 1; -- …and B sees A's. Information 
 (1 row)
 ```
 
-*Neither value was committed when it was read — if either side now rolls back, the other has computed on data that never existed. Both roll back:*
+*Both dirty cross-reads are asserted, then both writers commit. No serial order of these two transactions gives both new values to the readers. No external application arithmetic is executed.*
 
 ```transcript
-A> ROLLBACK;
+A> COMMIT;
 Query OK
 
-B> ROLLBACK;
+B> COMMIT;
 Query OK
+
+A> SELECT id, balance FROM accounts ORDER BY id;
+ id | balance 
+----+---------
+  1 |     111 
+  2 |     222 
+(2 rows)
+
+A> UPDATE accounts SET balance = 100;
+Query OK, 2 rows affected
 ```
 
-*The same dance at READ COMMITTED: each sees the world before the other.*
+*After resetting both balances, READ COMMITTED excludes these dirty cross-reads. The two old reads still do not form a serial execution.*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;

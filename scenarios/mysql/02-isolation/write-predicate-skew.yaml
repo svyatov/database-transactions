@@ -1,14 +1,14 @@
 title: Your DELETE and your SELECT live in different worlds
 claim: >-
-  Under REPEATABLE READ a write's WHERE clause is evaluated against the
-  CURRENT committed data while SELECTs keep showing the snapshot — so a
-  transaction can "delete every row matching X", delete nothing, and still
-  see rows matching X (Hermitage's G-single write-predicate anomaly).
+  In this InnoDB REPEATABLE READ schedule, A's DELETE of balance=20 finds
+  no current matching row after B commits 15/25, while A's consistent SELECT
+  still returns snapshot balance 20. The DELETE affects zero rows.
 setup: |
-  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL) ENGINE=InnoDB;
   INSERT INTO accounts VALUES (1, 'alice', 10), (2, 'bob', 20);
 sessions: [A, B]
 steps:
+  - A: SET TRANSACTION ISOLATION LEVEL REPEATABLE READ
   - note: A opens a snapshot. B then reshuffles every balance and commits.
   - A: BEGIN
   - A: SELECT id, balance FROM accounts ORDER BY id
@@ -24,7 +24,7 @@ steps:
     tl: COMMIT (now 15, 25)
 
   - note: >-
-      A closes every account with balance 20 — its snapshot says that's bob.
+      A closes every account with balance 20; its snapshot says that's bob.
       But the DELETE is a current read: it scans the committed 15 and 25,
       finds nothing, and deletes nothing.
   - A: DELETE FROM accounts WHERE balance = 20
@@ -38,6 +38,7 @@ steps:
   - A: COMMIT
 
   - note: >-
-      A's writes ran in one world, its reads in another. PostgreSQL's
-      REPEATABLE READ aborts the DELETE with a serialization failure instead;
-      on MySQL the cure is a locking read (FOR UPDATE) or SERIALIZABLE.
+      A's DELETE used current rows while its consistent SELECT retained an
+      older snapshot. A locking read must precede the decision and all
+      relevant writers must coordinate; changing a later read alone is not
+      a general repair. See the locking and SERIALIZABLE lessons.

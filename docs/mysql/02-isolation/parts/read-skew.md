@@ -8,7 +8,7 @@ B: COMMIT (transfer done)
 A: read bob → 75 (50 + 75 = 125!)
 ```
 
-*The invariant: alice + bob = 100 at every moment. A is an auditor summing the accounts row by row; B transfers 25 between them mid-audit.*
+*The rule: alice + bob = 100 in each committed state. A models an auditor reading the accounts row by row; B transfers 25 between them mid-audit.*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -32,7 +32,7 @@ Query OK, 1 row affected
 B> UPDATE accounts SET balance = balance + 25 WHERE owner = 'bob';
 Query OK, 1 row affected
 
-B> COMMIT; -- a perfectly correct transfer — atomic, invariant preserved
+B> COMMIT; -- a perfectly correct transfer; atomic, invariant preserved
 Query OK
 
 A> SELECT balance FROM accounts WHERE owner = 'bob'; -- 50 + 75 = 125. The auditor found 25 that never existed.
@@ -45,7 +45,7 @@ A> COMMIT;
 Query OK
 ```
 
-*Neither row was ever wrong — A read alice BEFORE the transfer and bob AFTER it. REPEATABLE READ pins every plain SELECT to one snapshot:*
+*Neither row was ever wrong; A read alice BEFORE the transfer and bob AFTER it. The repeated REPEATABLE READ consistent SELECTs use one snapshot; the reader makes no changes of its own:*
 
 ```transcript
 A> SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
@@ -72,7 +72,7 @@ Query OK, 1 row affected
 B> COMMIT;
 Query OK
 
-A> SELECT balance FROM accounts WHERE owner = 'bob'; -- 25 + 75 = 100 — one snapshot, one moment in time
+A> SELECT balance FROM accounts WHERE owner = 'bob'; -- 25 + 75 = 100; one snapshot, one moment in time
  balance 
 ---------
       75 

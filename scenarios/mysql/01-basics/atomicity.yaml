@@ -1,13 +1,13 @@
 title: "Atomicity: all or nothing"
 claim: >-
-  A transaction that fails halfway leaves zero partial writes — even
-  statements that already succeeded inside it are undone.
+  On InnoDB, the demonstrated CHECK error leaves bob's earlier credit in
+  A's transaction; explicit ROLLBACK then discards both balances' changes.
 setup: |
   CREATE TABLE accounts (
     id      int PRIMARY KEY,
     owner   varchar(20) NOT NULL,
     balance int NOT NULL CHECK (balance >= 0)
-  );
+  ) ENGINE=InnoDB;
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 50);
 sessions: [A, B]
 steps:
@@ -21,15 +21,17 @@ steps:
     comment: B can't see A's uncommitted credit
     tl: read bob → 50 (credit hidden)
 
-  - note: …but debiting alice violates the CHECK constraint — she only has 100.
+  - note: …but debiting alice violates the CHECK constraint; she only has 100.
   - A.fails: UPDATE accounts SET balance = balance - 150 WHERE owner = 'alice'
     error: "3819"
     comment: ER_CHECK_CONSTRAINT_VIOLATED
     tl: debit alice −150
 
-  - note: Roll the transaction back. Bob's credit — which had succeeded — evaporates with it.
+  - note: A's SELECT still sees bob's successful credit. The explicit ROLLBACK below discards it.
+  - A: SELECT owner, balance FROM accounts ORDER BY id
+    expect: [{ owner: alice, balance: 100 }, { owner: bob, balance: 200 }]
   - A: ROLLBACK
-    tl: ROLLBACK — bob's credit gone too
+    tl: ROLLBACK; bob's credit gone too
 
   - B: SELECT owner, balance FROM accounts ORDER BY id
     expect:

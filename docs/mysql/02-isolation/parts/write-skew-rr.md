@@ -7,7 +7,15 @@ A: alice off call
 B: bob off call
 A: COMMIT
 B: COMMIT (both succeed)
-A: on-call count → 0 — invariant broken
+A: on-call count → 0; invariant broken
+```
+
+```transcript
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
+B> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
 ```
 
 *Hospital rule: at least one doctor must stay on call. Alice and Bob both want the night off.*
@@ -19,13 +27,13 @@ Query OK
 B> BEGIN;
 Query OK
 
-A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- "two of us — safe for me to leave"
+A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- "two of us; safe for me to leave"
  on_call 
 ---------
        2 
 (1 row)
 
-B> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- "two of us — safe for me to leave"
+B> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- "two of us; safe for me to leave"
  on_call 
 ---------
        2 
@@ -47,13 +55,13 @@ Query OK
 B> COMMIT; -- both succeed!
 Query OK
 
-A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- nobody is on call — the invariant is broken
+A> SELECT count(*) AS on_call FROM doctors WHERE on_call; -- nobody is on call; the invariant is broken
  on_call 
 ---------
        0 
 (1 row)
 ```
 
-*Each transaction was internally consistent; together they broke the rule. Only SERIALIZABLE catches this.*
+*Each transaction was internally consistent; together they broke the rule. SERIALIZABLE or suitable coordination by all relevant writers can protect it; the next Scenario executes the SERIALIZABLE schedule.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-skew-rr.yaml)</small>

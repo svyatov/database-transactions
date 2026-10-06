@@ -9,7 +9,21 @@ A: COMMIT
 B: SELECT balance → 999 (now visible)
 ```
 
-*No BEGIN — the UPDATE is its own transaction, committed the instant it finishes.*
+```transcript
+A> SELECT @@autocommit AS autocommit, @@transaction_isolation AS isolation, @@default_storage_engine AS engine;
+ autocommit |    isolation    | engine 
+------------+-----------------+--------
+          1 | REPEATABLE-READ | InnoDB 
+(1 row)
+
+B> SELECT @@autocommit AS autocommit;
+ autocommit 
+------------
+          1 
+(1 row)
+```
+
+*No BEGIN; the UPDATE is its own transaction, committed the instant it finishes.*
 
 ```transcript
 A> UPDATE accounts SET balance = 150 WHERE id = 1;
@@ -38,7 +52,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- still the old value
 (1 row)
 ```
 
-*…until A commits.*
+*B's next standalone SELECT takes a new snapshot after A commits.*
 
 ```transcript
 A> COMMIT;

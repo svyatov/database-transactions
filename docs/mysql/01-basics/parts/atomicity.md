@@ -4,7 +4,7 @@
 A: credit bob +150 (uncommitted)
 B: read bob → 50 (credit hidden)
 A: debit alice −150 ← 3819 Check constraint 'accounts_chk_1' is violated.
-A: ROLLBACK — bob's credit gone too
+A: ROLLBACK; bob's credit gone too
 B: read → alice 100, bob 50 (untouched)
 ```
 
@@ -24,16 +24,23 @@ B> SELECT balance FROM accounts WHERE owner = 'bob'; -- B can't see A's uncommit
 (1 row)
 ```
 
-*…but debiting alice violates the CHECK constraint — she only has 100.*
+*…but debiting alice violates the CHECK constraint; she only has 100.*
 
 ```transcript
 A> UPDATE accounts SET balance = balance - 150 WHERE owner = 'alice'; -- ER_CHECK_CONSTRAINT_VIOLATED
 ERROR 3819 (HY000): Check constraint 'accounts_chk_1' is violated.
 ```
 
-*Roll the transaction back. Bob's credit — which had succeeded — evaporates with it.*
+*A's SELECT still sees bob's successful credit. The explicit ROLLBACK below discards it.*
 
 ```transcript
+A> SELECT owner, balance FROM accounts ORDER BY id;
+ owner | balance 
+-------+---------
+ alice |     100 
+ bob   |     200 
+(2 rows)
+
 A> ROLLBACK;
 Query OK
 

@@ -5,7 +5,7 @@ A: UPDATE balance = 999 (a draft)
 B: SELECT balance → 999 (reads the draft)
 A: UPDATE balance = 110 (final value)
 A: COMMIT
-B: SELECT balance → 110 (999 was never real)
+B: SELECT balance → 110 (999 never committed)
 ```
 
 *A recalculates alice's balance in two steps. B watches at READ UNCOMMITTED.*
@@ -20,7 +20,7 @@ Query OK
 A> BEGIN;
 Query OK
 
-A> UPDATE accounts SET balance = 999 WHERE id = 1; -- a working draft — A isn't done yet
+A> UPDATE accounts SET balance = 999 WHERE id = 1; -- a working draft; A isn't done yet
 Query OK, 1 row affected
 
 B> SELECT balance FROM accounts WHERE id = 1; -- B just read a draft
@@ -45,7 +45,7 @@ B> COMMIT;
 Query OK
 ```
 
-*The committed history is 100 → 110. The 999 B acted on was never true — not even for an instant of committed time. At READ COMMITTED the same watch shows only 100, then 110:*
+*The committed history is 100 → 110. B read 999 without executing any application action. At READ COMMITTED, B now excludes A's draft 555:*
 
 ```transcript
 B> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;

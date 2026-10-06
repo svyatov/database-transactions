@@ -11,7 +11,7 @@ A> INSERT INTO items VALUES (3, 'widget'); -- ER_DUP_ENTRY
 ERROR 1062 (23000): Duplicate entry 'widget' for key 'items.name'
 ```
 
-*PostgreSQL would now refuse every statement until ROLLBACK. MySQL just carries on.*
+*This 1062 error leaves the earlier INSERT intact. A chooses to continue and COMMIT.*
 
 ```transcript
 A> INSERT INTO items VALUES (3, 'doohickey');

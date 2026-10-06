@@ -7,7 +7,7 @@ A: UPDATE balance = 100 + 10
 A: COMMIT
 B: UPDATE balance = 100 + 10 (stale math)
 B: COMMIT
-A: SELECT balance → 110 — one deposit gone
+A: SELECT balance → 110; one deposit gone
 ```
 
 *Two app servers process a +10 deposit each: read the balance, add 10 in code, write it back.*
@@ -31,7 +31,7 @@ Query OK
 B> BEGIN;
 Query OK
 
-B> SELECT balance FROM accounts WHERE id = 1; -- B reads the same 100 — A hasn't committed
+B> SELECT balance FROM accounts WHERE id = 1; -- B reads the same 100; A hasn't committed
  balance 
 ---------
      100 
@@ -44,7 +44,7 @@ A> COMMIT;
 Query OK
 ```
 
-*B computed 100 + 10 from its stale read. Nothing stops the write — A's transaction is long gone.*
+*B uses its captured 100 plus 10 in this SQL UPDATE. A has committed; this stale replacement succeeds in the displayed schedule.*
 
 ```transcript
 B> UPDATE accounts SET balance = 100 + 10 WHERE id = 1;
@@ -60,6 +60,6 @@ A> SELECT balance FROM accounts WHERE id = 1; -- two +10 deposits, but only one 
 (1 row)
 ```
 
-*A's deposit vanished without any error. Fixes: atomic UPDATE or SELECT FOR UPDATE — see the lesson.*
+*A's deposit vanished without any error. Fixes: atomic UPDATE or SELECT FOR UPDATE; see the lesson.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/lost-update-read-committed.yaml)</small>

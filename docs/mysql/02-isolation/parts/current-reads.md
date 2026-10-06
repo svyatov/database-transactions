@@ -5,11 +5,14 @@ A: SELECT balance → 100 (snapshot)
 B: UPDATE balance = 150 (committed)
 A: SELECT balance → 100 (snapshot holds)
 A: UPDATE +50 (current read of 150)
-A: SELECT balance → 200 (150 + 50 — the hole)
+A: SELECT balance → 200 (150 + 50; the hole)
 A: COMMIT
 ```
 
 ```transcript
+A> SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
 A> BEGIN;
 Query OK
 
@@ -39,7 +42,7 @@ A> SELECT balance FROM accounts WHERE id = 1;
 A> UPDATE accounts SET balance = balance + 50 WHERE id = 1;
 Query OK, 1 row affected
 
-A> SELECT balance FROM accounts WHERE id = 1; -- 150 + 50 — and now A sees it: the snapshot has a hole
+A> SELECT balance FROM accounts WHERE id = 1; -- 150 + 50; and now A sees it: the snapshot has a hole
  balance 
 ---------
      200 
@@ -49,7 +52,7 @@ A> COMMIT;
 Query OK
 ```
 
-*PostgreSQL would have aborted A's UPDATE with 40001 instead. MySQL quietly switches world views.*
+*A's own write is visible to its later consistent SELECT. The PostgreSQL comparison is in its concurrent-update lesson.*
 
 *If the competing write is NOT yet committed, A first waits on the row lock…*
 

@@ -3,7 +3,7 @@
 ```timeline
 A: UPDATE balance = 999 (uncommitted)
 B: SELECT balance → 999 (dirty read)
-A: ROLLBACK — 999 never existed
+A: ROLLBACK; 999 never committed
 B: SELECT balance → 100 (the real value)
 ```
 
@@ -15,7 +15,7 @@ A> UPDATE accounts SET balance = 999 WHERE id = 1;
 Query OK, 1 row affected
 ```
 
-*B opts into READ UNCOMMITTED — and sees A's uncommitted 999.*
+*B opts into READ UNCOMMITTED; and sees A's uncommitted 999.*
 
 ```transcript
 B> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -30,14 +30,14 @@ B> SELECT @@transaction_isolation AS isolation;
  READ-UNCOMMITTED 
 (1 row)
 
-B> SELECT balance FROM accounts WHERE id = 1; -- a dirty read — A never committed this
+B> SELECT balance FROM accounts WHERE id = 1; -- a dirty read; A never committed this
  balance 
 ---------
      999 
 (1 row)
 ```
 
-*A rolls back. The 999 B just read never existed.*
+*A rolls back. The 999 B read never became committed.*
 
 ```transcript
 A> ROLLBACK;

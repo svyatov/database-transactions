@@ -1,10 +1,10 @@
 title: READ COMMITTED re-checks WHERE after waiting
 claim: >-
   An UPDATE at READ COMMITTED that waited for a lock re-evaluates its WHERE
-  clause against the new row version — rows that no longer match are silently
+  clause against the new row version; rows that no longer match are silently
   skipped.
 setup: |
-  CREATE TABLE items (id int PRIMARY KEY, value int NOT NULL);
+  CREATE TABLE items (id int PRIMARY KEY, value int NOT NULL) ENGINE=InnoDB;
   INSERT INTO items VALUES (1, 10), (2, 30);
 sessions: [A, B]
 steps:
@@ -15,7 +15,7 @@ steps:
 
   - note: >-
       B targets WHERE value = 10. The latest committed version of row 1 still
-      qualifies — but it's locked by A, so B waits.
+      qualifies; but it's locked by A, so B waits.
   - B: SET TRANSACTION ISOLATION LEVEL READ COMMITTED
   - B: BEGIN
   - B: UPDATE items SET value = 99 WHERE value = 10
@@ -23,14 +23,14 @@ steps:
     tl: UPDATE WHERE value = 10
 
   - note: >-
-      A commits. B wakes up and re-checks the row it waited for — against the
+      A commits. B wakes up and re-checks the row it waited for against the
       NEW version, where value is 20.
   - A: COMMIT
-    tl: COMMIT — row1 is now 20
+    tl: COMMIT; row1 is now 20
 
   - success: p1
     affected: 0
-  - note: 0 rows affected — the row slipped away.
+  - note: 0 rows affected; the row slipped away.
   - B: COMMIT
 
   - B: SELECT id, value FROM items ORDER BY id
