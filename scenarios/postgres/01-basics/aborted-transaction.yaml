@@ -1,12 +1,11 @@
-title: One error aborts the whole transaction
+title: Statement error leaves an explicit transaction failed
 claim: >-
-  After any error inside a transaction, PostgreSQL rejects every further
-  statement with 25P02 until you ROLLBACK.
+  After division by zero in this explicit transaction, SELECT fails with 25P02; ROLLBACK ends the failed transaction and a new SELECT succeeds. In the second transaction, COMMIT after the error rolls back the preceding INSERT.
 setup: |
-  SELECT 1;
+  CREATE TABLE samples (n int PRIMARY KEY);
 sessions: [A]
 steps:
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
 
   - A.fails: SELECT 1 / 0
     error: "22012"
@@ -17,8 +16,18 @@ steps:
     error: "25P02"
     comment: in_failed_sql_transaction
 
-  - note: ROLLBACK is the only way out. Afterwards, the session works normally again.
+  - note: This first transaction uses full ROLLBACK. The next transaction checks COMMIT after an error; savepoint recovery has its own Scenario.
   - A: ROLLBACK
 
   - A: SELECT 1 AS innocent
     expect: [{ innocent: 1 }]
+
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
+  - A: INSERT INTO samples VALUES (1)
+    affected: 1
+  - A.fails: SELECT 1 / 0
+    error: "22012"
+  - A: COMMIT
+    comment: a failed transaction ends by rolling back, even when COMMIT is sent
+  - A: SELECT count(*)::int AS remaining FROM samples
+    expect: [{ remaining: 0 }]

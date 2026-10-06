@@ -1,8 +1,6 @@
-title: No circular information flow
+title: No uncommitted cross-read in this schedule
 claim: >-
-  Two concurrent transactions cannot read each other's uncommitted writes
-  (Adya's G1c, "circular information flow"): each sees the pre-existing value,
-  as one serial order or the other would dictate.
+  At READ COMMITTED, both plain SELECTs read the original balance rather than the other transaction's uncommitted UPDATE; both writes later commit. This excludes a dirty-read cycle in this schedule, not every form of dependency cycle.
 anomaly: G1c
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
@@ -13,8 +11,8 @@ steps:
       A adjusts alice's balance while B adjusts bob's — then each peeks at the
       other's row. If both saw the other's uncommitted write, information would
       flow in a circle: A → B → A. No serial order can do that.
-  - A: BEGIN
-  - B: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: UPDATE accounts SET balance = 111 WHERE id = 1
     tl: UPDATE alice = 111 (uncommitted)
   - B: UPDATE accounts SET balance = 222 WHERE id = 2

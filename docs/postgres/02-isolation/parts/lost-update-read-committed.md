@@ -13,7 +13,7 @@ A: SELECT balance → 110 — one deposit gone
 *Two app servers process a +10 deposit each: read the balance, add 10 in code, write it back.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> SELECT balance FROM accounts WHERE id = 1;
@@ -22,7 +22,7 @@ A> SELECT balance FROM accounts WHERE id = 1;
      100 
 (1 row)
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> SELECT balance FROM accounts WHERE id = 1; -- B reads the same 100 — A hasn't committed

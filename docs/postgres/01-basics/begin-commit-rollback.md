@@ -1,78 +1,61 @@
 # BEGIN, COMMIT, ROLLBACK
 
-Here's the part many working devs never learned: there is no such thing as "outside a
-transaction" in PostgreSQL. Every statement you've ever run was in one. Without `BEGIN`,
-PostgreSQL wraps each statement in its own tiny transaction and commits it the moment it
-finishes. That's [*autocommit*](https://www.postgresql.org/docs/current/tutorial-transactions.html)
-(the manual: "each individual statement has an implicit `BEGIN` and (if successful) `COMMIT`
-wrapped around it").
+The [PostgreSQL 18 transaction tutorial](https://www.postgresql.org/docs/18/tutorial-transactions.html)
+documents implicit transactions: without an explicit transaction block, a successful
+individual statement commits its transaction. A client can issue BEGIN automatically;
+inspect the SQL sent by your driver before assuming autocommit. These Scenarios send
+one statement per request. Multiple statements in a single simple-query message can
+share an implicit transaction, as the [protocol manual](https://www.postgresql.org/docs/18/protocol-flow.html#PROTOCOL-FLOW-MULTI-STATEMENT)
+documents.
 
-`BEGIN` (or `START TRANSACTION`) says: *keep the transaction open, I have more
-statements coming.* From then on, nothing is visible to anyone else until `COMMIT`, and
-everything can still be abandoned with `ROLLBACK`.
+BEGIN keeps a transaction open for multiple statements. COMMIT makes its transactional
+changes committed; ROLLBACK discards them. Visibility to a later reader depends on that
+reader's isolation level and snapshot, not just on whether the writer has committed.
 
 ## Autocommit and visibility, demonstrated
+
+B uses plain SELECTs at the pinned server default, READ COMMITTED. Its next SELECT sees
+A's successful autocommit UPDATE, excludes A's later uncommitted UPDATE, then sees that
+UPDATE after COMMIT. A division-by-zero error outside a transaction block is followed
+by a successful new statement.
 
 <!--@include: ./parts/autocommit-visibility.md-->
 
 ## One error poisons the whole transaction
 
-A surprise that bites every ORM user eventually: after any error inside a transaction,
-PostgreSQL refuses every further statement, even perfectly valid ones, with SQLSTATE
-`25P02` (`in_failed_sql_transaction`) until you `ROLLBACK`.
+In an explicit transaction, the demonstrated division-by-zero error leaves the transaction
+failed. A subsequent ordinary SELECT returns SQLSTATE 25P02. This heading concerns that
+statement-error case, not every kind of connection or transaction failure.
 
 <!--@include: ./parts/aborted-transaction.md-->
 
-So autocommit isn't a mode you flip off server-side; it's the default that "commit after every
-statement" describes, and you opt out of it one transaction at a time with `BEGIN`. The moment
-you do, keep that transaction short: an open `BEGIN` that holds the connection through slow work
-leaves everyone else waiting on your locks, a theme the locking and MVCC chapters return to. And
-when `current transaction is aborted, commands ignored until end of transaction block` shows up
-in your logs, some earlier statement failed and your code kept going. The fix lives in your
-error handling, or in [savepoints](/postgres/01-basics/savepoints).
+Full ROLLBACK ends the failed transaction. A prior savepoint permits
+[ROLLBACK TO SAVEPOINT](/postgres/01-basics/savepoints) after a recoverable statement error.
+The second transaction above executes COMMIT after an error and asserts that its
+earlier INSERT was rolled back. These recovery
+commands are exceptions to the rejection of ordinary statements. A closed connection
+requires a new connection; a serialization failure requires reconsidering the whole
+transaction in a fresh attempt, not just rerunning the failed statement.
 
 ## ROLLBACK undoes DDL too
 
-A migration inserts a backfill row, adds an index, creates a bookkeeping table, and then trips
-over a constraint violation on step four. On MySQL you now own a half-migrated database: each
-schema change committed itself, and everything before it, the moment it ran. On PostgreSQL you
-type `ROLLBACK` and the migration never happened, schema included.
+This migration inserts a row, builds a non-concurrent index, creates a table, then
+encounters an asserted uniqueness violation. No implicit commit occurs along the way:
+B still counts zero orders and cannot resolve the uncommitted table. After ROLLBACK,
+B asserts that the row, table, and index are absent.
 
 <!--@include: ./parts/ddl-rollback.md-->
 
-Watch session B through the middle of that transcript. It counts zero rows after A's `INSERT`,
-which you'd expect, and it still counts zero after A's `CREATE INDEX`, which is the part worth
-sitting with: the DDL committed nothing on its way past. B's read of `migration_log` doesn't come
-back empty either. It fails with `42P01`, because a table that exists only inside someone else's
-open transaction doesn't exist for you at all. Schema lives in catalog rows, and catalog rows obey
-[MVCC](/postgres/04-mvcc/row-versions) like every other row.
-
-Then `ROLLBACK`, and both relations are gone. `to_regclass` returns `NULL` for a relation that
-isn't there rather than raising an error, so B can point it at the table and the index alike and
-get an answer instead of a failure. That's the guarantee in full: wrap a migration in `BEGIN`,
-and either all of it lands or none of it does.
-
-Run that same script on MySQL and the `CREATE INDEX` performs an implicit `COMMIT` first, so the
-closing `ROLLBACK` undoes nothing at all. [The MySQL lesson](/mysql/05-patterns/orm-pitfalls)
-proves it with the same beats and the opposite ending.
-
-One caveat, and it's the reason this section says *ordinary* DDL rather than *all* DDL. A handful
-of statements refuse to run inside a transaction block. The
-[manual](https://www.postgresql.org/docs/current/sql-createindex.html) puts it plainly for the one
-you're likeliest to meet: "a regular `CREATE INDEX` command can be performed within a transaction
-block, but `CREATE INDEX CONCURRENTLY` cannot." `VACUUM`, `CREATE DATABASE`, and `ALTER SYSTEM`
-behave the same way, each rejecting an open transaction with `25001` (`active_sql_transaction`);
-the manual documents the restriction on every such statement's own page rather than in one central
-list. A migration that needs one of them runs it outside the wrapper, and gives up atomicity for
-that step.
+This demonstrates the listed operations, not every schema command. The
+[CREATE INDEX manual, Building Indexes Concurrently](https://www.postgresql.org/docs/18/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY)
+documents that a regular index build can run inside a transaction block, while
+CREATE INDEX CONCURRENTLY cannot. Other commands have their own restrictions; a
+migration must check each command's manual and its external effects before claiming
+all-or-nothing execution. The [MySQL lesson](/mysql/05-patterns/orm-pitfalls) demonstrates
+that non-concurrent CREATE INDEX commits the preceding INSERT on MySQL 8.4.11.
 
 ## Further reading
 
-- [PostgreSQL docs: BEGIN](https://www.postgresql.org/docs/current/sql-begin.html) ·
-  [COMMIT](https://www.postgresql.org/docs/current/sql-commit.html) ·
-  [ROLLBACK](https://www.postgresql.org/docs/current/sql-rollback.html)
-- [PostgreSQL docs: SQLSTATE codes (Appendix A)](https://www.postgresql.org/docs/current/errcodes-appendix.html):
-  `25P02` is `in_failed_sql_transaction`
-- [PostgreSQL docs: CREATE INDEX](https://www.postgresql.org/docs/current/sql-createindex.html):
-  regular builds run inside a transaction block, `CONCURRENTLY` cannot
+- [PostgreSQL 18: BEGIN](https://www.postgresql.org/docs/18/sql-begin.html), [COMMIT](https://www.postgresql.org/docs/18/sql-commit.html), [ROLLBACK](https://www.postgresql.org/docs/18/sql-rollback.html)
+- [SQLSTATE codes](https://www.postgresql.org/docs/18/errcodes-appendix.html): 25P02 is in_failed_sql_transaction
 - [The same lesson on MySQL](/mysql/01-basics/begin-commit-rollback)

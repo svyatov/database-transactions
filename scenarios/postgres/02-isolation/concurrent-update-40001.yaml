@@ -1,8 +1,6 @@
-title: REPEATABLE READ refuses to overwrite concurrent changes
+title: REPEATABLE READ rejects these concurrent committed updates
 claim: >-
-  A REPEATABLE READ transaction that tries to UPDATE a row modified since its
-  snapshot fails with SQLSTATE 40001 — immediately if the change is committed,
-  or after waiting if it isn't.
+  A's UPDATE at REPEATABLE READ fails with 40001 when B updates its target row after A's snapshot, both when B has already committed and when A waits for B to commit; when B rolls back instead, A's waiting UPDATE succeeds.
 anomaly: P4
 isolation: REPEATABLE READ
 setup: |
@@ -31,10 +29,11 @@ steps:
       later: A first waits on the row lock…
   - A: BEGIN ISOLATION LEVEL REPEATABLE READ
   - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 150 }]
     comment: snapshot taken
     tl: SELECT (snapshot taken)
 
-  - B: BEGIN
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
   - B: UPDATE accounts SET balance = 300 WHERE id = 1
     tl: UPDATE balance = 300 (uncommitted)
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
@@ -42,10 +41,24 @@ steps:
     tl: UPDATE balance = 999
 
   - note: >-
-      …and fails with 40001 the moment B commits. (Had B rolled back, A would
-      have proceeded.)
+      A's waiting UPDATE fails with 40001 after B commits. The next schedule
+      checks the different outcome when B rolls back.
   - B: COMMIT
     tl: COMMIT
   - failure: p1
     error: "40001"
   - A: ROLLBACK
+
+  - A: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 300 }]
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
+  - B: UPDATE accounts SET balance = 400 WHERE id = 1
+  - A: UPDATE accounts SET balance = 999 WHERE id = 1
+    blocks: p2
+  - B: ROLLBACK
+  - success: p2
+    affected: 1
+  - A: COMMIT
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 999 }]

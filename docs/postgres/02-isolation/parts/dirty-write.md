@@ -8,16 +8,16 @@ A: COMMIT ← locks released, B wakes up
 B: ⏵ UPDATE id=1 price=12 → completes
 B: UPDATE id=2 price=22
 B: COMMIT
-A: SELECT → 12, 22 ← all B, never a mix
+A: SELECT → 12, 22 ← both final prices are B's
 ```
 
-*Two batch jobs reprice the whole catalog concurrently. A mix of their prices (A's mug with B's cap) would be a dirty write — a state no serial order could produce.*
+*Both batch jobs update the same two rows. A dirty write would overwrite a row before its previous writer commits or rolls back; the wait below prevents that overwrite in this schedule.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE items SET price = 11 WHERE id = 1;
@@ -45,7 +45,7 @@ UPDATE 1
 B> COMMIT;
 COMMIT
 
-A> SELECT id, price FROM items ORDER BY id; -- all B — as if B had run after A. Never 12/21 or 11/22.
+A> SELECT id, price FROM items ORDER BY id; -- both final prices are B's in this order
  id | price 
 ----+-------
   1 |    12 

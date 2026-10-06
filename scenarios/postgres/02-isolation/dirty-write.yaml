@@ -1,8 +1,6 @@
-title: Dirty writes are impossible — row locks serialize writers
+title: Row locks prevent an uncommitted overwrite
 claim: >-
-  Two transactions repricing the same rows cannot interleave their writes
-  (Adya's G0, "dirty write"): the second writer waits for the first to finish,
-  so the final state is one transaction's prices, never a mix.
+  At READ COMMITTED, B's UPDATE of row 1 waits for A to commit before proceeding; after both transactions update both rows and commit in this order, both final prices are B's.
 anomaly: G0
 setup: |
   CREATE TABLE items (id int PRIMARY KEY, name text NOT NULL, price int NOT NULL);
@@ -10,11 +8,11 @@ setup: |
 sessions: [A, B]
 steps:
   - note: >-
-      Two batch jobs reprice the whole catalog concurrently. A mix of their
-      prices (A's mug with B's cap) would be a dirty write — a state no serial
-      order could produce.
-  - A: BEGIN
-  - B: BEGIN
+      Both batch jobs update the same two rows. A dirty write would overwrite
+      a row before its previous writer commits or rolls back; the wait below
+      prevents that overwrite in this schedule.
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: UPDATE items SET price = 11 WHERE id = 1
     tl: UPDATE id=1 price=11
 
@@ -37,5 +35,5 @@ steps:
 
   - A: SELECT id, price FROM items ORDER BY id
     expect: [{ id: 1, price: 12 }, { id: 2, price: 22 }]
-    comment: all B — as if B had run after A. Never 12/21 or 11/22.
-    tl: SELECT → 12, 22 ← all B, never a mix
+    comment: both final prices are B's in this order
+    tl: SELECT → 12, 22 ← both final prices are B's

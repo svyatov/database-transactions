@@ -13,10 +13,10 @@ A: SELECT → 111, 222 ← both writes, no cross-read
 *A adjusts alice's balance while B adjusts bob's — then each peeks at the other's row. If both saw the other's uncommitted write, information would flow in a circle: A → B → A. No serial order can do that.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 111 WHERE id = 1;

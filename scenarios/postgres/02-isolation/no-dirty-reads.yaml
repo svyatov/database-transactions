@@ -1,7 +1,6 @@
-title: PostgreSQL has no dirty reads — not even at READ UNCOMMITTED
+title: READ UNCOMMITTED does not expose this uncommitted UPDATE
 claim: >-
-  PostgreSQL accepts READ UNCOMMITTED syntax but behaves as READ COMMITTED:
-  uncommitted changes from other transactions are never visible.
+  B accepts the READ UNCOMMITTED setting but its plain SELECT reads the committed 100 rather than A's uncommitted 999, which A later rolls back.
 anomaly: G1a
 isolation: READ UNCOMMITTED
 setup: |
@@ -9,13 +8,13 @@ setup: |
   INSERT INTO accounts VALUES (1, 'alice', 100);
 sessions: [A, B]
 steps:
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
     tl: UPDATE balance = 999 (uncommitted)
 
   - note: >-
-      B explicitly requests READ UNCOMMITTED — the one level that would permit
-      dirty reads.
+      The SQL standard permits dirty reads at READ UNCOMMITTED; PostgreSQL maps
+      that request to READ COMMITTED behavior.
   - B: BEGIN ISOLATION LEVEL READ UNCOMMITTED
   - B: SELECT current_setting('transaction_isolation') AS isolation
     expect: [{ isolation: "read uncommitted" }]

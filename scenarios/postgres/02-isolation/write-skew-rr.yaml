@@ -1,8 +1,6 @@
-title: "Write skew: REPEATABLE READ is not enough"
+title: Write skew with REPEATABLE READ and separate-row updates
 claim: >-
-  Two REPEATABLE READ transactions can each validate an invariant against
-  their snapshots, write to different rows, and both commit — leaving the
-  invariant broken. This is write skew.
+  Both REPEATABLE READ transactions read two on-call doctors, update different rows, and commit in this schedule; the final asserted on-call count is zero.
 anomaly: G2-item
 isolation: REPEATABLE READ
 setup: |
@@ -43,5 +41,6 @@ steps:
     tl: SELECT on_call → 0 ← invariant broken
 
   - note: >-
-      Each transaction was internally consistent; together they broke the
-      rule. Only SERIALIZABLE catches this.
+      Both transactions checked their own snapshots, but the final count is
+      zero. SERIALIZABLE rejects this schedule; coordinating all writers
+      with suitable explicit locks is another approach.

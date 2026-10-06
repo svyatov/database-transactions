@@ -1,13 +1,12 @@
-title: Autocommit and visibility
+title: Autocommit and READ COMMITTED visibility
 claim: >-
-  Without BEGIN, every statement commits instantly and is immediately visible
-  to everyone; inside BEGIN, changes stay private until COMMIT.
+  B sees A's successful autocommit UPDATE in its next plain SELECT at READ COMMITTED; an explicit transaction's UPDATE becomes visible to B only after COMMIT.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
 sessions: [A, B]
 steps:
-  - note: No BEGIN — the UPDATE is its own transaction, committed the instant it finishes.
+  - note: "No BEGIN: this successful UPDATE commits as its own transaction before the next SELECT."
   - A: UPDATE accounts SET balance = 150 WHERE id = 1
     tl: UPDATE balance = 150 (autocommit, committed at once)
 
@@ -17,7 +16,7 @@ steps:
     tl: SELECT → 150 ← visible right away
 
   - note: Inside an explicit transaction, A's change is invisible to B…
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
     tl: UPDATE balance = 999 (uncommitted)
 
@@ -33,3 +32,9 @@ steps:
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 999 }]
     tl: SELECT → 999 ← now B sees it
+
+  - note: A failed autocommit statement does not leave the next statement in a failed transaction.
+  - A.fails: SELECT 1 / 0
+    error: "22012"
+  - A: SELECT 1 AS recovered
+    expect: [{ recovered: 1 }]

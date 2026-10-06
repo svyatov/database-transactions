@@ -1,7 +1,6 @@
 title: Phantom read under READ COMMITTED
 claim: >-
-  At READ COMMITTED, re-running the same range query inside one transaction
-  can return rows that weren't there before — phantoms.
+  A's first aggregate at READ COMMITTED counts two matching orders; after B commits a matching INSERT, A's next aggregate counts three and totals 1500.
 anomaly: PMP
 isolation: READ COMMITTED
 setup: |

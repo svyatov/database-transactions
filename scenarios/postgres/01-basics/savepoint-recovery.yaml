@@ -1,13 +1,12 @@
-title: "Savepoints: recover from errors mid-transaction"
+title: "Savepoints: recover from a uniqueness error"
 claim: >-
-  ROLLBACK TO SAVEPOINT un-aborts a failed transaction, discarding only the
-  work done after the savepoint — the rest commits normally.
+  ROLLBACK TO the savepoint recovers from this uniqueness violation; the earlier INSERT and a later replacement INSERT commit successfully.
 setup: |
   CREATE TABLE items (id int PRIMARY KEY, name text NOT NULL UNIQUE);
   INSERT INTO items VALUES (1, 'widget');
 sessions: [A]
 steps:
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: INSERT INTO items VALUES (2, 'gadget')
   - A: SAVEPOINT before_risky
 

@@ -16,7 +16,7 @@ C: SELECT → 12, 18 ← now all of B, atomically
 *A rewrites both balances. B will overwrite one of them right after.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 11 WHERE id = 1;
@@ -25,7 +25,7 @@ UPDATE 1
 A> UPDATE accounts SET balance = 19 WHERE id = 2;
 UPDATE 1
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> UPDATE accounts SET balance = 12 WHERE id = 1;

@@ -1,7 +1,6 @@
-title: "Atomicity: all or nothing"
+title: "Atomicity: rollback removes the partial transfer"
 claim: >-
-  A transaction that fails halfway leaves zero partial writes — even
-  statements that already succeeded inside it are undone.
+  In this explicit transaction, a CHECK violation follows a successful credit; after ROLLBACK, both balances retain their original values.
 setup: |
   CREATE TABLE accounts (
     id      int PRIMARY KEY,
@@ -12,7 +11,7 @@ setup: |
 sessions: [A, B]
 steps:
   - note: A transfers 150 from alice to bob. Crediting bob works fine…
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: UPDATE accounts SET balance = balance + 150 WHERE owner = 'bob'
     tl: credit bob +150 (uncommitted)
 
@@ -28,8 +27,8 @@ steps:
     tl: debit alice −150
 
   - note: >-
-      The failed transaction can only be rolled back. Bob's credit — which had
-      succeeded — evaporates with it.
+      This run uses full ROLLBACK after the CHECK violation. Bob's earlier
+      credit is undone along with the failed transfer.
   - A: ROLLBACK
     tl: ROLLBACK ← bob's credit vanishes too
 

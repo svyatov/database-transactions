@@ -9,7 +9,7 @@ B: SELECT → 110 ← only the final value, never 999
 ```
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 999 WHERE id = 1; -- a working draft — A isn't done yet
@@ -34,6 +34,6 @@ B> SELECT balance FROM accounts WHERE id = 1;
 (1 row)
 ```
 
-*To every other transaction, the balance went 100 → 110 in one step. The intermediate 999 never existed outside A.*
+*B's two SELECTs returned 100 and 110, never A's uncommitted draft 999. A transaction with an older stable snapshot need not see 110 yet.*
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/intermediate-read.yaml)</small>

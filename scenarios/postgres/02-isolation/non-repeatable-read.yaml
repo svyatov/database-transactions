@@ -1,7 +1,6 @@
 title: Non-repeatable read under READ COMMITTED
 claim: >-
-  At READ COMMITTED, a transaction can read two different values for the same
-  row — other transactions' commits become visible between its statements.
+  A's plain SELECTs at READ COMMITTED return 100 and then 200 around B's committed UPDATE; in the following writer schedule, B waits for A's row lock before committing 400.
 anomaly: P2
 isolation: READ COMMITTED
 setup: |
@@ -24,9 +23,10 @@ steps:
   - A: COMMIT
 
   - note: >-
-      Readers never block — but writers do. The same interleaving with UPDATEs
-      makes B wait for A's row lock.
-  - A: BEGIN
+      The plain SELECTs above did not wait for a row lock. The following
+      UPDATE of the same row makes B wait for A's row lock; SELECT can still
+      wait for conflicting table locks.
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: UPDATE accounts SET balance = 300 WHERE id = 1
   - B: UPDATE accounts SET balance = 400 WHERE id = 1
     blocks: p1
