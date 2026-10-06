@@ -32,8 +32,10 @@ documents that later savepoints are destroyed and the target remains usable.
 [RELEASE SAVEPOINT](https://www.postgresql.org/docs/18/sql-release-savepoint.html#SQL-RELEASE-SAVEPOINT-DESCRIPTION)
 removes a savepoint and later savepoints without discarding their transactional changes; it does not commit.
 The [subtransaction manual](https://www.postgresql.org/docs/18/subxacts.html) documents
-increased storage I/O overhead beyond 64 open subtransactions per backend. No performance
-measurement in these Scenarios establishes a workload-specific cost.
+increased storage I/O overhead beyond 64 open subxids (assigned nonvirtual subtransaction
+IDs) per backend. Read-only subtransactions receive no subxid. A write assigns one
+to the subtransaction and also assigns nonvirtual IDs to any ancestors that need them.
+No performance measurement in these Scenarios establishes a workload-specific cost.
 
 ## Further reading
 
