@@ -3,7 +3,7 @@
 *A migration script wraps its work in a transaction, believing that makes it atomic: insert data, add an index, create a table — and if anything fails, roll back.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> INSERT INTO orders VALUES (1, 'draft');
@@ -21,6 +21,13 @@ CREATE INDEX
 A> CREATE TABLE migration_log (id int PRIMARY KEY, note text);
 CREATE TABLE
 
+A> SELECT to_regclass('migration_log') IS NOT NULL AS table_exists,
+          to_regclass('idx_orders_state') IS NOT NULL AS index_exists;
+ table_exists | index_exists 
+--------------+--------------
+ t            | t            
+(1 row)
+
 B> SELECT count(*)::int AS visible FROM orders; -- still nothing committed — the DDL joined the transaction
  visible 
 ---------
@@ -34,6 +41,9 @@ ERROR:  42P01: relation "migration_log" does not exist
 *The script now hits an error and rolls back, trusting the transaction to clean up:*
 
 ```transcript
+A> INSERT INTO orders VALUES (1, 'duplicate');
+ERROR:  23505: duplicate key value violates unique constraint "orders_pkey"
+
 A> ROLLBACK;
 ROLLBACK
 
@@ -51,6 +61,6 @@ B> SELECT to_regclass('migration_log') IS NULL AS table_gone,
 (1 row)
 ```
 
-*PostgreSQL keeps schema changes in the same transaction as the data. A migration that inserts, indexes, and creates its way to an error leaves nothing behind — design for atomicity, not for re-runnability.*
+*This rollback removed the INSERT, the non-concurrent index, and the new table. It does not test all DDL or external migration effects.*
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/01-basics/ddl-rollback.yaml)</small>

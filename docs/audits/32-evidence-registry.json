@@ -1,0 +1,336 @@
+[
+  {
+    "id": "P1",
+    "path": "docs/postgres/01-basics/begin-commit-rollback.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios. Comparative CREATE INDEX statement: MySQL 8.4.11, InnoDB table, default autocommit, explicit BEGIN followed by index build.",
+    "evidence": "scenarios/postgres/01-basics/autocommit-visibility.yaml; scenarios/postgres/01-basics/aborted-transaction.yaml; scenarios/postgres/01-basics/ddl-rollback.yaml; scenarios/mysql/05-patterns/implicit-commit.yaml:12-32; docs/mysql/05-patterns/parts/implicit-commit.md; https://www.postgresql.org/docs/18/tutorial-transactions.html; https://www.postgresql.org/docs/18/sql-rollback-to.html; https://www.postgresql.org/docs/18/sql-release-savepoint.html; https://www.postgresql.org/docs/18/subxacts.html; https://www.postgresql.org/docs/18/protocol-flow.html#PROTOCOL-FLOW-MULTI-STATEMENT; https://www.postgresql.org/docs/18/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY",
+    "assertions": []
+  },
+  {
+    "id": "P2",
+    "path": "docs/postgres/01-basics/savepoints.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios",
+    "evidence": "scenarios/postgres/01-basics/savepoint-recovery.yaml; scenarios/postgres/01-basics/savepoint-nesting.yaml; https://www.postgresql.org/docs/18/tutorial-transactions.html; https://www.postgresql.org/docs/18/sql-rollback-to.html; https://www.postgresql.org/docs/18/sql-release-savepoint.html; https://www.postgresql.org/docs/18/subxacts.html; https://www.postgresql.org/docs/18/protocol-flow.html#PROTOCOL-FLOW-MULTI-STATEMENT",
+    "assertions": []
+  },
+  {
+    "id": "P3",
+    "path": "docs/postgres/01-basics/what-is-a-transaction.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios",
+    "evidence": "scenarios/postgres/01-basics/atomicity.yaml; https://www.postgresql.org/docs/18/tutorial-transactions.html; https://www.postgresql.org/docs/18/sql-rollback-to.html; https://www.postgresql.org/docs/18/sql-release-savepoint.html; https://www.postgresql.org/docs/18/subxacts.html; https://www.postgresql.org/docs/18/protocol-flow.html#PROTOCOL-FLOW-MULTI-STATEMENT",
+    "assertions": []
+  },
+  {
+    "id": "P4",
+    "path": "docs/postgres/02-isolation/anomaly-catalog.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios",
+    "evidence": "scenarios/postgres/02-isolation/dirty-write.yaml; scenarios/postgres/02-isolation/intermediate-read.yaml; scenarios/postgres/02-isolation/circular-information-flow.yaml; scenarios/postgres/02-isolation/observed-transaction-vanishes.yaml; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES; https://www.postgresql.org/docs/18/sql-set-transaction.html",
+    "assertions": []
+  },
+  {
+    "id": "P5",
+    "path": "docs/postgres/02-isolation/lost-update.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios",
+    "evidence": "scenarios/postgres/02-isolation/lost-update-read-committed.yaml; scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES; https://www.postgresql.org/docs/18/sql-set-transaction.html",
+    "assertions": []
+  },
+  {
+    "id": "P6",
+    "path": "docs/postgres/02-isolation/read-committed.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios",
+    "evidence": "scenarios/postgres/02-isolation/no-dirty-reads.yaml; scenarios/postgres/02-isolation/non-repeatable-read.yaml; scenarios/postgres/02-isolation/phantom-read.yaml; scenarios/postgres/02-isolation/read-skew.yaml; scenarios/postgres/02-isolation/update-recheck.yaml; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES; https://www.postgresql.org/docs/18/sql-set-transaction.html",
+    "assertions": []
+  },
+  {
+    "id": "P7",
+    "path": "docs/postgres/02-isolation/repeatable-read.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios",
+    "evidence": "scenarios/postgres/02-isolation/stable-snapshot.yaml; scenarios/postgres/02-isolation/concurrent-update-40001.yaml; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES; https://www.postgresql.org/docs/18/sql-set-transaction.html",
+    "assertions": []
+  },
+  {
+    "id": "P8",
+    "path": "docs/postgres/02-isolation/serializable.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios",
+    "evidence": "scenarios/postgres/02-isolation/write-skew-rr.yaml; scenarios/postgres/02-isolation/write-skew-serializable.yaml; scenarios/postgres/02-isolation/read-only-anomaly.yaml; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES; https://www.postgresql.org/docs/18/sql-set-transaction.html",
+    "assertions": []
+  },
+  {
+    "id": "P9",
+    "path": "docs/postgres/02-isolation/snapshots-and-the-four-levels.md",
+    "scope": "PostgreSQL 18 contracts; operation and conditions in paragraph/cell; 18.6 schedules in linked Scenarios",
+    "evidence": "https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ; https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS; https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES; https://www.postgresql.org/docs/18/sql-set-transaction.html",
+    "assertions": []
+  },
+  {
+    "id": "P10",
+    "path": "scenarios/postgres/01-basics/aborted-transaction.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/BEGIN/SELECT/ROLLBACK/INSERT/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/01-basics/aborted-transaction.yaml; docs/postgres/01-basics/parts/aborted-transaction.md; docs/public/ledger.jsonl record scenario=postgres/01-basics/aborted-transaction.yaml; docs/public/llms-full.txt section=postgres/01-basics/aborted-transaction.yaml",
+    "assertions": [
+      "scenarios/postgres/01-basics/aborted-transaction.yaml:11",
+      "scenarios/postgres/01-basics/aborted-transaction.yaml:16",
+      "scenarios/postgres/01-basics/aborted-transaction.yaml:23",
+      "scenarios/postgres/01-basics/aborted-transaction.yaml:27",
+      "scenarios/postgres/01-basics/aborted-transaction.yaml:29",
+      "scenarios/postgres/01-basics/aborted-transaction.yaml:33"
+    ]
+  },
+  {
+    "id": "P11",
+    "path": "scenarios/postgres/01-basics/atomicity.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/UPDATE/SELECT/ROLLBACK; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/01-basics/atomicity.yaml; docs/postgres/01-basics/parts/atomicity.md; docs/public/ledger.jsonl record scenario=postgres/01-basics/atomicity.yaml; docs/public/llms-full.txt section=postgres/01-basics/atomicity.yaml",
+    "assertions": [
+      "scenarios/postgres/01-basics/atomicity.yaml:19",
+      "scenarios/postgres/01-basics/atomicity.yaml:25",
+      "scenarios/postgres/01-basics/atomicity.yaml:36"
+    ]
+  },
+  {
+    "id": "P12",
+    "path": "scenarios/postgres/01-basics/autocommit-visibility.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/UPDATE/SELECT/BEGIN/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/01-basics/autocommit-visibility.yaml; docs/postgres/01-basics/parts/autocommit-visibility.md; docs/public/ledger.jsonl record scenario=postgres/01-basics/autocommit-visibility.yaml; docs/public/llms-full.txt section=postgres/01-basics/autocommit-visibility.yaml",
+    "assertions": [
+      "scenarios/postgres/01-basics/autocommit-visibility.yaml:14",
+      "scenarios/postgres/01-basics/autocommit-visibility.yaml:24",
+      "scenarios/postgres/01-basics/autocommit-visibility.yaml:33",
+      "scenarios/postgres/01-basics/autocommit-visibility.yaml:38",
+      "scenarios/postgres/01-basics/autocommit-visibility.yaml:40"
+    ]
+  },
+  {
+    "id": "P13",
+    "path": "scenarios/postgres/01-basics/ddl-rollback.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/BEGIN/INSERT/SELECT/ROLLBACK; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects. The CREATE INDEX comparison note refers only to MySQL 8.4.11's demonstrated index-build implicit commit.",
+    "evidence": "scenarios/postgres/01-basics/ddl-rollback.yaml; docs/postgres/01-basics/parts/ddl-rollback.md; docs/public/ledger.jsonl record scenario=postgres/01-basics/ddl-rollback.yaml; docs/public/llms-full.txt section=postgres/01-basics/ddl-rollback.yaml; scenarios/mysql/05-patterns/implicit-commit.yaml:12-32; docs/mysql/05-patterns/parts/implicit-commit.md",
+    "assertions": [
+      "scenarios/postgres/01-basics/ddl-rollback.yaml:15",
+      "scenarios/postgres/01-basics/ddl-rollback.yaml:24",
+      "scenarios/postgres/01-basics/ddl-rollback.yaml:27",
+      "scenarios/postgres/01-basics/ddl-rollback.yaml:31",
+      "scenarios/postgres/01-basics/ddl-rollback.yaml:38",
+      "scenarios/postgres/01-basics/ddl-rollback.yaml:41",
+      "scenarios/postgres/01-basics/ddl-rollback.yaml:47"
+    ]
+  },
+  {
+    "id": "P14",
+    "path": "scenarios/postgres/01-basics/savepoint-nesting.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/BEGIN/INSERT/SAVEPOINT/ROLLBACK/RELEASE/COMMIT/SELECT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/01-basics/savepoint-nesting.yaml; docs/postgres/01-basics/parts/savepoint-nesting.md; docs/public/ledger.jsonl record scenario=postgres/01-basics/savepoint-nesting.yaml; docs/public/llms-full.txt section=postgres/01-basics/savepoint-nesting.yaml",
+    "assertions": [
+      "scenarios/postgres/01-basics/savepoint-nesting.yaml:19",
+      "scenarios/postgres/01-basics/savepoint-nesting.yaml:30",
+      "scenarios/postgres/01-basics/savepoint-nesting.yaml:36"
+    ]
+  },
+  {
+    "id": "P15",
+    "path": "scenarios/postgres/01-basics/savepoint-recovery.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; ROLLBACK/CREATE/INSERT/BEGIN/SAVEPOINT/COMMIT/SELECT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/01-basics/savepoint-recovery.yaml; docs/postgres/01-basics/parts/savepoint-recovery.md; docs/public/ledger.jsonl record scenario=postgres/01-basics/savepoint-recovery.yaml; docs/public/llms-full.txt section=postgres/01-basics/savepoint-recovery.yaml",
+    "assertions": [
+      "scenarios/postgres/01-basics/savepoint-recovery.yaml:14",
+      "scenarios/postgres/01-basics/savepoint-recovery.yaml:25"
+    ]
+  },
+  {
+    "id": "P16",
+    "path": "scenarios/postgres/02-isolation/circular-information-flow.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/UPDATE/SELECT/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/circular-information-flow.yaml; docs/postgres/02-isolation/parts/circular-information-flow.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/circular-information-flow.yaml; docs/public/llms-full.txt section=postgres/02-isolation/circular-information-flow.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/circular-information-flow.yaml:22",
+      "scenarios/postgres/02-isolation/circular-information-flow.yaml:26",
+      "scenarios/postgres/02-isolation/circular-information-flow.yaml:36"
+    ]
+  },
+  {
+    "id": "P17",
+    "path": "scenarios/postgres/02-isolation/concurrent-update-40001.yaml",
+    "scope": "PostgreSQL 18.6; REPEATABLE READ/READ COMMITTED; CREATE/INSERT/BEGIN/SELECT/UPDATE/ROLLBACK/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/concurrent-update-40001.yaml; docs/postgres/02-isolation/parts/concurrent-update-40001.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/concurrent-update-40001.yaml; docs/public/llms-full.txt section=postgres/02-isolation/concurrent-update-40001.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:13",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:21",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:23",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:32",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:40",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:49",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:54",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:58",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:61",
+      "scenarios/postgres/02-isolation/concurrent-update-40001.yaml:64"
+    ]
+  },
+  {
+    "id": "P18",
+    "path": "scenarios/postgres/02-isolation/dirty-write.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/UPDATE/COMMIT/SELECT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/dirty-write.yaml; docs/postgres/02-isolation/parts/dirty-write.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/dirty-write.yaml; docs/public/llms-full.txt section=postgres/02-isolation/dirty-write.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/dirty-write.yaml:21",
+      "scenarios/postgres/02-isolation/dirty-write.yaml:37"
+    ]
+  },
+  {
+    "id": "P19",
+    "path": "scenarios/postgres/02-isolation/intermediate-read.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/UPDATE/SELECT/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/intermediate-read.yaml; docs/postgres/02-isolation/parts/intermediate-read.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/intermediate-read.yaml; docs/public/llms-full.txt section=postgres/02-isolation/intermediate-read.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/intermediate-read.yaml:16",
+      "scenarios/postgres/02-isolation/intermediate-read.yaml:27"
+    ]
+  },
+  {
+    "id": "P20",
+    "path": "scenarios/postgres/02-isolation/lost-update-read-committed.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/SELECT/UPDATE/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/lost-update-read-committed.yaml; docs/postgres/02-isolation/parts/lost-update-read-committed.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/lost-update-read-committed.yaml; docs/public/llms-full.txt section=postgres/02-isolation/lost-update-read-committed.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/lost-update-read-committed.yaml:15",
+      "scenarios/postgres/02-isolation/lost-update-read-committed.yaml:21",
+      "scenarios/postgres/02-isolation/lost-update-read-committed.yaml:40"
+    ]
+  },
+  {
+    "id": "P21",
+    "path": "scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml",
+    "scope": "PostgreSQL 18.6; REPEATABLE READ; CREATE/INSERT/BEGIN/SELECT/UPDATE/COMMIT/ROLLBACK; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml; docs/postgres/02-isolation/parts/lost-update-repeatable-read.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/lost-update-repeatable-read.yaml; docs/public/llms-full.txt section=postgres/02-isolation/lost-update-repeatable-read.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml:19",
+      "scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml:32",
+      "scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml:38",
+      "scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml:46",
+      "scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml:49",
+      "scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml:52"
+    ]
+  },
+  {
+    "id": "P22",
+    "path": "scenarios/postgres/02-isolation/no-dirty-reads.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED/READ UNCOMMITTED; CREATE/INSERT/BEGIN/UPDATE/SELECT/COMMIT/ROLLBACK; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/no-dirty-reads.yaml; docs/postgres/02-isolation/parts/no-dirty-reads.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/no-dirty-reads.yaml; docs/public/llms-full.txt section=postgres/02-isolation/no-dirty-reads.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/no-dirty-reads.yaml:20",
+      "scenarios/postgres/02-isolation/no-dirty-reads.yaml:24"
+    ]
+  },
+  {
+    "id": "P23",
+    "path": "scenarios/postgres/02-isolation/non-repeatable-read.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/SELECT/UPDATE/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/non-repeatable-read.yaml; docs/postgres/02-isolation/parts/non-repeatable-read.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/non-repeatable-read.yaml; docs/public/llms-full.txt section=postgres/02-isolation/non-repeatable-read.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/non-repeatable-read.yaml:13",
+      "scenarios/postgres/02-isolation/non-repeatable-read.yaml:20",
+      "scenarios/postgres/02-isolation/non-repeatable-read.yaml:32",
+      "scenarios/postgres/02-isolation/non-repeatable-read.yaml:37"
+    ]
+  },
+  {
+    "id": "P24",
+    "path": "scenarios/postgres/02-isolation/observed-transaction-vanishes.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/UPDATE/COMMIT/SELECT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/observed-transaction-vanishes.yaml; docs/postgres/02-isolation/parts/observed-transaction-vanishes.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/observed-transaction-vanishes.yaml; docs/public/llms-full.txt section=postgres/02-isolation/observed-transaction-vanishes.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/observed-transaction-vanishes.yaml:19",
+      "scenarios/postgres/02-isolation/observed-transaction-vanishes.yaml:30",
+      "scenarios/postgres/02-isolation/observed-transaction-vanishes.yaml:37",
+      "scenarios/postgres/02-isolation/observed-transaction-vanishes.yaml:44"
+    ]
+  },
+  {
+    "id": "P25",
+    "path": "scenarios/postgres/02-isolation/phantom-read.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/SELECT/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/phantom-read.yaml; docs/postgres/02-isolation/parts/phantom-read.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/phantom-read.yaml; docs/public/llms-full.txt section=postgres/02-isolation/phantom-read.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/phantom-read.yaml:16",
+      "scenarios/postgres/02-isolation/phantom-read.yaml:25"
+    ]
+  },
+  {
+    "id": "P26",
+    "path": "scenarios/postgres/02-isolation/read-only-anomaly.yaml",
+    "scope": "PostgreSQL 18.6; REPEATABLE READ/SERIALIZABLE; CREATE/INSERT/BEGIN/SELECT/UPDATE/COMMIT/DELETE; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/read-only-anomaly.yaml; docs/postgres/02-isolation/parts/read-only-anomaly.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/read-only-anomaly.yaml; docs/public/llms-full.txt section=postgres/02-isolation/read-only-anomaly.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:17",
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:34",
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:38",
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:50",
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:62",
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:71",
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:73",
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:81",
+      "scenarios/postgres/02-isolation/read-only-anomaly.yaml:84"
+    ]
+  },
+  {
+    "id": "P27",
+    "path": "scenarios/postgres/02-isolation/read-skew.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED/REPEATABLE READ; CREATE/INSERT/BEGIN/SELECT/UPDATE/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/read-skew.yaml; docs/postgres/02-isolation/parts/read-skew.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/read-skew.yaml; docs/public/llms-full.txt section=postgres/02-isolation/read-skew.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/read-skew.yaml:16",
+      "scenarios/postgres/02-isolation/read-skew.yaml:29",
+      "scenarios/postgres/02-isolation/read-skew.yaml:40",
+      "scenarios/postgres/02-isolation/read-skew.yaml:48"
+    ]
+  },
+  {
+    "id": "P28",
+    "path": "scenarios/postgres/02-isolation/stable-snapshot.yaml",
+    "scope": "PostgreSQL 18.6; REPEATABLE READ; CREATE/INSERT/BEGIN/UPDATE/SELECT/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/stable-snapshot.yaml; docs/postgres/02-isolation/parts/stable-snapshot.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/stable-snapshot.yaml; docs/public/llms-full.txt section=postgres/02-isolation/stable-snapshot.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/stable-snapshot.yaml:13",
+      "scenarios/postgres/02-isolation/stable-snapshot.yaml:18",
+      "scenarios/postgres/02-isolation/stable-snapshot.yaml:27",
+      "scenarios/postgres/02-isolation/stable-snapshot.yaml:33",
+      "scenarios/postgres/02-isolation/stable-snapshot.yaml:35",
+      "scenarios/postgres/02-isolation/stable-snapshot.yaml:41"
+    ]
+  },
+  {
+    "id": "P29",
+    "path": "scenarios/postgres/02-isolation/update-recheck.yaml",
+    "scope": "PostgreSQL 18.6; READ COMMITTED; CREATE/INSERT/BEGIN/UPDATE/COMMIT/SELECT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/update-recheck.yaml; docs/postgres/02-isolation/parts/update-recheck.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/update-recheck.yaml; docs/public/llms-full.txt section=postgres/02-isolation/update-recheck.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/update-recheck.yaml:18",
+      "scenarios/postgres/02-isolation/update-recheck.yaml:27",
+      "scenarios/postgres/02-isolation/update-recheck.yaml:31"
+    ]
+  },
+  {
+    "id": "P30",
+    "path": "scenarios/postgres/02-isolation/write-skew-rr.yaml",
+    "scope": "PostgreSQL 18.6; REPEATABLE READ; CREATE/INSERT/BEGIN/SELECT/UPDATE/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/write-skew-rr.yaml; docs/postgres/02-isolation/parts/write-skew-rr.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/write-skew-rr.yaml; docs/public/llms-full.txt section=postgres/02-isolation/write-skew-rr.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/write-skew-rr.yaml:18",
+      "scenarios/postgres/02-isolation/write-skew-rr.yaml:22",
+      "scenarios/postgres/02-isolation/write-skew-rr.yaml:39"
+    ]
+  },
+  {
+    "id": "P31",
+    "path": "scenarios/postgres/02-isolation/write-skew-serializable.yaml",
+    "scope": "PostgreSQL 18.6; SERIALIZABLE; CREATE/INSERT/BEGIN/SELECT/UPDATE/COMMIT; pinned compose defaults; own writes visible; transactional tables, no sequences or external effects",
+    "evidence": "scenarios/postgres/02-isolation/write-skew-serializable.yaml; docs/postgres/02-isolation/parts/write-skew-serializable.md; docs/public/ledger.jsonl record scenario=postgres/02-isolation/write-skew-serializable.yaml; docs/public/llms-full.txt section=postgres/02-isolation/write-skew-serializable.yaml",
+    "assertions": [
+      "scenarios/postgres/02-isolation/write-skew-serializable.yaml:16",
+      "scenarios/postgres/02-isolation/write-skew-serializable.yaml:19",
+      "scenarios/postgres/02-isolation/write-skew-serializable.yaml:30",
+      "scenarios/postgres/02-isolation/write-skew-serializable.yaml:35",
+      "scenarios/postgres/02-isolation/write-skew-serializable.yaml:44",
+      "scenarios/postgres/02-isolation/write-skew-serializable.yaml:47"
+    ]
+  }
+]

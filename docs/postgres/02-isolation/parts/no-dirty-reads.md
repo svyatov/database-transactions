@@ -7,7 +7,7 @@ B: SELECT → 100 ← A's 999 stays invisible
 ```
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 999 WHERE id = 1;

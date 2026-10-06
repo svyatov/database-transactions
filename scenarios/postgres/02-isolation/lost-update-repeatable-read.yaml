@@ -1,8 +1,6 @@
-title: REPEATABLE READ turns lost updates into errors
+title: REPEATABLE READ rejects a stale deposit, then a fresh retry succeeds
 claim: >-
-  The interleaving that silently loses an update at READ COMMITTED fails
-  loudly with SQLSTATE 40001 at REPEATABLE READ — no data is lost, the loser
-  just retries.
+  In this schedule at REPEATABLE READ, B's stale UPDATE fails with 40001 after A commits 110; after ROLLBACK, B reads 110 in a fresh transaction and commits 120.
 anomaly: P4
 isolation: REPEATABLE READ
 setup: |
@@ -20,7 +18,7 @@ steps:
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
     capture: readB
-    tl: SELECT balance → 100 (same snapshot)
+    tl: SELECT balance → 100 (B's pre-commit snapshot)
 
   - A: UPDATE accounts SET balance = ${readA.balance} + 10 WHERE id = 1
     tl: UPDATE balance = 100 + 10
@@ -38,7 +36,18 @@ steps:
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 110 }]
-    comment: A's deposit is safe; B retries and lands on 120
-    tl: SELECT balance → 110 — nothing lost, B retries
+    comment: only A's deposit has committed so far
+    tl: SELECT balance → 110 ← B's deposit has not committed
 
   - note: Retrying B from scratch reads the fresh 110 and correctly produces 120.
+
+  - B: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 110 }]
+    capture: retryB
+  - B: UPDATE accounts SET balance = ${retryB.balance} + 10 WHERE id = 1
+    affected: 1
+  - B: COMMIT
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 120 }]
+    tl: SELECT balance → 120 ← B's fresh retry committed

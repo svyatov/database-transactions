@@ -1,8 +1,6 @@
-title: A committed transaction never half-vanishes
+title: Committed rows remain visible during an uncommitted overwrite
 claim: >-
-  Once a transaction commits, every reader sees ALL of its writes or none
-  (Adya's OTV, "observed transaction vanishes"): a later overwrite of one row
-  cannot make the rest of the committed transaction disappear.
+  C's plain SELECTs at READ COMMITTED see both of A's committed balances while B's overwrites are uncommitted; after B commits both changes, C's next SELECT sees both of B's balances.
 anomaly: OTV
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
@@ -10,13 +8,13 @@ setup: |
 sessions: [A, B, C]
 steps:
   - note: A rewrites both balances. B will overwrite one of them right after.
-  - A: BEGIN
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
   - A: UPDATE accounts SET balance = 11 WHERE id = 1
     tl: UPDATE alice = 11
   - A: UPDATE accounts SET balance = 19 WHERE id = 2
     tl: UPDATE bob = 19
 
-  - B: BEGIN
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
   - B: UPDATE accounts SET balance = 12 WHERE id = 1
     blocks: p1
     tl: UPDATE alice = 12

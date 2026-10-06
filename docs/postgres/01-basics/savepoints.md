@@ -1,45 +1,41 @@
 # Savepoints
 
-A savepoint is a named bookmark inside a transaction. `ROLLBACK TO SAVEPOINT` rewinds to the
-bookmark, undoing everything after it, while the transaction itself stays alive and can
-continue. This is also the escape hatch from the "one error aborts everything" rule you saw in
-the [previous lesson](/postgres/01-basics/begin-commit-rollback).
-
-If you've ever used "nested transactions" in an ORM, you were using savepoints. PostgreSQL
-has no actual nested transactions. Rails'
-[`transaction(requires_new: true)`](https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/DatabaseStatements.html#method-i-transaction),
-Django's [`atomic()` inside `atomic()`](https://docs.djangoproject.com/en/stable/topics/db/transactions/#django.db.transaction.atomic),
-and SQLAlchemy's [`begin_nested()`](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#using-savepoint)
-all emit `SAVEPOINT` under the hood. Mind the Rails default, though: a nested `transaction do`
-block *without* `requires_new: true` creates no savepoint at all. It merely joins the outer
-transaction, and a `raise ActiveRecord::Rollback` inside it is swallowed without rolling
-anything back (the Rails docs [warn about exactly this](https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/DatabaseStatements.html#method-i-transaction)).
+A savepoint identifies a point within the current transaction. The
+[PostgreSQL 18 ROLLBACK TO manual](https://www.postgresql.org/docs/18/sql-rollback-to.html#SQL-ROLLBACK-TO-DESCRIPTION)
+documents that rollback to it discards later transactional changes without ending the transaction.
+Savepoints are not independently committed nested transactions: surviving changes
+remain part of the outer transaction.
 
 ## Recovering from an error mid-transaction
 
+This Scenario establishes a savepoint before a uniqueness violation, rolls back to it,
+then inserts a replacement row. The final SELECT asserts that the earlier INSERT and
+the replacement both committed.
+
 <!--@include: ./parts/savepoint-recovery.md-->
+
+This is recovery from a statement error with a usable prior savepoint. It is not a
+general substitute for [retrying a serialization failure](/postgres/05-patterns/retrying-serialization-failures)
+with a fresh transaction, and it cannot restore a closed connection.
 
 ## Nesting and RELEASE
 
-Savepoints stack. Rolling back to an outer savepoint destroys the inner ones, and `RELEASE`
-keeps the work but removes the bookmark:
+The Scenario rolls back to outer_sp, then asserts 3B001 when it tries inner_sp.
+After recovering to outer_sp again, it inserts row 4 and releases the savepoint.
+A subsequent rollback attempt asserts that outer_sp is gone; recovery through a newer
+savepoint permits COMMIT. The final rows are 1 and 4.
 
 <!--@include: ./parts/savepoint-nesting.md-->
 
-The through-line: `ROLLBACK TO SAVEPOINT` un-aborts a failed transaction, losing only the work
-after the savepoint, and rolling back to an outer savepoint destroys the inner ones (touch one
-afterwards and you get `3B001`). `RELEASE SAVEPOINT` says "I no longer need to rewind here" while
-keeping the changes as part of the transaction. None of this is free, though: every savepoint
-starts a [subtransaction](https://www.postgresql.org/docs/current/subxacts.html), and once you
-pass 64 open subtransactions per backend, the manual warns that "the storage I/O overhead
-increases significantly". A savepoint per row in a hot loop is a known performance trap: fine in
-moderation, ruinous in bulk.
+The [ROLLBACK TO description](https://www.postgresql.org/docs/18/sql-rollback-to.html#SQL-ROLLBACK-TO-DESCRIPTION)
+documents that later savepoints are destroyed and the target remains usable.
+[RELEASE SAVEPOINT](https://www.postgresql.org/docs/18/sql-release-savepoint.html#SQL-RELEASE-SAVEPOINT-DESCRIPTION)
+removes a savepoint and later savepoints without discarding their transactional changes; it does not commit.
+The [subtransaction manual](https://www.postgresql.org/docs/18/subxacts.html) documents
+increased storage I/O overhead beyond 64 open subtransactions per backend. No performance
+measurement in these Scenarios establishes a workload-specific cost.
 
 ## Further reading
 
-- [PostgreSQL docs: SAVEPOINT](https://www.postgresql.org/docs/current/sql-savepoint.html) ·
-  [ROLLBACK TO SAVEPOINT](https://www.postgresql.org/docs/current/sql-rollback-to.html) ·
-  [RELEASE SAVEPOINT](https://www.postgresql.org/docs/current/sql-release-savepoint.html)
-- [PostgreSQL docs: Subtransactions](https://www.postgresql.org/docs/current/subxacts.html):
-  what a savepoint actually costs
+- [PostgreSQL 18: SAVEPOINT](https://www.postgresql.org/docs/18/sql-savepoint.html)
 - [The same lesson on MySQL](/mysql/01-basics/savepoints)

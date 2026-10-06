@@ -3689,10 +3689,10 @@ B> SELECT balance FROM accounts WHERE id = 1; -- A's 200 rolled back with its de
 ## postgres/01-basics/aborted-transaction.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: After any error inside a transaction, PostgreSQL rejects every further statement with 25P02 until you ROLLBACK.
+- claim: After division by zero in this explicit transaction, SELECT fails with 25P02; ROLLBACK ends the failed transaction and a new SELECT succeeds. In the second transaction, COMMIT after the error rolls back the preceding INSERT.
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> SELECT 1 / 0; -- division_by_zero
@@ -3706,7 +3706,7 @@ A> SELECT 1 AS innocent; -- in_failed_sql_transaction
 ERROR:  25P02: current transaction is aborted, commands ignored until end of transaction block
 ```
 
-*ROLLBACK is the only way out. Afterwards, the session works normally again.*
+*This first transaction uses full ROLLBACK. The next transaction checks COMMIT after an error; savepoint recovery has its own Scenario.*
 
 ```transcript
 A> ROLLBACK;
@@ -3717,6 +3717,24 @@ A> SELECT 1 AS innocent;
 ----------
         1 
 (1 row)
+
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+A> INSERT INTO samples VALUES (1);
+INSERT 0 1
+
+A> SELECT 1 / 0;
+ERROR:  22012: division by zero
+
+A> COMMIT; -- a failed transaction ends by rolling back, even when COMMIT is sent
+ROLLBACK
+
+A> SELECT count(*)::int AS remaining FROM samples;
+ remaining 
+-----------
+         0 
+(1 row)
 ```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/01-basics/aborted-transaction.yaml)</small>
@@ -3724,7 +3742,7 @@ A> SELECT 1 AS innocent;
 ## postgres/01-basics/atomicity.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A transaction that fails halfway leaves zero partial writes — even statements that already succeeded inside it are undone.
+- claim: In this explicit transaction, a CHECK violation follows a successful credit; after ROLLBACK, both balances retain their original values.
 
 ```timeline
 A: credit bob +150 (uncommitted)
@@ -3737,7 +3755,7 @@ B: SELECT → alice 100, bob 50 ← nothing changed
 *A transfers 150 from alice to bob. Crediting bob works fine…*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = balance + 150 WHERE owner = 'bob';
@@ -3757,7 +3775,7 @@ A> UPDATE accounts SET balance = balance - 150 WHERE owner = 'alice'; -- check_v
 ERROR:  23514: new row for relation "accounts" violates check constraint "accounts_balance_check"
 ```
 
-*The failed transaction can only be rolled back. Bob's credit — which had succeeded — evaporates with it.*
+*This run uses full ROLLBACK after the CHECK violation. Bob's earlier credit is undone along with the failed transfer.*
 
 ```transcript
 A> ROLLBACK;
@@ -3776,7 +3794,7 @@ B> SELECT owner, balance FROM accounts ORDER BY id;
 ## postgres/01-basics/autocommit-visibility.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Without BEGIN, every statement commits instantly and is immediately visible to everyone; inside BEGIN, changes stay private until COMMIT.
+- claim: B sees A's successful autocommit UPDATE in its next plain SELECT at READ COMMITTED; an explicit transaction's UPDATE becomes visible to B only after COMMIT.
 
 ```timeline
 A: UPDATE balance = 150 (autocommit, committed at once)
@@ -3787,7 +3805,7 @@ A: COMMIT
 B: SELECT → 999 ← now B sees it
 ```
 
-*No BEGIN — the UPDATE is its own transaction, committed the instant it finishes.*
+*No BEGIN: this successful UPDATE commits as its own transaction before the next SELECT.*
 
 ```transcript
 A> UPDATE accounts SET balance = 150 WHERE id = 1;
@@ -3803,7 +3821,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- B sees it immediately
 *Inside an explicit transaction, A's change is invisible to B…*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 999 WHERE id = 1;
@@ -3829,17 +3847,30 @@ B> SELECT balance FROM accounts WHERE id = 1;
 (1 row)
 ```
 
+*A failed autocommit statement does not leave the next statement in a failed transaction.*
+
+```transcript
+A> SELECT 1 / 0;
+ERROR:  22012: division by zero
+
+A> SELECT 1 AS recovered;
+ recovered 
+-----------
+         1 
+(1 row)
+```
+
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/01-basics/autocommit-visibility.yaml)</small>
 
 ## postgres/01-basics/ddl-rollback.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Ordinary DDL participates in the transaction like any other statement: a CREATE INDEX and a CREATE TABLE stay invisible until COMMIT, and a ROLLBACK removes the schema they created along with the rows.
+- claim: In this schedule, CREATE TABLE and non-concurrent CREATE INDEX do not commit the preceding INSERT; after a statement error and ROLLBACK, the inserted row, new table, and new index are absent.
 
 *A migration script wraps its work in a transaction, believing that makes it atomic: insert data, add an index, create a table — and if anything fails, roll back.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> INSERT INTO orders VALUES (1, 'draft');
@@ -3857,6 +3888,13 @@ CREATE INDEX
 A> CREATE TABLE migration_log (id int PRIMARY KEY, note text);
 CREATE TABLE
 
+A> SELECT to_regclass('migration_log') IS NOT NULL AS table_exists,
+          to_regclass('idx_orders_state') IS NOT NULL AS index_exists;
+ table_exists | index_exists 
+--------------+--------------
+ t            | t            
+(1 row)
+
 B> SELECT count(*)::int AS visible FROM orders; -- still nothing committed — the DDL joined the transaction
  visible 
 ---------
@@ -3870,6 +3908,9 @@ ERROR:  42P01: relation "migration_log" does not exist
 *The script now hits an error and rolls back, trusting the transaction to clean up:*
 
 ```transcript
+A> INSERT INTO orders VALUES (1, 'duplicate');
+ERROR:  23505: duplicate key value violates unique constraint "orders_pkey"
+
 A> ROLLBACK;
 ROLLBACK
 
@@ -3887,17 +3928,17 @@ B> SELECT to_regclass('migration_log') IS NULL AS table_gone,
 (1 row)
 ```
 
-*PostgreSQL keeps schema changes in the same transaction as the data. A migration that inserts, indexes, and creates its way to an error leaves nothing behind — design for atomicity, not for re-runnability.*
+*This rollback removed the INSERT, the non-concurrent index, and the new table. It does not test all DDL or external migration effects.*
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/01-basics/ddl-rollback.yaml)</small>
 
 ## postgres/01-basics/savepoint-nesting.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Rolling back to an outer savepoint discards inner savepoints along with their work; RELEASE keeps the changes but forfeits the rollback point.
+- claim: Rolling back to outer_sp removes the later rows and inner_sp; RELEASE outer_sp retains row 4, and COMMIT preserves rows 1 and 4.
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> INSERT INTO steps VALUES (1);
@@ -3938,6 +3979,15 @@ INSERT 0 1
 A> RELEASE SAVEPOINT outer_sp;
 RELEASE
 
+A> SAVEPOINT after_release;
+SAVEPOINT
+
+A> ROLLBACK TO SAVEPOINT outer_sp; -- RELEASE removed outer_sp; recover using the newer savepoint
+ERROR:  3B001: savepoint "outer_sp" does not exist
+
+A> ROLLBACK TO SAVEPOINT after_release;
+ROLLBACK
+
 A> COMMIT;
 COMMIT
 
@@ -3954,10 +4004,10 @@ A> SELECT n FROM steps ORDER BY n;
 ## postgres/01-basics/savepoint-recovery.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: ROLLBACK TO SAVEPOINT un-aborts a failed transaction, discarding only the work done after the savepoint — the rest commits normally.
+- claim: ROLLBACK TO the savepoint recovers from this uniqueness violation; the earlier INSERT and a later replacement INSERT commit successfully.
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> INSERT INTO items VALUES (2, 'gadget');
@@ -3996,7 +4046,7 @@ A> SELECT id, name FROM items ORDER BY id; -- survived — it predates the savep
 ## postgres/02-isolation/circular-information-flow.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Two concurrent transactions cannot read each other's uncommitted writes (Adya's G1c, "circular information flow"): each sees the pre-existing value, as one serial order or the other would dictate.
+- claim: At READ COMMITTED, both plain SELECTs read the original balance rather than the other transaction's uncommitted UPDATE; both writes later commit. This excludes a dirty-read cycle in this schedule, not every form of dependency cycle.
 
 ```timeline
 A: UPDATE alice = 111 (uncommitted)
@@ -4011,10 +4061,10 @@ A: SELECT → 111, 222 ← both writes, no cross-read
 *A adjusts alice's balance while B adjusts bob's — then each peeks at the other's row. If both saw the other's uncommitted write, information would flow in a circle: A → B → A. No serial order can do that.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 111 WHERE id = 1;
@@ -4054,7 +4104,7 @@ A> SELECT id, balance FROM accounts ORDER BY id; -- both writes landed — but n
 ## postgres/02-isolation/concurrent-update-40001.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A REPEATABLE READ transaction that tries to UPDATE a row modified since its snapshot fails with SQLSTATE 40001 — immediately if the change is committed, or after waiting if it isn't.
+- claim: A's UPDATE at REPEATABLE READ fails with 40001 when B updates its target row after A's snapshot, both when B has already committed and when A waits for B to commit; when B rolls back instead, A's waiting UPDATE succeeds.
 
 ```timeline
 A: SELECT (snapshot taken)
@@ -4106,7 +4156,7 @@ A> SELECT balance FROM accounts WHERE id = 1; -- snapshot taken
      150 
 (1 row)
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> UPDATE accounts SET balance = 300 WHERE id = 1;
@@ -4116,7 +4166,7 @@ A> UPDATE accounts SET balance = 999 WHERE id = 1;
 ⏳ A is waiting for a lock…
 ```
 
-*…and fails with 40001 the moment B commits. (Had B rolled back, A would have proceeded.)*
+*A's waiting UPDATE fails with 40001 after B commits. The next schedule checks the different outcome when B rolls back.*
 
 ```transcript
 B> COMMIT;
@@ -4127,6 +4177,39 @@ ERROR:  40001: could not serialize access due to concurrent update
 
 A> ROLLBACK;
 ROLLBACK
+
+A> BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+
+A> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     300 
+(1 row)
+
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+B> UPDATE accounts SET balance = 400 WHERE id = 1;
+UPDATE 1
+
+A> UPDATE accounts SET balance = 999 WHERE id = 1;
+⏳ A is waiting for a lock…
+
+B> ROLLBACK;
+ROLLBACK
+
+⏵ A resumes:
+UPDATE 1
+
+A> COMMIT;
+COMMIT
+
+B> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     999 
+(1 row)
 ```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/concurrent-update-40001.yaml)</small>
@@ -4134,7 +4217,7 @@ ROLLBACK
 ## postgres/02-isolation/dirty-write.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Two transactions repricing the same rows cannot interleave their writes (Adya's G0, "dirty write"): the second writer waits for the first to finish, so the final state is one transaction's prices, never a mix.
+- claim: At READ COMMITTED, B's UPDATE of row 1 waits for A to commit before proceeding; after both transactions update both rows and commit in this order, both final prices are B's.
 
 ```timeline
 A: UPDATE id=1 price=11
@@ -4144,16 +4227,16 @@ A: COMMIT ← locks released, B wakes up
 B: ⏵ UPDATE id=1 price=12 → completes
 B: UPDATE id=2 price=22
 B: COMMIT
-A: SELECT → 12, 22 ← all B, never a mix
+A: SELECT → 12, 22 ← both final prices are B's
 ```
 
-*Two batch jobs reprice the whole catalog concurrently. A mix of their prices (A's mug with B's cap) would be a dirty write — a state no serial order could produce.*
+*Both batch jobs update the same two rows. A dirty write would overwrite a row before its previous writer commits or rolls back; the wait below prevents that overwrite in this schedule.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE items SET price = 11 WHERE id = 1;
@@ -4181,7 +4264,7 @@ UPDATE 1
 B> COMMIT;
 COMMIT
 
-A> SELECT id, price FROM items ORDER BY id; -- all B — as if B had run after A. Never 12/21 or 11/22.
+A> SELECT id, price FROM items ORDER BY id; -- both final prices are B's in this order
  id | price 
 ----+-------
   1 |    12 
@@ -4194,7 +4277,7 @@ A> SELECT id, price FROM items ORDER BY id; -- all B — as if B had run after A
 ## postgres/02-isolation/intermediate-read.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A transaction that changes a value twice exposes neither draft to other transactions (Adya's G1b, "intermediate read"): readers see the old value until commit, then only the final one.
+- claim: B's plain SELECT reads 100 while A's draft 999 is uncommitted, and its SELECT after A commits reads the final 110.
 
 ```timeline
 A: UPDATE balance = 999 (draft, uncommitted)
@@ -4205,7 +4288,7 @@ B: SELECT → 110 ← only the final value, never 999
 ```
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 999 WHERE id = 1; -- a working draft — A isn't done yet
@@ -4230,14 +4313,14 @@ B> SELECT balance FROM accounts WHERE id = 1;
 (1 row)
 ```
 
-*To every other transaction, the balance went 100 → 110 in one step. The intermediate 999 never existed outside A.*
+*B's two SELECTs returned 100 and 110, never A's uncommitted draft 999. A transaction with an older stable snapshot need not see 110 yet.*
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/intermediate-read.yaml)</small>
 
 ## postgres/02-isolation/lost-update-read-committed.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Two read-modify-write transactions at READ COMMITTED can silently overwrite each other: two deposits of 10 grow the balance by only 10.
+- claim: Two read-modify-write transactions at READ COMMITTED both read 100 and write 110; both commit, leaving 110 rather than the intended 120.
 
 ```timeline
 A: SELECT balance → 100
@@ -4252,7 +4335,7 @@ A: SELECT balance → 110 — one deposit gone
 *Two app servers process a +10 deposit each: read the balance, add 10 in code, write it back.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> SELECT balance FROM accounts WHERE id = 1;
@@ -4261,7 +4344,7 @@ A> SELECT balance FROM accounts WHERE id = 1;
      100 
 (1 row)
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> SELECT balance FROM accounts WHERE id = 1; -- B reads the same 100 — A hasn't committed
@@ -4300,15 +4383,16 @@ A> SELECT balance FROM accounts WHERE id = 1; -- two +10 deposits, but only one 
 ## postgres/02-isolation/lost-update-repeatable-read.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: The interleaving that silently loses an update at READ COMMITTED fails loudly with SQLSTATE 40001 at REPEATABLE READ — no data is lost, the loser just retries.
+- claim: In this schedule at REPEATABLE READ, B's stale UPDATE fails with 40001 after A commits 110; after ROLLBACK, B reads 110 in a fresh transaction and commits 120.
 
 ```timeline
 A: SELECT balance → 100
-B: SELECT balance → 100 (same snapshot)
+B: SELECT balance → 100 (B's pre-commit snapshot)
 A: UPDATE balance = 100 + 10
 A: COMMIT
 B: UPDATE balance = 100 + 10 ← 40001 could not serialize access due to concurrent update
-A: SELECT balance → 110 — nothing lost, B retries
+A: SELECT balance → 110 ← B's deposit has not committed
+A: SELECT balance → 120 ← B's fresh retry committed
 ```
 
 *The same two +10 deposits — but this time at REPEATABLE READ.*
@@ -4348,7 +4432,7 @@ ERROR:  40001: could not serialize access due to concurrent update
 B> ROLLBACK;
 ROLLBACK
 
-A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is safe; B retries and lands on 120
+A> SELECT balance FROM accounts WHERE id = 1; -- only A's deposit has committed so far
  balance 
 ---------
      110 
@@ -4357,12 +4441,35 @@ A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is safe; B retries 
 
 *Retrying B from scratch reads the fresh 110 and correctly produces 120.*
 
+```transcript
+B> BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+
+B> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     110 
+(1 row)
+
+B> UPDATE accounts SET balance = 110 + 10 WHERE id = 1;
+UPDATE 1
+
+B> COMMIT;
+COMMIT
+
+A> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     120 
+(1 row)
+```
+
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml)</small>
 
 ## postgres/02-isolation/no-dirty-reads.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: PostgreSQL accepts READ UNCOMMITTED syntax but behaves as READ COMMITTED: uncommitted changes from other transactions are never visible.
+- claim: B accepts the READ UNCOMMITTED setting but its plain SELECT reads the committed 100 rather than A's uncommitted 999, which A later rolls back.
 
 ```timeline
 A: UPDATE balance = 999 (uncommitted)
@@ -4371,7 +4478,7 @@ B: SELECT → 100 ← A's 999 stays invisible
 ```
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 999 WHERE id = 1;
@@ -4408,7 +4515,7 @@ ROLLBACK
 ## postgres/02-isolation/non-repeatable-read.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: At READ COMMITTED, a transaction can read two different values for the same row — other transactions' commits become visible between its statements.
+- claim: A's plain SELECTs at READ COMMITTED return 100 and then 200 around B's committed UPDATE; in the following writer schedule, B waits for A's row lock before committing 400.
 
 ```timeline
 A: SELECT balance → 100
@@ -4443,10 +4550,10 @@ A> COMMIT;
 COMMIT
 ```
 
-*Readers never block — but writers do. The same interleaving with UPDATEs makes B wait for A's row lock.*
+*The plain SELECTs above did not wait for a row lock. The following UPDATE of the same row makes B wait for A's row lock; SELECT can still wait for conflicting table locks.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 300 WHERE id = 1;
@@ -4473,7 +4580,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- B's write landed on top of A's 
 ## postgres/02-isolation/observed-transaction-vanishes.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Once a transaction commits, every reader sees ALL of its writes or none (Adya's OTV, "observed transaction vanishes"): a later overwrite of one row cannot make the rest of the committed transaction disappear.
+- claim: C's plain SELECTs at READ COMMITTED see both of A's committed balances while B's overwrites are uncommitted; after B commits both changes, C's next SELECT sees both of B's balances.
 
 ```timeline
 A: UPDATE alice = 11
@@ -4491,7 +4598,7 @@ C: SELECT → 12, 18 ← now all of B, atomically
 *A rewrites both balances. B will overwrite one of them right after.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 11 WHERE id = 1;
@@ -4500,7 +4607,7 @@ UPDATE 1
 A> UPDATE accounts SET balance = 19 WHERE id = 2;
 UPDATE 1
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> UPDATE accounts SET balance = 12 WHERE id = 1;
@@ -4549,7 +4656,7 @@ C> SELECT id, balance FROM accounts ORDER BY id; -- only now does C move on — 
 ## postgres/02-isolation/phantom-read.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: At READ COMMITTED, re-running the same range query inside one transaction can return rows that weren't there before — phantoms.
+- claim: A's first aggregate at READ COMMITTED counts two matching orders; after B commits a matching INSERT, A's next aggregate counts three and totals 1500.
 
 ```timeline
 A: SELECT count → 2
@@ -4594,7 +4701,7 @@ COMMIT
 ## postgres/02-isolation/read-only-anomaly.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: At REPEATABLE READ, even a read-only transaction can observe a state no serial execution could produce; at SERIALIZABLE, PostgreSQL aborts the offending writer instead (SQLSTATE 40001).
+- claim: In this schedule, the REPEATABLE READ report commits with two receipts before the cashier commits a third into the closed batch; with all three transactions SERIALIZABLE, the report commits and the cashier's COMMIT fails with 40001.
 
 ```timeline
 Cashier: SELECT deposit_no → 1 (current batch)
@@ -4607,6 +4714,8 @@ Report: COMMIT
 Cashier: COMMIT ← receipt 3 lands in the closed batch 1
 Report: re-read batch 1 → 3 receipts ← the published report was wrong
 ```
+
+*The report is modeled by SELECT results; no printing, external publication, or cashier retry is executed.*
 
 *A bank tracks receipts per deposit batch. The cashier files a receipt into the current batch (1) — slowly.*
 
@@ -4731,7 +4840,7 @@ COMMIT
 Cashier> COMMIT;
 ERROR:  40001: could not serialize access due to read/write dependencies among transactions
 
-Report> SELECT receipt_no, amount FROM receipts WHERE deposit_no = 1 ORDER BY receipt_no; -- batch 1 still matches the published report; the cashier retries into batch 2
+Report> SELECT receipt_no, amount FROM receipts WHERE deposit_no = 1 ORDER BY receipt_no; -- batch 1 still has two receipts; no cashier retry is executed here
  receipt_no | amount 
 ------------+--------
           1 |    100 
@@ -4744,7 +4853,7 @@ Report> SELECT receipt_no, amount FROM receipts WHERE deposit_no = 1 ORDER BY re
 ## postgres/02-isolation/read-skew.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: At READ COMMITTED, a transaction reading two rows around a concurrent transfer observes money that never existed (Adya's G-single, "read skew"); REPEATABLE READ's single snapshot makes the same interleaving consistent.
+- claim: At READ COMMITTED, A's separate SELECTs around B's committed transfer return balances totaling 125; in the second schedule at REPEATABLE READ, the two reads total 100 despite B's intervening transfer.
 
 ```timeline
 A: SELECT alice → 50 (before the transfer)
@@ -4757,7 +4866,7 @@ A: SELECT bob → 75 ← 50+75=125, money that never existed
 *The invariant: alice + bob = 100 at every moment. A is an auditor summing the accounts row by row; B transfers 25 between them mid-audit.*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> SELECT balance FROM accounts WHERE owner = 'alice';
@@ -4766,7 +4875,7 @@ A> SELECT balance FROM accounts WHERE owner = 'alice';
       50 
 (1 row)
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> UPDATE accounts SET balance = balance - 25 WHERE owner = 'alice';
@@ -4800,7 +4909,7 @@ A> SELECT balance FROM accounts WHERE owner = 'alice';
       25 
 (1 row)
 
-B> BEGIN;
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 B> UPDATE accounts SET balance = balance - 10 WHERE owner = 'alice';
@@ -4827,13 +4936,13 @@ COMMIT
 ## postgres/02-isolation/stable-snapshot.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: At REPEATABLE READ, PostgreSQL uses a single snapshot for the entire transaction — no non-repeatable reads AND no phantoms (stronger than the SQL standard requires).
+- claim: A's first plain SELECT at REPEATABLE READ includes B's change after BEGIN; subsequent SELECTs exclude B's later committed UPDATE and INSERT but include A's own UPDATE. After COMMIT, A's next SELECT sees all committed rows.
 
 ```timeline
-A: SELECT → alice 100, bob 50 (snapshot frozen here)
+A: SELECT → alice 101, bob 50 (snapshot frozen here)
 B: UPDATE alice = 999 (committed)
 B: INSERT carol (committed)
-A: SELECT → 100, 50 ← no 999, no carol
+A: SELECT → 101, 50 ← no 999, no carol
 A: COMMIT
 A: SELECT → 999 and carol ← new txn, new snapshot
 ```
@@ -4841,6 +4950,9 @@ A: SELECT → 999 and carol ← new txn, new snapshot
 ```transcript
 A> BEGIN ISOLATION LEVEL REPEATABLE READ;
 BEGIN
+
+B> UPDATE accounts SET balance = 101 WHERE id = 1; -- commits after BEGIN but before A's first query
+UPDATE 1
 ```
 
 *The snapshot is taken by the FIRST query, not by BEGIN.*
@@ -4849,7 +4961,7 @@ BEGIN
 A> SELECT id, balance FROM accounts ORDER BY id;
  id | balance 
 ----+---------
-  1 |     100 
+  1 |     101 
   2 |      50 
 (2 rows)
 ```
@@ -4866,8 +4978,22 @@ INSERT 0 1
 A> SELECT id, balance FROM accounts ORDER BY id; -- not 999 — no non-repeatable read; and no carol — no phantom
  id | balance 
 ----+---------
-  1 |     100 
+  1 |     101 
   2 |      50 
+(2 rows)
+```
+
+*A sees its own UPDATE even though B's later changes remain outside the snapshot.*
+
+```transcript
+A> UPDATE accounts SET balance = 60 WHERE id = 2;
+UPDATE 1
+
+A> SELECT id, balance FROM accounts ORDER BY id;
+ id | balance 
+----+---------
+  1 |     101 
+  2 |      60 
 (2 rows)
 
 A> COMMIT;
@@ -4881,7 +5007,7 @@ A> SELECT id, balance FROM accounts ORDER BY id;
  id | balance 
 ----+---------
   1 |     999 
-  2 |      50 
+  2 |      60 
   3 |     300 
 (3 rows)
 ```
@@ -4891,7 +5017,7 @@ A> SELECT id, balance FROM accounts ORDER BY id;
 ## postgres/02-isolation/update-recheck.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: An UPDATE at READ COMMITTED that waited for a lock re-evaluates its WHERE clause against the new row version — rows that no longer match are silently skipped.
+- claim: B's UPDATE at READ COMMITTED waits for A to commit, re-checks value = 10 against the changed row, and affects zero rows; the final values remain 20 and 30.
 
 ```timeline
 A: UPDATE id=1 value 10→20 (uncommitted)
@@ -4902,7 +5028,7 @@ B: SELECT → 20, 30 ← B re-checked WHERE, matched 0 rows
 ```
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE items SET value = value * 2 WHERE id = 1; -- row 1: 10 → 20, uncommitted
@@ -4942,7 +5068,7 @@ B> SELECT id, value FROM items ORDER BY id;
 ## postgres/02-isolation/write-skew-rr.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Two REPEATABLE READ transactions can each validate an invariant against their snapshots, write to different rows, and both commit — leaving the invariant broken. This is write skew.
+- claim: Both REPEATABLE READ transactions read two on-call doctors, update different rows, and commit in this schedule; the final asserted on-call count is zero.
 
 ```timeline
 A: SELECT on_call → 2 ← "safe for me to leave"
@@ -4998,21 +5124,21 @@ A> SELECT count(*)::int AS on_call FROM doctors WHERE on_call; -- nobody is on c
 (1 row)
 ```
 
-*Each transaction was internally consistent; together they broke the rule. Only SERIALIZABLE catches this.*
+*Both transactions checked their own snapshots, but the final count is zero. SERIALIZABLE rejects this schedule; coordinating all writers with suitable explicit locks is another approach.*
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/write-skew-rr.yaml)</small>
 
 ## postgres/02-isolation/write-skew-serializable.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: The exact interleaving that breaks the invariant under REPEATABLE READ fails with SQLSTATE 40001 under SERIALIZABLE — one transaction commits, the other must retry.
+- claim: With both transactions SERIALIZABLE, A commits and B's COMMIT fails with 40001 in this schedule; one doctor remains on call. B's fresh transaction observes one and leaves that doctor on call.
 
 ```timeline
 A: on-call count → 2
 B: on-call count → 2
 A: alice off call
 B: bob off call
-A: COMMIT — first committer wins
+A: COMMIT succeeds in this schedule
 B: COMMIT ← 40001 could not serialize access due to read/write dependencies among transactions
 ```
 
@@ -5044,7 +5170,7 @@ B> UPDATE doctors SET on_call = false WHERE name = 'bob';
 UPDATE 1
 ```
 
-*The first committer wins. The second cannot be serialized against it and is aborted.*
+*In this schedule A commits and B is rejected. Other schedules can fail at a statement or select a different victim.*
 
 ```transcript
 A> COMMIT;
@@ -5060,7 +5186,28 @@ A> SELECT count(*)::int AS on_call FROM doctors WHERE on_call; -- the invariant 
 (1 row)
 ```
 
-*B's job is to retry. On retry it would see only one doctor on call — and refuse the night off.*
+*B now starts a fresh transaction, checks the count again, and keeps the remaining doctor on call.*
+
+```transcript
+B> BEGIN ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+
+B> SELECT count(*)::int AS on_call FROM doctors WHERE on_call;
+ on_call 
+---------
+       1 
+(1 row)
+
+B> COMMIT;
+COMMIT
+
+A> SELECT name, on_call FROM doctors ORDER BY name;
+ name  | on_call 
+-------+---------
+ alice | f       
+ bob   | t       
+(2 rows)
+```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/write-skew-serializable.yaml)</small>
 

@@ -1,8 +1,6 @@
-title: "REPEATABLE READ: one snapshot for the whole transaction"
+title: REPEATABLE READ snapshot timing and visibility
 claim: >-
-  At REPEATABLE READ, PostgreSQL uses a single snapshot for the entire
-  transaction — no non-repeatable reads AND no phantoms (stronger than the SQL
-  standard requires).
+  A's first plain SELECT at REPEATABLE READ includes B's change after BEGIN; subsequent SELECTs exclude B's later committed UPDATE and INSERT but include A's own UPDATE. After COMMIT, A's next SELECT sees all committed rows.
 anomaly: P2
 isolation: REPEATABLE READ
 setup: |
@@ -11,11 +9,14 @@ setup: |
 sessions: [A, B]
 steps:
   - A: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - B: UPDATE accounts SET balance = 101 WHERE id = 1
+    affected: 1
+    comment: commits after BEGIN but before A's first query
 
   - note: The snapshot is taken by the FIRST query, not by BEGIN.
   - A: SELECT id, balance FROM accounts ORDER BY id
-    expect: [{}, {}]
-    tl: SELECT → alice 100, bob 50 (snapshot frozen here)
+    expect: [{ id: 1, balance: 101 }, { id: 2, balance: 50 }]
+    tl: SELECT → alice 101, bob 50 (snapshot frozen here)
 
   - note: B changes an existing row AND inserts a new one — both committed instantly.
   - B: UPDATE accounts SET balance = 999 WHERE id = 1
@@ -23,14 +24,19 @@ steps:
   - B: INSERT INTO accounts VALUES (3, 'carol', 300)
     tl: INSERT carol (committed)
   - A: SELECT id, balance FROM accounts ORDER BY id
-    expect: [{ id: 1, balance: 100 }, { id: 2, balance: 50 }]
+    expect: [{ id: 1, balance: 101 }, { id: 2, balance: 50 }]
     comment: not 999 — no non-repeatable read; and no carol — no phantom
-    tl: SELECT → 100, 50 ← no 999, no carol
+    tl: SELECT → 101, 50 ← no 999, no carol
 
+  - note: A sees its own UPDATE even though B's later changes remain outside the snapshot.
+  - A: UPDATE accounts SET balance = 60 WHERE id = 2
+    affected: 1
+  - A: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 101 }, { id: 2, balance: 60 }]
   - A: COMMIT
     tl: COMMIT
 
   - note: Only a NEW transaction gets a new snapshot.
   - A: SELECT id, balance FROM accounts ORDER BY id
-    expect: [{ balance: 999 }, {}, {}]
+    expect: [{ id: 1, balance: 999 }, { id: 2, balance: 60 }, { id: 3, balance: 300 }]
     tl: SELECT → 999 and carol ← new txn, new snapshot

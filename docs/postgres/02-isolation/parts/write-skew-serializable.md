@@ -5,7 +5,7 @@ A: on-call count → 2
 B: on-call count → 2
 A: alice off call
 B: bob off call
-A: COMMIT — first committer wins
+A: COMMIT succeeds in this schedule
 B: COMMIT ← 40001 could not serialize access due to read/write dependencies among transactions
 ```
 
@@ -37,7 +37,7 @@ B> UPDATE doctors SET on_call = false WHERE name = 'bob';
 UPDATE 1
 ```
 
-*The first committer wins. The second cannot be serialized against it and is aborted.*
+*In this schedule A commits and B is rejected. Other schedules can fail at a statement or select a different victim.*
 
 ```transcript
 A> COMMIT;
@@ -53,6 +53,27 @@ A> SELECT count(*)::int AS on_call FROM doctors WHERE on_call; -- the invariant 
 (1 row)
 ```
 
-*B's job is to retry. On retry it would see only one doctor on call — and refuse the night off.*
+*B now starts a fresh transaction, checks the count again, and keeps the remaining doctor on call.*
+
+```transcript
+B> BEGIN ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+
+B> SELECT count(*)::int AS on_call FROM doctors WHERE on_call;
+ on_call 
+---------
+       1 
+(1 row)
+
+B> COMMIT;
+COMMIT
+
+A> SELECT name, on_call FROM doctors ORDER BY name;
+ name  | on_call 
+-------+---------
+ alice | f       
+ bob   | t       
+(2 rows)
+```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/write-skew-serializable.yaml)</small>

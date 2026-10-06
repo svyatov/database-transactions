@@ -2,11 +2,12 @@
 
 ```timeline
 A: SELECT balance → 100
-B: SELECT balance → 100 (same snapshot)
+B: SELECT balance → 100 (B's pre-commit snapshot)
 A: UPDATE balance = 100 + 10
 A: COMMIT
 B: UPDATE balance = 100 + 10 ← 40001 could not serialize access due to concurrent update
-A: SELECT balance → 110 — nothing lost, B retries
+A: SELECT balance → 110 ← B's deposit has not committed
+A: SELECT balance → 120 ← B's fresh retry committed
 ```
 
 *The same two +10 deposits — but this time at REPEATABLE READ.*
@@ -46,7 +47,7 @@ ERROR:  40001: could not serialize access due to concurrent update
 B> ROLLBACK;
 ROLLBACK
 
-A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is safe; B retries and lands on 120
+A> SELECT balance FROM accounts WHERE id = 1; -- only A's deposit has committed so far
  balance 
 ---------
      110 
@@ -54,5 +55,28 @@ A> SELECT balance FROM accounts WHERE id = 1; -- A's deposit is safe; B retries 
 ```
 
 *Retrying B from scratch reads the fresh 110 and correctly produces 120.*
+
+```transcript
+B> BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+
+B> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     110 
+(1 row)
+
+B> UPDATE accounts SET balance = 110 + 10 WHERE id = 1;
+UPDATE 1
+
+B> COMMIT;
+COMMIT
+
+A> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     120 
+(1 row)
+```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/02-isolation/lost-update-repeatable-read.yaml)</small>

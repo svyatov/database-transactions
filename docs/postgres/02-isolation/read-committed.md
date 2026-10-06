@@ -1,61 +1,59 @@
 # Read Committed
 
-READ COMMITTED is PostgreSQL's default isolation level, the one nearly all of your
-production code runs at. Its contract: every *statement* sees a fresh snapshot of everything
-committed before that statement began. Never uncommitted data; never data committed
-mid-statement.
-
-That per-statement snapshot is both its strength (no waiting for readers, always-fresh data)
-and the source of every anomaly on this page.
+The [PostgreSQL 18 Read Committed manual](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED)
+documents the default level. A plain SELECT, without FOR UPDATE or FOR SHARE, uses
+a snapshot of data committed before that query began, plus earlier changes from its
+own transaction. It excludes other transactions' uncommitted changes and commits
+that occur during that query. Updating and locking commands have additional rules.
 
 ## No dirty reads, even if you ask for them
+
+B requests READ UNCOMMITTED and still reads 100 rather than A's uncommitted 999.
+The [manual's level mapping](https://www.postgresql.org/docs/18/transaction-iso.html)
+documents READ COMMITTED behavior for READ UNCOMMITTED; this one read illustrates it.
 
 <!--@include: ./parts/no-dirty-reads.md-->
 
 ## Non-repeatable reads
 
-The flagship READ COMMITTED anomaly: the same query, twice, inside one transaction, two
-different answers.
+A's two plain SELECTs return different values around B's committed UPDATE. The
+second part also asserts that a competing UPDATE waits for a row lock.
 
 <!--@include: ./parts/non-repeatable-read.md-->
 
 ## Phantoms
 
-The same effect applies to *sets* of rows, not only values. New matching rows appear between
-your statements:
+A's later aggregate includes B's newly committed matching row, changing its count
+from two to three inside the same transaction.
 
 <!--@include: ./parts/phantom-read.md-->
 
 ## Read skew: a total that never existed
 
-Non-repeatable reads have a nastier multi-row cousin,
-[read skew](/concepts/non-repeatable-read#read-skew): every row you read was committed and
-correct, yet the combination existed at no point in time:
+Separate reads around a committed transfer yield 50 and 75, totaling 125 rather
+than 100. The second schedule uses REPEATABLE READ and its two reads total 100.
+This concerns separate queries, not a single plain SELECT over both accounts.
 
 <!--@include: ./parts/read-skew.md-->
 
 ## The subtle one: UPDATE re-checks its WHERE clause
 
-What happens when your UPDATE has to *wait* for a lock, and the row changes while you wait?
-At READ COMMITTED, PostgreSQL re-evaluates the WHERE clause against the new row version,
-and silently skips rows that no longer match ("The search condition of the command (the
-`WHERE` clause) is re-evaluated to see if the updated version of the row still matches the
-search condition", [the manual](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED)):
+The [Read Committed updating-command contract](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED)
+documents that an updater can wait, then operate on a newly committed target version
+after rechecking its predicate. It can therefore use a target version outside its
+initial snapshot. A single updating command is not necessarily a consistent snapshot
+of all rows it consults.
 
 <!--@include: ./parts/update-recheck.md-->
 
-`UPDATE 0`: no error, no warning. If your code assumes "the row matched a moment ago, so it
-was updated", this is where that assumption dies. Always check the affected-row count.
-
-The pattern to hold onto: READ COMMITTED gives you a fresh snapshot per statement, so any single
-statement is internally consistent while two statements in the same transaction can flatly
-disagree. Dirty reads never happen in PostgreSQL, full stop. But that same per-statement snapshot
-is exactly why multi-statement read-modify-write logic here is exposed to
-[lost updates](/postgres/02-isolation/lost-update), the most common real-world transaction bug,
-and why an UPDATE or DELETE that waited for a lock can affect fewer rows than you saw. Check the
-affected-row count, every time.
+Here B affects zero rows because value = 10 no longer matches after A commits 20.
+Check affected-row counts when application success depends on a row being changed.
+Plain SELECTs do not wait for these row-update locks, but they can wait for conflicting
+table locks, as the [table-lock manual](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-TABLES)
+documents. The snapshot contract concerns transactional table rows; sequences have
+[separate visibility and rollback rules](https://www.postgresql.org/docs/18/transaction-iso.html).
 
 ## Further reading
 
-- [PostgreSQL docs: Read Committed Isolation Level](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED)
+- [Lost updates](/postgres/02-isolation/lost-update)
 - [The same lesson on MySQL](/mysql/02-isolation/read-committed)
