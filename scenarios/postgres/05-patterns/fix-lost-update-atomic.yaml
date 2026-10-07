@@ -1,7 +1,7 @@
 title: "Fixing lost updates #1: compute in SQL, not in the app"
 claim: >-
-  UPDATE ... SET balance = balance + 10 reads and writes in one statement: the
-  second writer waits for the first and stacks on top — both deposits survive.
+  At READ COMMITTED, two relative single-row balance increments serialize:
+  B waits for A's commit and returns 120; the final balance is 120.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);

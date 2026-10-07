@@ -6704,7 +6704,7 @@ A> SELECT (pg_relation_size('bloat') / 8192)::int AS pages;
 ## postgres/05-patterns/advisory-locks.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Advisory locks serialize application-defined work with no table involved: try-lock answers instantly, session-level locks survive COMMIT and need an explicit unlock, transaction-level locks vanish at COMMIT.
+- claim: With these exclusive advisory keys, B's try-lock returns false while A holds the key, and a blocking acquisition waits for unlock. COMMIT leaves the session-level key held but releases the transaction-level key.
 
 ```timeline
 A: lock(42) → held
@@ -6723,7 +6723,7 @@ A> SELECT pg_advisory_lock(42);
                   
 (1 row)
 
-B> SELECT pg_try_advisory_lock(42) AS got_it; -- an instant answer — no waiting
+B> SELECT pg_try_advisory_lock(42) AS got_it; -- false without waiting to acquire this advisory lock; latency is not measured
  got_it 
 --------
  f      
@@ -6749,7 +6749,7 @@ A> SELECT pg_advisory_unlock(42) AS released;
 (1 row)
 ```
 
-*Session-level locks ignore transaction boundaries entirely — COMMIT releases nothing.*
+*COMMIT does not release A's session-level advisory lock on key 9.*
 
 ```transcript
 A> BEGIN;
@@ -6777,7 +6777,7 @@ A> SELECT pg_advisory_unlock(9) AS released;
 (1 row)
 ```
 
-*pg_advisory_xact_lock, by contrast, releases itself at COMMIT — there is no unlock function for it.*
+*After A commits, the next try-lock checks that its transaction-level key 7 is available.*
 
 ```transcript
 A> BEGIN;
@@ -6822,7 +6822,7 @@ B> SELECT pg_advisory_unlock(42);
 ## postgres/05-patterns/check-then-insert-race.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: "SELECT first, INSERT if absent" cannot enforce uniqueness: two concurrent requests both see 0 rows, both insert, and the duplicate lands without any error.
+- claim: At READ COMMITTED without a UNIQUE email constraint, two concurrent check-then-insert requests both see zero matching rows, both insert, and the final email count is two. Neither insertion errors in this schedule.
 
 ```timeline
 A: any bob? → 0
@@ -6883,7 +6883,7 @@ A> SELECT count(*)::int AS bobs FROM signups WHERE email = 'bob@example.com'; --
 ## postgres/05-patterns/fix-lost-update-atomic.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: UPDATE ... SET balance = balance + 10 reads and writes in one statement: the second writer waits for the first and stacks on top — both deposits survive.
+- claim: At READ COMMITTED, two relative single-row balance increments serialize: B waits for A's commit and returns 120; the final balance is 120.
 
 *Same two +10 deposits that lost an update in chapter 2 — but the math moved into the UPDATE itself.*
 
@@ -6931,7 +6931,7 @@ A> SELECT balance FROM accounts WHERE id = 1; -- both deposits survived
 ## postgres/05-patterns/fix-lost-update-for-update.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: When the new value must be computed in application code, SELECT ... FOR UPDATE serializes the read-modify-write: the second reader waits and then reads the committed 110, so both deposits land.
+- claim: At READ COMMITTED, both writers lock before reading and update within the same transaction. B waits and reads A's committed 110; the final balance is 120. Other writer protocols and external effects are not tested.
 
 *The app must apply business rules to the balance in code — so it locks the row while it reads.*
 
@@ -6958,7 +6958,7 @@ A> COMMIT;
 COMMIT
 ```
 
-*B's locked read waited out A's transaction — and returns the fresh 110, not the 100 it would have seen.*
+*B's locking read waited for A's transaction. The next assertion checks that it returns 110.*
 
 ```transcript
 ⏵ B resumes:
@@ -6985,9 +6985,9 @@ A> SELECT balance FROM accounts WHERE id = 1; -- both deposits survived
 ## postgres/05-patterns/fix-lost-update-version-column.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A version column makes the lost update detectable instead of silent: the stale write matches 0 rows (UPDATE 0), and retrying against the new version lands both deposits.
+- claim: At READ COMMITTED, B's stale version predicate affects zero rows. B rolls back, rereads, and reapplies its additive deposit; the final balance is 120 and version 3. Both writers check and advance the version.
 
-*Both app servers read the row — including its version — with no locks held.*
+*Both writers read the row and version without taking a FOR UPDATE row lock. Their transactions still acquire table locks.*
 
 ```transcript
 A> BEGIN;
@@ -7024,7 +7024,7 @@ B> UPDATE accounts SET balance = 100 + 10, version = version + 1
 UPDATE 0
 ```
 
-*UPDATE 0 is the signal to retry: roll back, re-read, write against the new version.*
+*For this additive deposit, B retries after UPDATE 0. Other applications may need to report or reconsider a stale edit; deletion can also yield zero rows.*
 
 ```transcript
 B> ROLLBACK;
@@ -7058,7 +7058,7 @@ A> SELECT balance, version FROM accounts WHERE id = 1; -- both deposits survived
 ## postgres/05-patterns/idempotency-key.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: INSERT ... ON CONFLICT DO NOTHING RETURNING on an idempotency key makes retries safe: the first request charges, every retry — even one racing the original in flight — gets 0 rows back and charges nothing.
+- claim: At READ COMMITTED, a payment key and balance update commit together. The two demonstrated same-key duplicates, one after commit and one in flight, insert no row; the final balance is 45. No remote charge is tested.
 
 *The client sends 'charge $30' with idempotency key req-42. Server A processes it.*
 
@@ -7081,7 +7081,7 @@ A> COMMIT;
 COMMIT
 ```
 
-*The response is lost in the network. The client retries the same request; server B picks it up.*
+*B repeats the same key after commit. No response loss or network fault is injected.*
 
 ```transcript
 B> BEGIN;
@@ -7089,7 +7089,7 @@ BEGIN
 
 B> INSERT INTO payments VALUES ('req-42', 30)
    ON CONFLICT (idempotency_key) DO NOTHING
-   RETURNING idempotency_key; -- 0 rows: already processed — skip the charge, return the stored result
+   RETURNING idempotency_key; -- 0 rows for this retained key: skip the balance change and read the stored amount
 INSERT 0 0
 
 B> SELECT amount FROM payments WHERE idempotency_key = 'req-42';
@@ -7141,7 +7141,7 @@ COMMIT
 INSERT 0 0
 ```
 
-*Even the in-flight duplicate cannot double-charge.*
+*This in-flight duplicate inserted no row. The next assertion checks database-local charges only.*
 
 ```transcript
 A> SELECT balance FROM accounts WHERE id = 1; -- 100 - 30 - 25: every charge applied exactly once
@@ -7156,9 +7156,9 @@ A> SELECT balance FROM accounts WHERE id = 1; -- 100 - 30 - 25: every charge app
 ## postgres/05-patterns/idle-in-transaction-timeout.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A session that goes idle mid-transaction (the classic ORM failure mode) is killed by idle_in_transaction_session_timeout: its work is rolled back and the app discovers the corpse on its next statement.
+- claim: With idle_in_transaction_session_timeout set to 500ms, A goes idle after an UPDATE. After a 1500ms wait the monitor finds no A session, COMMIT sees a closed connection, and the order remains pending. No ORM or API runs.
 
-*An ORM opens a transaction, updates a row… and then the request handler calls a slow external API.*
+*A opens a transaction and updates a row. A sleep models idle client time; no ORM or external API is executed.*
 
 ```transcript
 A> SET idle_in_transaction_session_timeout = '500ms';
@@ -7181,7 +7181,7 @@ M> SELECT state FROM pg_stat_activity WHERE application_name = 'A';
 (1 row)
 ```
 
-*…the API call drags on past the timeout. The server kills the session (FATAL 25P03).*
+*The modeled idle time exceeds the configured timeout. The next queries check session absence and client failure; no server log is captured.*
 
 ```transcript
 M> SELECT state FROM pg_stat_activity WHERE application_name = 'A'; -- the backend is gone
@@ -7206,21 +7206,21 @@ M> SELECT status FROM orders WHERE id = 1; -- the UPDATE was rolled back with th
 ## postgres/05-patterns/job-queue.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: The full worker loop — claim with FOR UPDATE SKIP LOCKED, work, mark done, commit — never double-processes a job and never loses one: a worker crash returns its job to the queue automatically.
+- claim: At READ COMMITTED, two workers select different available jobs with FOR UPDATE SKIP LOCKED. An explicit rollback leaves job 2 queued for selection again; both jobs end in state done. No external task execution is tested.
 
 ```timeline
 A: claim → job 1
 B: claim → job 2 (skips locked job 1)
 A: job 1 done
 A: COMMIT
-B: crash → job 2 requeued
+B: ROLLBACK → job 2 remains queued
 B: claim → job 2 (back in queue)
 B: job 2 done
 B: COMMIT
 A: both jobs done
 ```
 
-*Two workers run the same loop: claim the oldest queued job, do the work, mark it done, commit.*
+*Two workers select available queued rows in id order and mark database state done. Task names are data; no email or invoice is executed.*
 
 ```transcript
 A> BEGIN;
@@ -7244,7 +7244,7 @@ B> SELECT id, task FROM jobs WHERE state = 'queued'
 (1 row)
 ```
 
-*A finishes and commits. B crashes mid-job — its claim evaporates with its transaction.*
+*A marks job 1 done and commits. B explicitly rolls back; no worker process is killed.*
 
 ```transcript
 A> UPDATE jobs SET state = 'done' WHERE id = 1;
@@ -7257,7 +7257,7 @@ B> ROLLBACK;
 ROLLBACK
 ```
 
-*A restarted worker finds job 2 right back in the queue — nothing was lost, nothing ran twice.*
+*B selects job 2 again after rollback. This checks row availability, not the number of external effects.*
 
 ```transcript
 B> BEGIN;
@@ -7289,7 +7289,7 @@ A> SELECT id, state FROM jobs ORDER BY id;
 ## postgres/05-patterns/on-conflict.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A UNIQUE constraint makes the concurrent duplicate wait for the first insert's fate and then fail with 23505 — and ON CONFLICT turns that error into a clean no-op or upsert.
+- claim: At READ COMMITTED with UNIQUE on a non-NULL email, B's duplicate waits for A's commit then fails with 23505. DO NOTHING affects zero rows; DO UPDATE returns the existing id and email in the shown statements.
 
 ```timeline
 A: INSERT bob
@@ -7348,7 +7348,7 @@ B> INSERT INTO signups (email) VALUES ('bob@example.com')
 ## postgres/05-patterns/retry-serialization-failures.ts
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A 40001 is transient, not fatal: rerunning the identical transaction reads the fresh state and succeeds — withRetry needs exactly two attempts here.
+- claim: In this forced REPEATABLE READ conflict, B rolls back after 40001 and retries with fresh reads: two attempts produce balance 115. Eventual success is not guaranteed.
 
 ```transcript
 B> BEGIN ISOLATION LEVEL REPEATABLE READ;
@@ -7404,7 +7404,7 @@ A> SELECT balance FROM accounts WHERE id = 1;
 ## postgres/06-distributed/dual-write-problem.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Two systems, two writes, no shared transaction: whichever write goes first, a failure between them leaves the database and the broker permanently disagreeing.
+- claim: Separate commits in one database model a dual-write boundary: omitting a broker-table insert leaves one order without an event; a CHECK failure after a broker-table insert leaves one event without its order.
 
 *Attempt 1 — write, then publish. The order commits…*
 
@@ -7419,7 +7419,7 @@ App> COMMIT;
 COMMIT
 ```
 
-*…and the process crashes before the publish step ever runs. The broker never hears about order 1.*
+*Publication is deliberately omitted. No process crashes; the broker table has no order-1 event.*
 
 ```transcript
 App> SELECT (SELECT count(*)::int FROM orders) AS orders,
@@ -7437,14 +7437,14 @@ App> INSERT INTO broker VALUES ('order_placed: order 2');
 INSERT 0 1
 ```
 
-*…and then the order INSERT fails — a constraint, a crash, a timeout, anything.*
+*The order INSERT fails its CHECK constraint after the separately committed broker record.*
 
 ```transcript
 App> INSERT INTO orders VALUES (2, 'mallory', -5); -- check_violation
 ERROR:  23514: new row for relation "orders" violates check constraint "orders_amount_check"
 ```
 
-*Downstream services now process an order that never existed.*
+*The receiver table has an event without an order. No downstream service is executed.*
 
 ```transcript
 App> SELECT (SELECT count(*)::int FROM orders WHERE id = 2) AS orders,
@@ -7460,7 +7460,7 @@ App> SELECT (SELECT count(*)::int FROM orders WHERE id = 2) AS orders,
 ## postgres/06-distributed/listen-notify.ts
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: NOTIFY delivers nothing until COMMIT, a rolled-back NOTIFY is never delivered, and identical notifications within one transaction are folded into one.
+- claim: With a psql listener already registered, this run observes silence before COMMIT and after ROLLBACK, a payload after COMMIT, and one payload for two identical same-transaction notifications within the observation windows.
 
 *A psql process is attached and ran LISTEN orders; — a separate client, not one of our sessions.*
 
@@ -7528,7 +7528,7 @@ COMMIT
 ## postgres/06-distributed/saga-compensation.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A saga replaces one distributed transaction with a chain of local ones: every step commits immediately and is visible to everyone, and a failed step is undone by a new compensating transaction — not by ROLLBACK.
+- claim: In this two-table saga model, a READ COMMITTED Reader sees four flight seats after the first commit. A hotel update affects zero rows, then a new compensating transaction restores five seats. No remote service runs.
 
 *Step 1 — book the flight. A local transaction, committed immediately.*
 
@@ -7546,7 +7546,7 @@ Saga> COMMIT;
 COMMIT
 ```
 
-*A saga has no isolation: between steps, the whole world sees the half-done trip.*
+*There is no enclosing transaction across steps. This standalone READ COMMITTED Reader sees the committed intermediate seat count.*
 
 ```transcript
 Reader> SELECT seats FROM flights WHERE id = 1;
@@ -7590,7 +7590,7 @@ COMMIT
 ## postgres/06-distributed/transactional-outbox.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Writing the order and its event in one transaction makes them atomic, and a SKIP LOCKED relay gives at-least-once delivery: a crashed relay redelivers the event instead of losing it.
+- claim: The order and outbox row commit or roll back together in the shown transactions. A relay's rolled-back delete leaves the row selectable again; a committed delete empties the outbox. Publication is not executed.
 
 *The order and its event are written in ONE transaction — both land in the same database.*
 
@@ -7628,6 +7628,12 @@ App> SELECT id, event FROM outbox ORDER BY id;
 ----+-----------------------
   1 | order_placed: order 1 
 (1 row)
+
+App> SELECT id, customer, amount FROM orders ORDER BY id;
+ id | customer | amount 
+----+----------+--------
+  1 | alice    |     90 
+(1 row)
 ```
 
 *A relay claims the event exactly like a chapter-5 job-queue worker…*
@@ -7643,7 +7649,7 @@ Relay> SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (1 row)
 ```
 
-*…publishes it to the broker (an HTTP call — outside any transaction), deletes it, and crashes before COMMIT.*
+*A real relay would publish outside this transaction. Here publication is narration only; the DELETE is executed and explicitly rolled back.*
 
 ```transcript
 Relay> DELETE FROM outbox WHERE id = 1;
@@ -7653,7 +7659,7 @@ Relay> ROLLBACK;
 ROLLBACK
 ```
 
-*The delete evaporated with the crash — the event is still in the outbox. The restarted relay publishes it AGAIN: at-least-once delivery, so consumers must be idempotent.*
+*ROLLBACK restored the deleted row. The relay selects it again and commits its deletion. No receiver effect or delivery count is recorded here.*
 
 ```transcript
 Relay> BEGIN;
@@ -7683,7 +7689,7 @@ Relay> SELECT count(*)::int AS pending FROM outbox;
 ## postgres/06-distributed/two-phase-commit.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: PREPARE TRANSACTION detaches a transaction from its session: it survives the session's death, keeps holding its locks, holds the xid horizon back so VACUUM reclaims nothing in any table, and any later session can finish it by name with COMMIT PREPARED.
+- claim: With prepared transactions enabled, one prepared update survives backend termination and retains its row lock. VACUUM leaves four occupied ledger tuple slots until a superuser commits the prepared transaction; then it leaves one. No server restart or global coordinator is tested.
 
 *A is one participant in a distributed transfer. It does its work, then PREPARES — phase one.*
 
@@ -7721,7 +7727,7 @@ B> SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- lock_not_avai
 ERROR:  55P03: could not obtain lock on row in relation "accounts"
 ```
 
-*Now the coordinator crashes: A's backend is killed outright.*
+*M terminates A's backend. No global coordinator or server process is killed.*
 
 ```transcript
 M> SELECT pg_terminate_backend(pid) AS terminated
@@ -7735,7 +7741,7 @@ A> SELECT 1;
 ERROR:  ERR_POSTGRES_CONNECTION_CLOSED: Connection closed
 ```
 
-*The session is gone. The prepared transaction is not — it survives anything short of COMMIT/ROLLBACK PREPARED, including a full server restart. And it still holds its locks:*
+*The originating backend is gone. The prepared entry remains, and B's next NOWAIT request still fails. Server-restart durability is a manual contract, not an executed test here.*
 
 ```transcript
 M> SELECT gid FROM pg_prepared_xacts;
@@ -7748,7 +7754,7 @@ B> SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
 ERROR:  55P03: could not obtain lock on row in relation "accounts"
 ```
 
-*The locks are the visible damage. The quiet damage is the xid horizon: the orphan still counts as a running transaction, so no snapshot taken since it prepared can be ruled out. Watch it freeze VACUUM in `ledger` — a table the prepared transaction never touched.*
+*The prepared transaction retains an old xid horizon. Check occupied tuple slots around VACUUM in ledger, an unrelated table updated after prepare. This does not imply all VACUUM work or every table's reclamation stops.*
 
 ```transcript
 B> UPDATE ledger SET n = 1 WHERE id = 1;
@@ -7775,7 +7781,7 @@ B> VACUUM ledger;
 VACUUM
 ```
 
-*VACUUM ran, reported success, and reclaimed nothing. The orphan's horizon still covers every one of those versions.*
+*The next count checks that these four occupied tuple slots remain after VACUUM, not that all maintenance was a no-op.*
 
 ```transcript
 B> SELECT count(*)::int AS versions_on_page
@@ -7786,7 +7792,7 @@ B> SELECT count(*)::int AS versions_on_page
 (1 row)
 ```
 
-*Phase two — any session can finish the job by name. B commits the orphan.*
+*Phase two runs outside a transaction block. B, a superuser in the same database, commits the prepared transaction by name.*
 
 ```transcript
 B> COMMIT PREPARED 'transfer-42';

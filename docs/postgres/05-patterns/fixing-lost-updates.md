@@ -1,61 +1,56 @@
 # Fixing lost updates
 
-[Chapter 2's scariest bug](/postgres/02-isolation/lost-update): two read-modify-write transactions,
-one deposit silently gone. This lesson is the toolbox: three fixes, in the order you
-should reach for them. All three run at plain READ COMMITTED; none of them needs a higher
-isolation level.
+Three READ COMMITTED schedules repair the single-row
+[lost update](/postgres/02-isolation/lost-update): relative SQL arithmetic,
+a locking read, and a checked version column. Each asserts a final balance
+of 120 from two deposits of 10. These are Demonstrated behaviors under the
+shown writer protocols, not protection for every business rule.
 
 ## Fix #1: compute in SQL, not in the app
 
-If the new value can be expressed in SQL, the whole bug class evaporates. There is no
-stale read to write back:
-
 <!--@include: ./parts/fix-lost-update-atomic.md-->
 
-B's UPDATE waits for A's row lock, then (this is the
-[update-recheck behavior](/postgres/02-isolation/read-committed) from chapter 2, now working *for*
-you) re-reads the committed 110 and applies `+ 10` on top of it. The recheck that made
-read-modify-write dangerous makes single-statement math safe.
+B's relative UPDATE waits, then applies its increment to A's committed 110.
+The PostgreSQL 18 [READ COMMITTED contract](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED)
+explains the updated-row recheck. No stale application value is written
+back in this operation. Other predicates, constraints and cross-row rules
+require their own analysis. At stronger isolation levels a conflicting
+update can instead raise `40001`.
 
 ## Fix #2: `SELECT ... FOR UPDATE` (pessimistic)
 
-Sometimes the new value genuinely needs application code: business rules, an external
-rate lookup. Then lock the row *at the read*, so the read-modify-write becomes a queue:
-
 <!--@include: ./parts/fix-lost-update-for-update.md-->
 
-The manual's definition is exactly the guarantee we need:
-["FOR UPDATE causes the rows retrieved by the SELECT statement to be locked as though for update. This prevents them from being locked, modified or deleted by other transactions until the current transaction ends."](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)
-B cannot even *read* (with intent to write) until A is done, and its read then returns
-110, not the stale 100. The price: B waits, and waiting transactions are
-[lock queues](/postgres/03-locking/lock-queues) with everything chapter 3 said about them.
+B's locking read waits and returns 110 after A commits. Ordinary SELECT
+has different visibility and does not take this row lock. The
+[row-lock contract](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS)
+protects selected rows against conflicting changes until transaction end.
+Every participating read-modify-write writer must lock before reading and
+write within that same transaction. Keep it short; do not hold it open
+while a user thinks or a slow external call runs.
 
 ## Fix #3: a version column (optimistic)
 
-Pessimistic locking holds a lock while the app thinks. If "thinking" includes a user
-staring at an edit form, that's unacceptable: you can't hold a row lock across HTTP
-requests. Optimistic locking holds nothing and instead *detects* the conflict at write
-time:
-
 <!--@include: ./parts/fix-lost-update-version-column.md-->
 
-`UPDATE 0` is the entire mechanism: the write names the version it read, and if the row
-has moved on, it matches nothing. The lost update didn't become impossible, it became
-detectable, and the retry (re-read, recompute, write against the new version) lands
-safely. Every ORM's "optimistic concurrency" feature is this one WHERE clause.
+B's stale predicate matches zero rows. In this additive-deposit example,
+B rolls back, rereads 110/version 2, and successfully writes 120/version 3.
+Every writer must check and advance the version. UPDATE 0 can also mean a
+deleted row; it is not a complete diagnosis. For a stale user edit, report
+the conflict or reconsider the edit instead of automatically replacing
+newer work. The UPDATE still takes a row lock and can wait; optimistic
+locking avoids a long-held lock during the earlier read-to-edit interval.
 
-The three fixes sort by how much of the change you can push into SQL. Prefer fix #1
-whenever SQL can express it: `SET balance = balance + 10` is race-free at any isolation
-level and never waits longer than the lock itself. Reach for `FOR UPDATE` when
-application code must compute the value inside one short transaction: it trades
-throughput for simplicity. Use a version column when the read and the write are split by
-something you can't hold a lock across, like user think-time or an HTTP round-trip, and
-handle `UPDATE 0` everywhere you write. The fourth option is the next lesson's:
-[REPEATABLE READ + retry](/postgres/05-patterns/retrying-serialization-failures), where
-PostgreSQL flags the conflict as a `40001` and you rerun the whole transaction.
+Prefer relative SQL for this increment, a locking read for a short
+transaction that computes a new value, or a checked version for a long
+read-to-write interval. These are recommendations for the stated shapes,
+not a universal selector. Handle errors and zero-row outcomes. None of
+these repairs alone enforces a cross-row invariant or protects external
+effects. [Whole-transaction retry](/postgres/05-patterns/retrying-serialization-failures)
+is needed when stronger isolation rejects the transaction.
 
 ## Further reading
 
-- [PostgreSQL docs: Row-Level Locks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)
-- [PostgreSQL docs: The Locking Clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE)
+- [PostgreSQL 18: Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)
+- [PostgreSQL 18: Row-Level Locks](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS)
 - [The same lesson on MySQL](/mysql/05-patterns/fixing-lost-updates)

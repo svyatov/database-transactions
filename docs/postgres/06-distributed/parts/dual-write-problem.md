@@ -13,7 +13,7 @@ App> COMMIT;
 COMMIT
 ```
 
-*…and the process crashes before the publish step ever runs. The broker never hears about order 1.*
+*Publication is deliberately omitted. No process crashes; the broker table has no order-1 event.*
 
 ```transcript
 App> SELECT (SELECT count(*)::int FROM orders) AS orders,
@@ -31,14 +31,14 @@ App> INSERT INTO broker VALUES ('order_placed: order 2');
 INSERT 0 1
 ```
 
-*…and then the order INSERT fails — a constraint, a crash, a timeout, anything.*
+*The order INSERT fails its CHECK constraint after the separately committed broker record.*
 
 ```transcript
 App> INSERT INTO orders VALUES (2, 'mallory', -5); -- check_violation
 ERROR:  23514: new row for relation "orders" violates check constraint "orders_amount_check"
 ```
 
-*Downstream services now process an order that never existed.*
+*The receiver table has an event without an order. No downstream service is executed.*
 
 ```transcript
 App> SELECT (SELECT count(*)::int FROM orders WHERE id = 2) AS orders,

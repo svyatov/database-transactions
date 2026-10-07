@@ -5,14 +5,14 @@ A: claim → job 1
 B: claim → job 2 (skips locked job 1)
 A: job 1 done
 A: COMMIT
-B: crash → job 2 requeued
+B: ROLLBACK → job 2 remains queued
 B: claim → job 2 (back in queue)
 B: job 2 done
 B: COMMIT
 A: both jobs done
 ```
 
-*Two workers run the same loop: claim the oldest queued job, do the work, mark it done, commit.*
+*Two workers select available queued rows in id order and mark database state done. Task names are data; no email or invoice is executed.*
 
 ```transcript
 A> BEGIN;
@@ -36,7 +36,7 @@ B> SELECT id, task FROM jobs WHERE state = 'queued'
 (1 row)
 ```
 
-*A finishes and commits. B crashes mid-job — its claim evaporates with its transaction.*
+*A marks job 1 done and commits. B explicitly rolls back; no worker process is killed.*
 
 ```transcript
 A> UPDATE jobs SET state = 'done' WHERE id = 1;
@@ -49,7 +49,7 @@ B> ROLLBACK;
 ROLLBACK
 ```
 
-*A restarted worker finds job 2 right back in the queue — nothing was lost, nothing ran twice.*
+*B selects job 2 again after rollback. This checks row availability, not the number of external effects.*
 
 ```transcript
 B> BEGIN;

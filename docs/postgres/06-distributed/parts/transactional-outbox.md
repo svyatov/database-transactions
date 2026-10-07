@@ -36,6 +36,12 @@ App> SELECT id, event FROM outbox ORDER BY id;
 ----+-----------------------
   1 | order_placed: order 1 
 (1 row)
+
+App> SELECT id, customer, amount FROM orders ORDER BY id;
+ id | customer | amount 
+----+----------+--------
+  1 | alice    |     90 
+(1 row)
 ```
 
 *A relay claims the event exactly like a chapter-5 job-queue worker…*
@@ -51,7 +57,7 @@ Relay> SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (1 row)
 ```
 
-*…publishes it to the broker (an HTTP call — outside any transaction), deletes it, and crashes before COMMIT.*
+*A real relay would publish outside this transaction. Here publication is narration only; the DELETE is executed and explicitly rolled back.*
 
 ```transcript
 Relay> DELETE FROM outbox WHERE id = 1;
@@ -61,7 +67,7 @@ Relay> ROLLBACK;
 ROLLBACK
 ```
 
-*The delete evaporated with the crash — the event is still in the outbox. The restarted relay publishes it AGAIN: at-least-once delivery, so consumers must be idempotent.*
+*ROLLBACK restored the deleted row. The relay selects it again and commits its deletion. No receiver effect or delivery count is recorded here.*
 
 ```transcript
 Relay> BEGIN;

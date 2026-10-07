@@ -17,7 +17,7 @@ A> SELECT pg_advisory_lock(42);
                   
 (1 row)
 
-B> SELECT pg_try_advisory_lock(42) AS got_it; -- an instant answer — no waiting
+B> SELECT pg_try_advisory_lock(42) AS got_it; -- false without waiting to acquire this advisory lock; latency is not measured
  got_it 
 --------
  f      
@@ -43,7 +43,7 @@ A> SELECT pg_advisory_unlock(42) AS released;
 (1 row)
 ```
 
-*Session-level locks ignore transaction boundaries entirely — COMMIT releases nothing.*
+*COMMIT does not release A's session-level advisory lock on key 9.*
 
 ```transcript
 A> BEGIN;
@@ -71,7 +71,7 @@ A> SELECT pg_advisory_unlock(9) AS released;
 (1 row)
 ```
 
-*pg_advisory_xact_lock, by contrast, releases itself at COMMIT — there is no unlock function for it.*
+*After A commits, the next try-lock checks that its transaction-level key 7 is available.*
 
 ```transcript
 A> BEGIN;
