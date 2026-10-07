@@ -1,7 +1,8 @@
 title: "lock_timeout: wait, but not forever"
 claim: >-
-  With lock_timeout set, a statement waits for a lock only that long, then
-  fails with SQLSTATE 55P03 — the same code NOWAIT raises immediately.
+  B's standalone UPDATE fails with 55P03 under a 100ms lock_timeout while
+  A holds the row lock. After A commits, B retries successfully and reads
+  300. lock_timeout limits each acquisition, not total statement time.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -18,7 +19,7 @@ steps:
     comment: lock_not_available, raised after the timeout
     tl: UPDATE 300 → gives up after 100ms
 
-  - note: The failure canceled only B's statement — a retry after A commits works.
+  - note: B's failed standalone statement ends its implicit transaction; a fresh attempt after A commits works here.
   - A: COMMIT
     tl: COMMIT
   - B: UPDATE accounts SET balance = 300 WHERE id = 1

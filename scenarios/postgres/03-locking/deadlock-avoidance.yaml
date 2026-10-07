@@ -1,8 +1,8 @@
 title: "Deadlock avoidance: lock rows in a consistent order"
 claim: >-
-  The same two opposite-direction transfers cannot deadlock if both
-  transactions lock the rows in the same (id) order first — the second simply
-  waits its turn.
+  In this two-row schedule both transfers lock rows in id order first.
+  B waits for A, then both commit, leaving balances 115 and 85.
+  Other resources and schedules are not tested.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
@@ -32,4 +32,4 @@ steps:
 
   - A: SELECT owner, balance FROM accounts ORDER BY id
     expect: [{ owner: alice, balance: 115 }, { owner: bob, balance: 85 }]
-    comment: both transfers landed — same workload, zero deadlocks
+    comment: both transfers committed in this schedule

@@ -1,7 +1,8 @@
 title: "NOWAIT: fail fast instead of queueing"
 claim: >-
-  SELECT ... FOR UPDATE NOWAIT refuses to wait: if the row is locked it fails
-  immediately with SQLSTATE 55P03 instead of joining the lock queue.
+  B's FOR UPDATE NOWAIT gets 55P03 while A holds a conflicting row lock;
+  after A commits, B's standalone retry returns row 1. NOWAIT concerns
+  row locks and does not eliminate table-lock waits or other errors.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -13,7 +14,7 @@ steps:
 
   - B.fails: SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
     error: "55P03"
-    comment: lock_not_available — instantly, no waiting
+    comment: lock_not_available from the conflicting row-lock request
     tl: … FOR UPDATE NOWAIT
 
   - note: Once A is done, the same statement succeeds.

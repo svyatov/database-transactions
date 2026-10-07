@@ -1,8 +1,8 @@
 title: "Reading pg_locks: what one UPDATE really holds"
 claim: >-
-  pg_locks shows every lock a transaction holds — a single-row UPDATE takes
-  four — and a waiter shows up as granted = false, findable via
-  pg_blocking_pids().
+  For this table and primary index, M asserts four pg_locks entries for A's
+  UPDATE, B's ungranted transaction-id ShareLock, and B's direct blocker A.
+  Ordinary on-disk row locks normally do not appear directly in pg_locks.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -13,7 +13,7 @@ steps:
     tl: UPDATE (takes the row lock)
 
   - note: >-
-      One innocent UPDATE = four locks: table, index, its own xid, its own virtual xid.
+      This UPDATE's inspected lock entries: table, index, assigned xid and virtual xid.
   - M: |
       SELECT l.locktype, l.relation::regclass AS relation, l.mode, l.granted
       FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid

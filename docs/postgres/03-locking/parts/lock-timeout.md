@@ -25,7 +25,7 @@ B> UPDATE accounts SET balance = 300 WHERE id = 1; -- lock_not_available, raised
 ERROR:  55P03: canceling statement due to lock timeout
 ```
 
-*The failure canceled only B's statement — a retry after A commits works.*
+*B's failed standalone statement ends its implicit transaction; a fresh attempt after A commits works here.*
 
 ```transcript
 A> COMMIT;

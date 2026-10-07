@@ -1,8 +1,9 @@
-title: "VACUUM: reclaim for reuse, not for the OS"
+title: "VACUUM: observed slot reuse and file compaction"
 claim: >-
-  VACUUM turns dead tuples into reusable free space inside the table's file —
-  new rows land in the freed slots — but it does not shrink the file; only
-  VACUUM FULL rewrites the table to its minimal size.
+  In this setup VACUUM frees inspected counters slots and the next INSERT
+  reuses slot 2. Standard VACUUM leaves bloat at 9 pages; VACUUM FULL
+  compacts it to 5. Standard VACUUM can truncate empty trailing pages
+  under suitable locking conditions, a variant not executed here.
 setup: |
   CREATE EXTENSION pageinspect;
   CREATE TABLE counters (id int PRIMARY KEY, n int NOT NULL);
@@ -34,7 +35,7 @@ steps:
   - A: INSERT INTO counters VALUES (2, 0) RETURNING ctid, id
     expect: [{ ctid: "(0,2)" }]
 
-  - note: Same story at file level — 1000 rows in 5 pages, doubled to 9 by an UPDATE of every row.
+  - note: At file level this 1000-row heap grows from 5 to 9 pages after UPDATE.
   - A: SELECT (pg_relation_size('bloat') / 8192)::int AS pages
     expect: [{ pages: 5 }]
   - A: UPDATE bloat SET filler = 'y'
@@ -43,8 +44,8 @@ steps:
 
   - A: VACUUM bloat
   - note: >-
-      VACUUM cleaned 1000 dead tuples — and the file is still 9 pages. The
-      space is free *inside* the file.
+      Standard VACUUM completes and the asserted file size remains 9 pages.
+      This size observation does not count reclaimed tuples or reusable bytes.
   - A: SELECT (pg_relation_size('bloat') / 8192)::int AS pages
     expect: [{ pages: 9 }]
 
