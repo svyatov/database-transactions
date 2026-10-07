@@ -55,6 +55,6 @@ A> SELECT owner, balance FROM accounts ORDER BY id; -- A's transfer survived; B'
 (2 rows)
 ```
 
-*Unlike a lock timeout, a deadlock rolls back B's entire transaction — there is nothing left to ROLLBACK.*
+*Unlike a row-lock timeout with innodb_rollback_on_timeout=OFF, this deadlock rolls back B's entire transaction — there is nothing left to ROLLBACK.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/deadlock.yaml)</small>

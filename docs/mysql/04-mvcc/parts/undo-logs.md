@@ -22,7 +22,7 @@ R> SELECT id, balance FROM accounts ORDER BY id; -- the read view opens here
 (3 rows)
 ```
 
-*A deletes every row — and commits. This is not a trick; the data is gone.*
+*A deletes and commits all three rows; its current SELECT counts zero, without inspecting physical storage.*
 
 ```transcript
 A> DELETE FROM accounts;
@@ -35,10 +35,10 @@ A> SELECT count(*) AS remaining FROM accounts;
 (1 row)
 ```
 
-*R's SELECT finds three rows anyway. InnoDB follows each deleted record's roll pointer into the undo log and rebuilds the version R's read view is entitled to — row by row, on every read.*
+*R's SELECT still returns three rows. The MySQL multi-versioning manual explains this using undo reconstruction; the SELECT asserts visibility, not a count of internal reconstruction operations.*
 
 ```transcript
-R> SELECT id, balance FROM accounts ORDER BY id; -- reconstructed from undo, not read from the table
+R> SELECT id, balance FROM accounts ORDER BY id; -- the prior read view still returns the original rows
  id | balance 
 ----+---------
   1 |     100 

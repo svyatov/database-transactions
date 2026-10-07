@@ -21,7 +21,7 @@ B> ALTER TABLE accounts ADD COLUMN note varchar(50); -- ER_LOCK_WAIT_TIMEOUT
 ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
 ```
 
-*No waiting ALTER in the queue means no outage: C's read is instant.*
+*After the ALTER times out, C reads successfully while A remains open.*
 
 ```transcript
 C> SELECT balance FROM accounts WHERE id = 1;

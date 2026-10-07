@@ -1,8 +1,9 @@
 title: Waiters pile up — and sys.innodb_lock_waits shows who blocks whom
 claim: >-
-  Sessions waiting for the same row lock pile up behind the holder, visible live
-  in sys.innodb_lock_waits — and every queued update lands once the holder
-  commits.
+  In this MySQL 8.4 InnoDB primary-key schedule, B and C wait for A's lock;
+  sys.innodb_lock_waits identifies B's blocker. Both queued updates complete
+  after A commits, giving balance 211. Grant order and general eventual
+  completion are not asserted.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'shared', 100);
@@ -27,7 +28,7 @@ steps:
 
   - note: >-
       A commits — the waiters drain. (InnoDB's CATS scheduler does not promise
-      strict FIFO order, but every update lands.)
+      strict FIFO order; this run checks both completions, not their order.)
   - A: COMMIT
     tl: COMMIT → waiters drain
   - success: p1

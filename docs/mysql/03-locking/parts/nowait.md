@@ -10,7 +10,7 @@ A> SELECT id FROM accounts WHERE id = 1 FOR UPDATE;
   1 
 (1 row)
 
-B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- ER_LOCK_NOWAIT — instantly, no waiting
+B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- ER_LOCK_NOWAIT, no wait for this record lock
 ERROR 3572 (HY000): Statement aborted because lock(s) could not be acquired immediately and NOWAIT is set.
 ```
 

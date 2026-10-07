@@ -1,8 +1,9 @@
 title: Old row versions live in the undo log
 claim: >-
-  A committed DELETE removes rows only from the current version of the table.
-  A transaction whose read view predates it keeps reading the old versions,
-  rebuilt on demand from the undo log — long after the "real" rows are gone.
+  At MySQL 8.4 InnoDB REPEATABLE READ, R's earlier read view still returns
+  three rows after A commits their deletion and counts zero. R counts zero
+  after ending its transaction. Undo reconstruction and deferred physical
+  removal are documented mechanisms, not physical-page observations here.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 200), (3, 'carol', 300);
@@ -14,7 +15,7 @@ steps:
     comment: the read view opens here
     tl: reads 3 rows — snapshot opens
 
-  - note: A deletes every row — and commits. This is not a trick; the data is gone.
+  - note: A deletes and commits all three rows; its current SELECT counts zero, without inspecting physical storage.
   - A: DELETE FROM accounts
     affected: 3
     tl: DELETE all 3 (+ commit)
@@ -23,12 +24,12 @@ steps:
     tl: table now empty
 
   - note: >-
-      R's SELECT finds three rows anyway. InnoDB follows each deleted record's
-      roll pointer into the undo log and rebuilds the version R's read view is
-      entitled to — row by row, on every read.
+      R's SELECT still returns three rows. The MySQL multi-versioning manual
+      explains this using undo reconstruction; the SELECT asserts visibility,
+      not a count of internal reconstruction operations.
   - R: SELECT id, balance FROM accounts ORDER BY id
     expect: [{ id: 1, balance: 100 }, { id: 2, balance: 200 }, { id: 3, balance: 300 }]
-    comment: reconstructed from undo, not read from the table
+    comment: the prior read view still returns the original rows
     tl: still sees 3 rows (from undo)
 
   - R: COMMIT

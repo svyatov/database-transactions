@@ -4,12 +4,12 @@
 A: grabs job 1
 B: job 1 taken → grabs job 2
 C: grabs job 3
-D: queue empty → nothing
-A: crash (rollback) → job 1 freed
+D: no available row → nothing
+A: ROLLBACK → job 1 lock released
 D: grabs job 1
 ```
 
-*Four workers run the exact same query at the same time.*
+*Four sessions issue the same query in the order shown, with A, B, and C retaining their locks.*
 
 ```transcript
 A> BEGIN;
@@ -40,14 +40,14 @@ C> SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (1 row)
 ```
 
-*Worker D finds the queue empty — an instant answer, not a wait.*
+*D finds no available row; the table still contains the locked jobs.*
 
 ```transcript
 D> SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 Empty set
 ```
 
-*A worker crash (rollback) puts its job straight back on the queue.*
+*A explicitly rolls back, releasing its job-row lock. No crash is injected.*
 
 ```transcript
 A> ROLLBACK;

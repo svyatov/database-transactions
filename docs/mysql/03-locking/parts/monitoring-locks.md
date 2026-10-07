@@ -8,7 +8,7 @@ A> UPDATE accounts SET balance = 200 WHERE id = 1;
 Query OK, 1 row affected
 ```
 
-*One innocent UPDATE = two locks: an intention-exclusive on the table, an exclusive on the row.*
+*This existing PRIMARY-key UPDATE shows a table IX lock and an exclusive record lock.*
 
 ```transcript
 M> SELECT object_name, index_name, lock_type, lock_mode, lock_status, lock_data

@@ -1,7 +1,8 @@
 title: "NOWAIT: fail fast instead of queueing"
 claim: >-
-  SELECT ... FOR UPDATE NOWAIT refuses to wait: if the row is locked it fails
-  immediately with errno 3572 instead of joining the lock queue.
+  For this locked MySQL 8.4 InnoDB primary-key row, FOR UPDATE NOWAIT
+  returns errno 3572; the same query succeeds after A commits. The row-lock
+  NOWAIT contract does not exclude metadata-lock waits or measure total latency.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -12,7 +13,7 @@ steps:
 
   - B.fails: SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
     error: "3572"
-    comment: ER_LOCK_NOWAIT — instantly, no waiting
+    comment: ER_LOCK_NOWAIT, no wait for this record lock
 
   - note: Once A is done, the same statement succeeds.
   - A: COMMIT

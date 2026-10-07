@@ -1,8 +1,9 @@
 title: "Two row-lock strengths: shared and exclusive"
 claim: >-
-  InnoDB row locks come in exactly two strengths — S locks coexist with each
-  other but block writers, X locks block everything. There is no
-  PostgreSQL-style four-mode ladder.
+  On this existing MySQL 8.4 InnoDB PRIMARY record, two FOR SHARE reads
+  coexist; an UPDATE waits for FOR SHARE, and FOR SHARE waits for an UPDATE.
+  The documented S/X record-lock matrix does not describe gap locks or
+  nonlocking consistent reads.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -25,7 +26,7 @@ steps:
     tl: COMMIT
   - success: p1
 
-  - note: "And an X lock blocks even the friendliest reader: FOR SHARE has to wait for a running UPDATE."
+  - note: "An X record lock conflicts with FOR SHARE's S request; this locking reader waits."
   - A: BEGIN
   - A: UPDATE accounts SET balance = 300 WHERE id = 1
     tl: UPDATE (X)
@@ -36,4 +37,4 @@ steps:
     tl: COMMIT
   - success: p2
 
-  - note: PostgreSQL's FOR KEY SHARE would coexist with that UPDATE — InnoDB has no lock that weak.
+  - note: The S/X record-lock contract is documented in the MySQL 8.4 locking manual; gap locks have different compatibility.

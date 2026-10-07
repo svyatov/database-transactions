@@ -1,14 +1,15 @@
 title: "SKIP LOCKED: take what's free, skip what's taken"
 claim: >-
-  SELECT ... FOR UPDATE SKIP LOCKED silently skips locked rows, so concurrent
-  workers each grab a different row without ever waiting — the backbone of SQL
-  job queues.
+  In this MySQL 8.4 InnoDB schedule, FOR UPDATE SKIP LOCKED selects
+  different available job rows for A, B, and C; D finds none, then can select
+  job 1 after A rolls back. This tests row selection and explicit rollback,
+  not worker crashes or duplicate-free external execution.
 setup: |
   CREATE TABLE jobs (id int PRIMARY KEY, task varchar(50) NOT NULL);
   INSERT INTO jobs VALUES (1, 'send email'), (2, 'resize image'), (3, 'build report');
 sessions: [A, B, C, D]
 steps:
-  - note: Four workers run the exact same query at the same time.
+  - note: Four sessions issue the same query in the order shown, with A, B, and C retaining their locks.
   - A: BEGIN
   - A: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1 }]
@@ -25,14 +26,14 @@ steps:
     expect: [{ id: 3 }]
     tl: grabs job 3
 
-  - note: Worker D finds the queue empty — an instant answer, not a wait.
+  - note: D finds no available row; the table still contains the locked jobs.
   - D: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: []
-    tl: queue empty → nothing
+    tl: no available row → nothing
 
-  - note: A worker crash (rollback) puts its job straight back on the queue.
+  - note: A explicitly rolls back, releasing its job-row lock. No crash is injected.
   - A: ROLLBACK
-    tl: crash (rollback) → job 1 freed
+    tl: ROLLBACK → job 1 lock released
   - D: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1 }]
     tl: grabs job 1
