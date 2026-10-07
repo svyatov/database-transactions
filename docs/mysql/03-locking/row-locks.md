@@ -1,47 +1,45 @@
 # Row locks
 
-MVCC keeps plain readers lock-free, but writers (and readers who intend to write) take
-*row locks*. InnoDB's are simple: a row lock is either *shared* (S) or *exclusive* (X).
-S coexists with S; everything else conflicts.
+In MySQL 8.4 InnoDB, record locks protect index records. Shared (S) record locks coexist;
+exclusive (X) record locks conflict with S and X requests from other transactions.
+This is a [Documented contract](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html),
+not a compatibility rule for every InnoDB lock type. Gap locks behave differently.
 
-## FOR UPDATE blocks writers, never readers
+## FOR UPDATE blocks writers, not consistent reads {#for-update-blocks-writers-never-readers}
+
+The scenario uses the default REPEATABLE READ isolation and an existing primary-key row.
+B's nonlocking SELECT reads the committed version while its UPDATE waits for A.
+Locking reads can wait; plain SELECT in an explicit SERIALIZABLE transaction can also take locks.
+A consistent read avoids record-lock waits, but can still wait for [metadata locks](/mysql/03-locking/table-locks-and-ddl).
 
 <!--@include: ./parts/for-update-blocks.md-->
 
 ## The whole matrix: S and X
 
-PostgreSQL has [a four-mode ladder](/postgres/03-locking/row-locks) of row locks. InnoDB has
-two strengths, and the full compatibility story fits in one demo:
+The transcript demonstrates S/S compatibility, an UPDATE waiting for S, and FOR SHARE
+waiting for X. The full record-lock matrix comes from the manual above.
 
 <!--@include: ./parts/lock-mode-matrix.md-->
 
 ## Foreign keys take row locks for you
 
-Every `INSERT` into a child table locks the referenced parent row with an S lock: that's how
-InnoDB guarantees the parent can't vanish mid-insert. With no weaker lock available, even an
-innocent update of the parent's *other columns* has to wait:
+For this declared foreign key, the child INSERT's parent check holds a shared record lock.
+B's non-key UPDATE waits, and the later DELETE fails with `1451` under the default RESTRICT action.
+Other referential actions, such as CASCADE, change the deletion behavior.
 
 <!--@include: ./parts/fk-shared-lock.md-->
 
-::: warning The silent no-op FK
-MySQL silently ignores the inline `REFERENCES` syntax:
-`customer_id int REFERENCES customers (id)` creates no constraint at all. Foreign keys
-must be declared at table level: `FOREIGN KEY (customer_id) REFERENCES customers (id)`.
+::: warning Declare the constraint
+MySQL 8.4 parses inline column `REFERENCES` without enforcing a foreign key. Use a table-level
+`FOREIGN KEY` declaration, as the [CREATE TABLE manual](https://dev.mysql.com/doc/refman/8.4/en/create-table.html) specifies.
 :::
 
-InnoDB's row-lock story fits in two strengths: S coexists with S, X conflicts with
-everything, and that's the entire compatibility matrix. `FOR SHARE` takes S; `FOR UPDATE` and
-every write take X; plain SELECTs stay out of it below SERIALIZABLE, which is why readers never
-wait for writers. The sharp edge is the foreign key: a child insert takes a full S lock on the
-parent row that even PostgreSQL's `FOR KEY SHARE` would have let slide, so a hot parent under
-busy children becomes a queue Postgres wouldn't have. All of these locks live until `COMMIT` or
-`ROLLBACK`, never released mid-transaction, so keeping write transactions short is the whole
-game. Rows are only half of InnoDB locking, though: at REPEATABLE READ it also locks the empty
-spaces between them, which is where [gap locks](/mysql/03-locking/gap-locks) come in.
+[Locking-read locks](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html) last until transaction end.
+Do not generalize that lifetime to all record locks: at READ COMMITTED, locks on nonmatching
+rows can be released after predicate evaluation. Keep transactions short and inspect the
+actual query/index path. Next: [gap locks](/mysql/03-locking/gap-locks).
 
 ## Further reading
 
-- [MySQL docs: InnoDB Locking](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html)
 - [MySQL docs: Locks Set by Different SQL Statements](https://dev.mysql.com/doc/refman/8.4/en/innodb-locks-set.html)
-- [Gap locks](/mysql/03-locking/gap-locks), the other half of InnoDB locking: locking the spaces between rows
-- [The same lesson on PostgreSQL](/postgres/03-locking/row-locks)
+- [The PostgreSQL record-lock modes](/postgres/03-locking/row-locks)

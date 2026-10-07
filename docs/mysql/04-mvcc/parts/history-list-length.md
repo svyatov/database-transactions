@@ -21,13 +21,13 @@ R> SELECT v FROM counters;
 (1 row)
 ```
 
-*Meanwhile the application hums along: 200 small transactions, each updating one row and committing. Every one of them must keep its undo — R's read view might still need any of those versions.*
+*Meanwhile the application hums along: 200 small transactions, each updating one row and committing. Every one of them must keep its undo — R's old read view prevents purge from advancing past the retained history.*
 
 ```transcript
 A> CALL bump(200); -- 200 committed single-row updates
 Query OK
 
-A> SELECT count >= 200 AS pinned_by_reader FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'; -- none of those 200 undo logs can be purged while R's read view lives
+A> SELECT count >= 200 AS pinned_by_reader FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'; -- the history-list counter is at least 200 while R retains its view
  pinned_by_reader 
 ------------------
                 1 
@@ -43,6 +43,6 @@ R> COMMIT;
 Query OK
 ```
 
-*With the read view gone, purge is free to reclaim all 200 versions in the background. The one number to watch in production is exactly this counter — trx_rseg_history_len.*
+*R's commit removes its read-view retention requirement. Background purge and other readers determine later cleanup; this run does not wait for or assert history-list drainage.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/04-mvcc/history-list-length.yaml)</small>

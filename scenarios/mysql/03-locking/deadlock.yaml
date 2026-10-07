@@ -1,8 +1,8 @@
 title: "Deadlock: two transactions, opposite lock order"
 claim: >-
-  Two transactions locking the same rows in opposite order deadlock; InnoDB
-  detects the cycle instantly and rolls back one of them with errno 1213 so the
-  other can finish.
+  With MySQL 8.4 InnoDB deadlock detection enabled, these opposite-order
+  updates form a cycle. B receives errno 1213, its earlier debit is rolled back,
+  and A commits with balances 90 and 110. Detection latency is not measured.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
@@ -41,5 +41,5 @@ steps:
     comment: A's transfer survived; B's evaporated — retry it
 
   - note: >-
-      Unlike a lock timeout, a deadlock rolls back B's entire transaction —
+      Unlike a row-lock timeout with innodb_rollback_on_timeout=OFF, this deadlock rolls back B's entire transaction —
       there is nothing left to ROLLBACK.

@@ -16,6 +16,18 @@ Query OK, 1 row affected
 
 B> SET SESSION innodb_lock_wait_timeout = 1;
 Query OK
+
+B> SELECT @@innodb_rollback_on_timeout AS rollback_on_timeout;
+ rollback_on_timeout 
+---------------------
+                   0 
+(1 row)
+
+B> BEGIN;
+Query OK
+
+B> UPDATE accounts SET balance = 125 WHERE id = 2;
+Query OK, 1 row affected
 ```
 
 *B queues for the row lock like anyone else — but gives up after a second.*
@@ -25,7 +37,32 @@ B> UPDATE accounts SET balance = 300 WHERE id = 1; -- ER_LOCK_WAIT_TIMEOUT, rais
 ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
 ```
 
-*The failure canceled only B's statement — a retry after A commits works.*
+*B's earlier change survives, and C still waits for B's lock on bob.*
+
+```transcript
+B> SELECT balance FROM accounts WHERE id = 2;
+ balance 
+---------
+     125 
+(1 row)
+
+C> UPDATE accounts SET balance = balance + 1 WHERE id = 2;
+⏳ C is waiting for a lock…
+
+B> ROLLBACK;
+Query OK
+
+⏵ C resumes:
+Query OK, 1 row affected
+
+C> SELECT balance FROM accounts WHERE id = 2;
+ balance 
+---------
+     101 
+(1 row)
+```
+
+*After A commits, B can retry the failed update as a new autocommit statement.*
 
 ```transcript
 A> COMMIT;

@@ -2,7 +2,7 @@
 
 ```timeline
 A: SELECT … FOR UPDATE (locks the row)
-B: SELECT balance → 100 (readers don't block)
+B: consistent SELECT balance → 100
 B: UPDATE -10 → ⏳ waits
 A: COMMIT (releases the lock)
 B: ⏵ UPDATE -10 → completes
@@ -19,7 +19,7 @@ A> SELECT * FROM accounts WHERE id = 1 FOR UPDATE;
 (1 row)
 ```
 
-*Reading the locked row costs B nothing — MVCC readers don't take row locks.*
+*B's consistent SELECT does not request a record lock and completes while A holds its lock.*
 
 ```transcript
 B> SELECT balance FROM accounts WHERE id = 1;

@@ -1,43 +1,45 @@
 # Table locks & DDL
 
-Row locks aren't the only game. Every statement that touches a table also holds a *metadata
-lock* (MDL) on it for the whole transaction, and DDL needs that lock in exclusive mode. That's
-how a one-millisecond `ALTER TABLE` takes a production system down.
+MySQL 8.4 metadata locks (MDL) protect object definitions. They differ from InnoDB record
+and intention locks and explicit MySQL `LOCK TABLES` locks. The
+[metadata-locking manual](https://dev.mysql.com/doc/refman/8.4/en/metadata-locking.html)
+documents acquisition and release: a table used by an explicit transaction retains its
+metadata lock until the transaction ends; under autocommit that transaction can be one statement.
 
-::: warning DDL commits your open transaction
-Every DDL statement on MySQL commits implicitly: whatever your transaction had done so far
-is committed, and the DDL itself cannot be rolled back. A "transactional" migration that
-mixes DML and DDL is not transactional. See [ORM pitfalls](/mysql/05-patterns/orm-pitfalls).
+::: warning ALTER TABLE commits your open transaction
+`ALTER TABLE` implicitly commits pending work before execution. Its schema change is not
+undone by an application ROLLBACK. Do not generalize this to every DDL form:
+`CREATE TEMPORARY TABLE` and `DROP TEMPORARY TABLE` are exceptions to implicit commit,
+but their effects still cannot be rolled back. See the
+[implicit-commit manual](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html)
+and [ORM pitfalls](/mysql/05-patterns/orm-pitfalls).
 :::
 
 ## The classic migration outage
 
-Even an `ALGORITHM=INSTANT` column add must wait for every open transaction that has touched
-the table. While it waits, its exclusive request sits at the head of the queue, and every
-query that arrives after it (plain SELECTs included) has to wait behind it:
+A's explicit read transaction holds MDL. B's column addition waits for an exclusive
+metadata lock, and the later SELECT from C waits too. The transcript asserts both process
+states and their completion after A commits. It does not specify `ALGORITHM=INSTANT` or
+measure DDL runtime. Metadata-lock priority rules, including `max_write_lock_count`, are
+Documented contracts, not a universal FIFO rule established here.
 
 <!--@include: ./parts/alter-table-outage.md-->
 
 ## The fix: run DDL with a lock_wait_timeout
 
-MDL waits are governed by `lock_wait_timeout` (a *different* variable from InnoDB's
-`innodb_lock_wait_timeout`, default: one year). Set it low for migrations so they fail fast
-instead of camping in the queue:
+The [variable manual](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_lock_wait_timeout)
+documents a metadata-lock timeout in whole seconds, defaulting to 31536000 (one year).
+It applies separately to each lock acquisition attempt, not to total statement runtime.
 
 <!--@include: ./parts/ddl-lock-timeout.md-->
 
-The through-line is that a shared MDL outlives every statement that took it, right up to
-`COMMIT`, so a long-running read and a migration are natural enemies. The outage isn't the DDL
-doing work (an `INSTANT` add does almost none), it's the queue that forms behind the DDL's
-waiting exclusive request, which you can watch from `performance_schema.processlist` where
-every stuck session reports `Waiting for table metadata lock`. The lever that saves you is
-`lock_wait_timeout`, measured in whole seconds, a different knob from
-[PostgreSQL's millisecond `lock_timeout`](/postgres/03-locking/table-locks-and-ddl). The other
-way a write gets stuck isn't a queue but a cycle: two transactions each holding what the
-other needs, which is where [deadlocks](/mysql/03-locking/deadlocks) come in.
+B still queues while waiting. The scenario proves that after its one-second timeout
+(`1205`), C reads successfully while A remains open; it does not prove C could never be
+blocked during that second. A later retry succeeds after A commits.
+Use a timeout to limit migration waits, not as a promise of no outage.
+Inspect `performance_schema.metadata_locks` and process states via
+[monitoring locks](/mysql/03-locking/monitoring-locks).
 
 ## Further reading
 
-- [MySQL docs: Metadata Locking](https://dev.mysql.com/doc/refman/8.4/en/metadata-locking.html)
-- [MySQL docs: lock_wait_timeout](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_lock_wait_timeout)
-- [The same lesson on PostgreSQL](/postgres/03-locking/table-locks-and-ddl)
+- [The PostgreSQL counterpart](/postgres/03-locking/table-locks-and-ddl)

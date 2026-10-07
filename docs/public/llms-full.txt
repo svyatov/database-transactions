@@ -1592,7 +1592,7 @@ Query OK
 ## mysql/03-locking/alter-table-outage.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: An ALTER TABLE queued behind one long transaction blocks every later query on that table — even plain SELECTs — because they must queue behind its exclusive metadata-lock request.
+- claim: In this MySQL 8.4 InnoDB schedule, ALTER TABLE waits for A's transaction-held metadata lock, and C's later SELECT waits too. Both complete after A commits.
 
 ```timeline
 A: SELECT (a long-lived transaction)
@@ -1623,7 +1623,7 @@ B> ALTER TABLE accounts ADD COLUMN note varchar(50);
 ⏳ B is waiting for a lock…
 ```
 
-*— every new query on the table queues behind the *waiting* ALTER. This is the outage.*
+*C's new SELECT queues behind the waiting ALTER in this schedule.*
 
 ```transcript
 C> SELECT balance FROM accounts WHERE id = 1;
@@ -1659,7 +1659,7 @@ Query OK
 ## mysql/03-locking/ddl-lock-timeout.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: With lock_wait_timeout set, a migration that can't get its metadata lock fails fast (errno 1205) instead of queueing — and other sessions' queries are never blocked behind it.
+- claim: With lock_wait_timeout = 1, this ALTER TABLE fails with errno 1205 while A retains its metadata lock. After that failure C can read, and a retry succeeds after A commits. Queries during the DDL wait are not tested.
 
 ```transcript
 A> BEGIN;
@@ -1682,7 +1682,7 @@ B> ALTER TABLE accounts ADD COLUMN note varchar(50); -- ER_LOCK_WAIT_TIMEOUT
 ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
 ```
 
-*No waiting ALTER in the queue means no outage: C's read is instant.*
+*After the ALTER times out, C reads successfully while A remains open.*
 
 ```transcript
 C> SELECT balance FROM accounts WHERE id = 1;
@@ -1707,7 +1707,7 @@ Query OK
 ## mysql/03-locking/deadlock-avoidance.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: The same two opposite-direction transfers cannot deadlock if both transactions lock the rows in the same (id) order first — the second simply waits its turn.
+- claim: In this two-row primary-key schedule, acquiring both rows in id order makes B wait for A; both opposite-direction transfers then commit with the expected balances. This does not prove deadlock freedom for other access paths.
 
 ```timeline
 A: locks id 1,2 (ordered)
@@ -1736,7 +1736,7 @@ B> SELECT id FROM accounts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;
 ⏳ B is waiting for a lock…
 ```
 
-*No cycle is possible: B parks at the first row and holds nothing A needs.*
+*In this schedule B waits before holding any record lock A needs.*
 
 ```transcript
 A> UPDATE accounts SET balance = balance - 10 WHERE id = 1;
@@ -1777,7 +1777,7 @@ A> SELECT owner, balance FROM accounts ORDER BY id; -- both transfers landed —
 ## mysql/03-locking/deadlock.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Two transactions locking the same rows in opposite order deadlock; InnoDB detects the cycle instantly and rolls back one of them with errno 1213 so the other can finish.
+- claim: With MySQL 8.4 InnoDB deadlock detection enabled, these opposite-order updates form a cycle. B receives errno 1213, its earlier debit is rolled back, and A commits with balances 90 and 110. Detection latency is not measured.
 
 ```timeline
 A: locks alice (id=1)
@@ -1834,14 +1834,14 @@ A> SELECT owner, balance FROM accounts ORDER BY id; -- A's transfer survived; B'
 (2 rows)
 ```
 
-*Unlike a lock timeout, a deadlock rolls back B's entire transaction — there is nothing left to ROLLBACK.*
+*Unlike a row-lock timeout with innodb_rollback_on_timeout=OFF, this deadlock rolls back B's entire transaction — there is nothing left to ROLLBACK.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/deadlock.yaml)</small>
 
 ## mysql/03-locking/fk-shared-lock.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: INSERTing a child row locks the referenced parent row with a plain shared lock: even a non-key UPDATE of the parent blocks until the child commits (PostgreSQL's FOR KEY SHARE would allow it), and deleting a referenced parent fails outright.
+- claim: For this MySQL 8.4 InnoDB table-level foreign key with the default RESTRICT action, a child INSERT makes a parent non-key UPDATE wait until commit. The later parent DELETE fails with errno 1451. The shared parent-record lock mechanism is documented in the MySQL manual, not inspected here.
 
 ```timeline
 A: INSERT child (S-locks parent)
@@ -1872,7 +1872,7 @@ Query OK
 Query OK, 1 row affected
 ```
 
-*With the order committed, deleting the parent doesn't block — it fails on the spot.*
+*With this RESTRICT foreign key and committed child, the parent DELETE fails with 1451.*
 
 ```transcript
 B> DELETE FROM customers WHERE id = 1; -- ER_ROW_IS_REFERENCED_2
@@ -1890,11 +1890,11 @@ B> SELECT balance FROM customers WHERE id = 1; -- the parent survived, with B's 
 ## mysql/03-locking/for-update-blocks.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: A row locked with SELECT FOR UPDATE can still be read by everyone, but any write to it waits until the locking transaction ends.
+- claim: At MySQL 8.4 InnoDB REPEATABLE READ, A's FOR UPDATE on an existing PRIMARY key does not prevent B's consistent SELECT, but B's UPDATE waits. After A commits 150, B's decrement produces 140. Locking readers have different rules.
 
 ```timeline
 A: SELECT … FOR UPDATE (locks the row)
-B: SELECT balance → 100 (readers don't block)
+B: consistent SELECT balance → 100
 B: UPDATE -10 → ⏳ waits
 A: COMMIT (releases the lock)
 B: ⏵ UPDATE -10 → completes
@@ -1911,7 +1911,7 @@ A> SELECT * FROM accounts WHERE id = 1 FOR UPDATE;
 (1 row)
 ```
 
-*Reading the locked row costs B nothing — MVCC readers don't take row locks.*
+*B's consistent SELECT does not request a record lock and completes while A holds its lock.*
 
 ```transcript
 B> SELECT balance FROM accounts WHERE id = 1;
@@ -1948,7 +1948,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- B's -10 applied on top of A's c
 ## mysql/03-locking/gap-locks.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Under REPEATABLE READ a locking read on a range takes next-key locks — the matching rows AND the gaps between them — so INSERTs into the range block until the reader finishes. Under READ COMMITTED only the found rows are locked and the same INSERT sails through.
+- claim: On MySQL 8.4 InnoDB, the demonstrated PRIMARY-index range read at REPEATABLE READ makes insertion of slot 15 wait with X,GAP,INSERT_INTENTION. At READ COMMITTED the later insertion of 17 completes before A commits. Other queries, indexes, and constraint checks can have different coverage.
 
 ```timeline
 A: SELECT 10–20 FOR UPDATE
@@ -2038,7 +2038,7 @@ A> SELECT slot FROM bookings ORDER BY slot;
 ## mysql/03-locking/lock-mode-matrix.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: InnoDB row locks come in exactly two strengths — S locks coexist with each other but block writers, X locks block everything. There is no PostgreSQL-style four-mode ladder.
+- claim: On this existing MySQL 8.4 InnoDB PRIMARY record, two FOR SHARE reads coexist; an UPDATE waits for FOR SHARE, and FOR SHARE waits for an UPDATE. The documented S/X record-lock matrix does not describe gap locks or nonlocking consistent reads.
 
 ```timeline
 A: FOR SHARE (S)
@@ -2090,7 +2090,7 @@ Query OK
 Query OK, 1 row affected
 ```
 
-*And an X lock blocks even the friendliest reader: FOR SHARE has to wait for a running UPDATE.*
+*An X record lock conflicts with FOR SHARE's S request; this locking reader waits.*
 
 ```transcript
 A> BEGIN;
@@ -2112,14 +2112,14 @@ Query OK
 (1 row)
 ```
 
-*PostgreSQL's FOR KEY SHARE would coexist with that UPDATE — InnoDB has no lock that weak.*
+*The S/X record-lock contract is documented in the MySQL 8.4 locking manual; gap locks have different compatibility.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-mode-matrix.yaml)</small>
 
 ## mysql/03-locking/lock-queue.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Sessions waiting for the same row lock pile up behind the holder, visible live in sys.innodb_lock_waits — and every queued update lands once the holder commits.
+- claim: In this MySQL 8.4 InnoDB primary-key schedule, B and C wait for A's lock; sys.innodb_lock_waits identifies B's blocker. Both queued updates complete after A commits, giving balance 211. Grant order and general eventual completion are not asserted.
 
 ```timeline
 A: UPDATE +1 (takes the row lock)
@@ -2155,7 +2155,7 @@ C> UPDATE accounts SET balance = balance + 100 WHERE id = 1;
 ⏳ C is waiting for a lock…
 ```
 
-*A commits — the waiters drain. (InnoDB's CATS scheduler does not promise strict FIFO order, but every update lands.)*
+*A commits — the waiters drain. (InnoDB's CATS scheduler does not promise strict FIFO order; this run checks both completions, not their order.)*
 
 ```transcript
 A> COMMIT;
@@ -2179,7 +2179,7 @@ C> SELECT balance FROM accounts WHERE id = 1; -- 100 + 1 + 10 + 100 — nothing 
 ## mysql/03-locking/lock-timeout.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: With innodb_lock_wait_timeout set, a statement waits for a row lock only that long, then fails with errno 1205 — only the statement is rolled back, the transaction survives.
+- claim: With innodb_lock_wait_timeout set, a statement waits for a row lock only that long, then fails with errno 1205 — only the statement is rolled back, the explicit transaction survives when innodb_rollback_on_timeout is OFF; its earlier change and record lock remain until ROLLBACK.
 
 ```timeline
 A: UPDATE (holds row lock)
@@ -2197,6 +2197,18 @@ Query OK, 1 row affected
 
 B> SET SESSION innodb_lock_wait_timeout = 1;
 Query OK
+
+B> SELECT @@innodb_rollback_on_timeout AS rollback_on_timeout;
+ rollback_on_timeout 
+---------------------
+                   0 
+(1 row)
+
+B> BEGIN;
+Query OK
+
+B> UPDATE accounts SET balance = 125 WHERE id = 2;
+Query OK, 1 row affected
 ```
 
 *B queues for the row lock like anyone else — but gives up after a second.*
@@ -2206,7 +2218,32 @@ B> UPDATE accounts SET balance = 300 WHERE id = 1; -- ER_LOCK_WAIT_TIMEOUT, rais
 ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
 ```
 
-*The failure canceled only B's statement — a retry after A commits works.*
+*B's earlier change survives, and C still waits for B's lock on bob.*
+
+```transcript
+B> SELECT balance FROM accounts WHERE id = 2;
+ balance 
+---------
+     125 
+(1 row)
+
+C> UPDATE accounts SET balance = balance + 1 WHERE id = 2;
+⏳ C is waiting for a lock…
+
+B> ROLLBACK;
+Query OK
+
+⏵ C resumes:
+Query OK, 1 row affected
+
+C> SELECT balance FROM accounts WHERE id = 2;
+ balance 
+---------
+     101 
+(1 row)
+```
+
+*After A commits, B can retry the failed update as a new autocommit statement.*
 
 ```transcript
 A> COMMIT;
@@ -2227,7 +2264,7 @@ B> SELECT balance FROM accounts WHERE id = 1;
 ## mysql/03-locking/monitoring-locks.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: data_locks shows every lock a transaction holds — a single-row UPDATE takes an intention lock on the table plus a record lock on the row — and a waiter shows up as WAITING, findable via sys.innodb_lock_waits.
+- claim: For this MySQL 8.4 InnoDB existing-primary-key UPDATE, data_locks shows a granted table IX lock and X,REC_NOT_GAP record lock, then B's WAITING record request. sys.innodb_lock_waits identifies A as B's blocker. This is not a count of every lock type or every UPDATE access path.
 
 ```transcript
 A> BEGIN;
@@ -2237,7 +2274,7 @@ A> UPDATE accounts SET balance = 200 WHERE id = 1;
 Query OK, 1 row affected
 ```
 
-*One innocent UPDATE = two locks: an intention-exclusive on the table, an exclusive on the row.*
+*This existing PRIMARY-key UPDATE shows a table IX lock and an exclusive record lock.*
 
 ```transcript
 M> SELECT object_name, index_name, lock_type, lock_mode, lock_status, lock_data
@@ -2286,7 +2323,7 @@ Query OK, 1 row affected
 ## mysql/03-locking/nowait.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: SELECT ... FOR UPDATE NOWAIT refuses to wait: if the row is locked it fails immediately with errno 3572 instead of joining the lock queue.
+- claim: For this locked MySQL 8.4 InnoDB primary-key row, FOR UPDATE NOWAIT returns errno 3572; the same query succeeds after A commits. The row-lock NOWAIT contract does not exclude metadata-lock waits or measure total latency.
 
 ```transcript
 A> BEGIN;
@@ -2298,7 +2335,7 @@ A> SELECT id FROM accounts WHERE id = 1 FOR UPDATE;
   1 
 (1 row)
 
-B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- ER_LOCK_NOWAIT — instantly, no waiting
+B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- ER_LOCK_NOWAIT, no wait for this record lock
 ERROR 3572 (HY000): Statement aborted because lock(s) could not be acquired immediately and NOWAIT is set.
 ```
 
@@ -2320,18 +2357,18 @@ B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
 ## mysql/03-locking/skip-locked.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: SELECT ... FOR UPDATE SKIP LOCKED silently skips locked rows, so concurrent workers each grab a different row without ever waiting — the backbone of SQL job queues.
+- claim: In this MySQL 8.4 InnoDB schedule, FOR UPDATE SKIP LOCKED selects different available job rows for A, B, and C; D finds none, then can select job 1 after A rolls back. This tests row selection and explicit rollback, not worker crashes or duplicate-free external execution.
 
 ```timeline
 A: grabs job 1
 B: job 1 taken → grabs job 2
 C: grabs job 3
-D: queue empty → nothing
-A: crash (rollback) → job 1 freed
+D: no available row → nothing
+A: ROLLBACK → job 1 lock released
 D: grabs job 1
 ```
 
-*Four workers run the exact same query at the same time.*
+*Four sessions issue the same query in the order shown, with A, B, and C retaining their locks.*
 
 ```transcript
 A> BEGIN;
@@ -2362,14 +2399,14 @@ C> SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (1 row)
 ```
 
-*Worker D finds the queue empty — an instant answer, not a wait.*
+*D finds no available row; the table still contains the locked jobs.*
 
 ```transcript
 D> SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 Empty set
 ```
 
-*A worker crash (rollback) puts its job straight back on the queue.*
+*A explicitly rolls back, releasing its job-row lock. No crash is injected.*
 
 ```transcript
 A> ROLLBACK;
@@ -2393,7 +2430,7 @@ Query OK
 ## mysql/04-mvcc/history-list-length.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: While any read view stays open, purge cannot remove the undo history behind it: every committed write transaction adds to the history list, and the history list length — InnoDB's bloat metric — grows for as long as the reader lives.
+- claim: On MySQL 8.4 InnoDB, R retains a REPEATABLE READ view at v=0 while 200 single-row UPDATE transactions commit. The history-list counter is at least 200 and R still reads zero. The run does not measure retained bytes, an exact counter delta, or purge completion after R commits.
 
 ```timeline
 R: read view opens
@@ -2416,13 +2453,13 @@ R> SELECT v FROM counters;
 (1 row)
 ```
 
-*Meanwhile the application hums along: 200 small transactions, each updating one row and committing. Every one of them must keep its undo — R's read view might still need any of those versions.*
+*Meanwhile the application hums along: 200 small transactions, each updating one row and committing. Every one of them must keep its undo — R's old read view prevents purge from advancing past the retained history.*
 
 ```transcript
 A> CALL bump(200); -- 200 committed single-row updates
 Query OK
 
-A> SELECT count >= 200 AS pinned_by_reader FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'; -- none of those 200 undo logs can be purged while R's read view lives
+A> SELECT count >= 200 AS pinned_by_reader FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'; -- the history-list counter is at least 200 while R retains its view
  pinned_by_reader 
 ------------------
                 1 
@@ -2438,14 +2475,14 @@ R> COMMIT;
 Query OK
 ```
 
-*With the read view gone, purge is free to reclaim all 200 versions in the background. The one number to watch in production is exactly this counter — trx_rseg_history_len.*
+*R's commit removes its read-view retention requirement. Background purge and other readers determine later cleanup; this run does not wait for or assert history-list drainage.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/04-mvcc/history-list-length.yaml)</small>
 
 ## mysql/04-mvcc/read-views.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: BEGIN does not take the snapshot — the transaction's first read does. START TRANSACTION WITH CONSISTENT SNAPSHOT takes it immediately. And until it writes, a transaction doesn't even get a real transaction ID — readers are cheap by design.
+- claim: At MySQL 8.4 InnoDB REPEATABLE READ, R sees a commit after BEGIN but before its first consistent read. WITH CONSISTENT SNAPSHOT instead retains the start-time balance. This build shows a trx_id above 2^48 before R writes and below it afterward; that threshold is an observation, not an ID-format contract.
 
 ```timeline
 A: UPDATE balance=999 (+ commit)
@@ -2492,10 +2529,10 @@ R> SELECT balance FROM accounts WHERE id = 1; -- this time the read view predate
 (1 row)
 ```
 
-*One more thing R hasn't needed so far: a transaction ID. InnoDB hands read-only transactions a placeholder above 2^48 instead of consuming a real, persistent ID.*
+*The documented nonlocking read-only optimization avoids a persistent transaction ID. This build exposes a placeholder above 2^48 for R; that numeric representation is not a public format guarantee.*
 
 ```transcript
-A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx; -- R is the only open transaction — and its ID is fake
+A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx; -- R is the only open transaction; this build reports an ID above 2^48
  placeholder_id 
 ----------------
               1 
@@ -2504,7 +2541,7 @@ A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM info
 R> UPDATE accounts SET balance = balance + 1 WHERE id = 1; -- R's first write…
 Query OK, 1 row affected
 
-A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx; -- …and only now does it get a real transaction ID
+A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx; -- after the write, this build reports an ID below 2^48
  placeholder_id 
 ----------------
               0 
@@ -2519,7 +2556,7 @@ Query OK
 ## mysql/04-mvcc/undo-logs.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: A committed DELETE removes rows only from the current version of the table. A transaction whose read view predates it keeps reading the old versions, rebuilt on demand from the undo log — long after the "real" rows are gone.
+- claim: At MySQL 8.4 InnoDB REPEATABLE READ, R's earlier read view still returns three rows after A commits their deletion and counts zero. R counts zero after ending its transaction. Undo reconstruction and deferred physical removal are documented mechanisms, not physical-page observations here.
 
 ```timeline
 R: reads 3 rows — snapshot opens
@@ -2543,7 +2580,7 @@ R> SELECT id, balance FROM accounts ORDER BY id; -- the read view opens here
 (3 rows)
 ```
 
-*A deletes every row — and commits. This is not a trick; the data is gone.*
+*A deletes and commits all three rows; its current SELECT counts zero, without inspecting physical storage.*
 
 ```transcript
 A> DELETE FROM accounts;
@@ -2556,10 +2593,10 @@ A> SELECT count(*) AS remaining FROM accounts;
 (1 row)
 ```
 
-*R's SELECT finds three rows anyway. InnoDB follows each deleted record's roll pointer into the undo log and rebuilds the version R's read view is entitled to — row by row, on every read.*
+*R's SELECT still returns three rows. The MySQL multi-versioning manual explains this using undo reconstruction; the SELECT asserts visibility, not a count of internal reconstruction operations.*
 
 ```transcript
-R> SELECT id, balance FROM accounts ORDER BY id; -- reconstructed from undo, not read from the table
+R> SELECT id, balance FROM accounts ORDER BY id; -- the prior read view still returns the original rows
  id | balance 
 ----+---------
   1 |     100 
