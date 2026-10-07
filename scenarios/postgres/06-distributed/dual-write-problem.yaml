@@ -1,12 +1,12 @@
 title: The dual-write problem
 claim: >-
-  Two systems, two writes, no shared transaction: whichever write goes first,
-  a failure between them leaves the database and the broker permanently
-  disagreeing.
+  Separate commits in one database model a dual-write boundary: omitting a
+  broker-table insert leaves one order without an event; a CHECK failure
+  after a broker-table insert leaves one event without its order.
 setup: |
   CREATE TABLE orders (id int PRIMARY KEY, customer text NOT NULL, amount int NOT NULL CHECK (amount > 0));
-  -- Stand-in for a message broker. In real life this is a SEPARATE system (Kafka,
-  -- RabbitMQ, an HTTP call) — you cannot BEGIN a transaction that spans both.
+  -- Receiver model in the SAME database, committed separately from the order.
+  -- No live broker, transport, consumer, or process crash is exercised.
   CREATE TABLE broker (event text NOT NULL);
 sessions: [App]
 steps:
@@ -14,7 +14,7 @@ steps:
   - App: BEGIN
   - App: INSERT INTO orders VALUES (1, 'alice', 90)
   - App: COMMIT
-  - note: …and the process crashes before the publish step ever runs. The broker never hears about order 1.
+  - note: Publication is deliberately omitted. No process crashes; the broker table has no order-1 event.
   - App: |-
       SELECT (SELECT count(*)::int FROM orders) AS orders,
              (SELECT count(*)::int FROM broker) AS events
@@ -22,12 +22,12 @@ steps:
 
   - note: Attempt 2 — publish first, then write. The event goes out…
   - App: "INSERT INTO broker VALUES ('order_placed: order 2')"
-  - note: …and then the order INSERT fails — a constraint, a crash, a timeout, anything.
+  - note: The order INSERT fails its CHECK constraint after the separately committed broker record.
   - App.fails: INSERT INTO orders VALUES (2, 'mallory', -5)
     error: "23514"
     comment: check_violation
 
-  - note: Downstream services now process an order that never existed.
+  - note: The receiver table has an event without an order. No downstream service is executed.
   - App: |-
       SELECT (SELECT count(*)::int FROM orders WHERE id = 2) AS orders,
              (SELECT count(*)::int FROM broker WHERE event LIKE '%order 2%') AS events

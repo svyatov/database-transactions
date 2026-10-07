@@ -1,8 +1,8 @@
 title: "Advisory locks: locking ideas, not rows"
 claim: >-
-  Advisory locks serialize application-defined work with no table involved:
-  try-lock answers instantly, session-level locks survive COMMIT and need an
-  explicit unlock, transaction-level locks vanish at COMMIT.
+  With these exclusive advisory keys, B's try-lock returns false while A
+  holds the key, and a blocking acquisition waits for unlock. COMMIT leaves
+  the session-level key held but releases the transaction-level key.
 setup: |
   -- No tables. Advisory locks guard whatever the application says number 42 means.
 sessions: [A, B]
@@ -12,7 +12,7 @@ steps:
     tl: lock(42) → held
   - B: SELECT pg_try_advisory_lock(42) AS got_it
     expect: [{ got_it: false }]
-    comment: an instant answer — no waiting
+    comment: false without waiting to acquire this advisory lock; latency is not measured
     tl: try-lock(42) → false (no wait)
 
   - note: "try-lock says no without waiting. A runner can also queue up for the lock:"
@@ -23,7 +23,7 @@ steps:
     tl: unlock(42)
   - success: p1
 
-  - note: Session-level locks ignore transaction boundaries entirely — COMMIT releases nothing.
+  - note: COMMIT does not release A's session-level advisory lock on key 9.
   - A: BEGIN
   - A: SELECT pg_advisory_lock(9)
   - A: COMMIT
@@ -31,7 +31,7 @@ steps:
     expect: [{ got_it: false }]
   - A: SELECT pg_advisory_unlock(9) AS released
 
-  - note: pg_advisory_xact_lock, by contrast, releases itself at COMMIT — there is no unlock function for it.
+  - note: After A commits, the next try-lock checks that its transaction-level key 7 is available.
   - A: BEGIN
   - A: SELECT pg_advisory_xact_lock(7)
   - B: SELECT pg_try_advisory_lock(7) AS got_it

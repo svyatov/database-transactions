@@ -1,8 +1,8 @@
 title: "UNIQUE + ON CONFLICT: closing the race at the source"
 claim: >-
-  A UNIQUE constraint makes the concurrent duplicate wait for the first
-  insert's fate and then fail with 23505 — and ON CONFLICT turns that error
-  into a clean no-op or upsert.
+  At READ COMMITTED with UNIQUE on a non-NULL email, B's duplicate waits
+  for A's commit then fails with 23505. DO NOTHING affects zero rows;
+  DO UPDATE returns the existing id and email in the shown statements.
 setup: |
   CREATE TABLE signups (id serial PRIMARY KEY, email text UNIQUE NOT NULL);
 sessions: [A, B]

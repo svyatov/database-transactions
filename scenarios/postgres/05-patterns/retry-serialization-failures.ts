@@ -16,7 +16,7 @@ export async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<
 export default scenario({
   title: "Retrying serialization failures",
   claim:
-    "A 40001 is transient, not fatal: rerunning the identical transaction reads the fresh state and succeeds — withRetry needs exactly two attempts here.",
+    "In this forced REPEATABLE READ conflict, B rolls back after 40001 and retries with fresh reads: two attempts produce balance 115. Eventual success is not guaranteed.",
   setup: `
     CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
     INSERT INTO accounts VALUES (1, 'alice', 100);

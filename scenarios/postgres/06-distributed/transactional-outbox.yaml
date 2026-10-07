@@ -1,8 +1,8 @@
 title: The transactional outbox
 claim: >-
-  Writing the order and its event in one transaction makes them atomic, and a
-  SKIP LOCKED relay gives at-least-once delivery: a crashed relay redelivers
-  the event instead of losing it.
+  The order and outbox row commit or roll back together in the shown
+  transactions. A relay's rolled-back delete leaves the row selectable
+  again; a committed delete empties the outbox. Publication is not executed.
 setup: |
   CREATE TABLE orders (id int PRIMARY KEY, customer text NOT NULL, amount int NOT NULL);
   CREATE TABLE outbox (id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, event text NOT NULL);
@@ -21,20 +21,21 @@ steps:
   - App: ROLLBACK
   - App: SELECT id, event FROM outbox ORDER BY id
     expect: [{ id: 1, event: "order_placed: order 1" }]
+  - App: SELECT id, customer, amount FROM orders ORDER BY id
+    expect: [{ id: 1, customer: "alice", amount: 90 }]
 
   - note: A relay claims the event exactly like a chapter-5 job-queue worker…
   - Relay: BEGIN
   - Relay: SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1, event: "order_placed: order 1" }]
 
-  - note: …publishes it to the broker (an HTTP call — outside any transaction), deletes it, and crashes before COMMIT.
+  - note: A real relay would publish outside this transaction. Here publication is narration only; the DELETE is executed and explicitly rolled back.
   - Relay: DELETE FROM outbox WHERE id = 1
   - Relay: ROLLBACK
 
   - note: >-
-      The delete evaporated with the crash — the event is still in the outbox.
-      The restarted relay publishes it AGAIN: at-least-once delivery, so
-      consumers must be idempotent.
+      ROLLBACK restored the deleted row. The relay selects it again and commits
+      its deletion. No receiver effect or delivery count is recorded here.
   - Relay: BEGIN
   - Relay: SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1, event: "order_placed: order 1" }]

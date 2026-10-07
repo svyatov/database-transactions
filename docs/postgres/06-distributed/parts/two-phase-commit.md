@@ -36,7 +36,7 @@ B> SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- lock_not_avai
 ERROR:  55P03: could not obtain lock on row in relation "accounts"
 ```
 
-*Now the coordinator crashes: A's backend is killed outright.*
+*M terminates A's backend. No global coordinator or server process is killed.*
 
 ```transcript
 M> SELECT pg_terminate_backend(pid) AS terminated
@@ -50,7 +50,7 @@ A> SELECT 1;
 ERROR:  ERR_POSTGRES_CONNECTION_CLOSED: Connection closed
 ```
 
-*The session is gone. The prepared transaction is not — it survives anything short of COMMIT/ROLLBACK PREPARED, including a full server restart. And it still holds its locks:*
+*The originating backend is gone. The prepared entry remains, and B's next NOWAIT request still fails. Server-restart durability is a manual contract, not an executed test here.*
 
 ```transcript
 M> SELECT gid FROM pg_prepared_xacts;
@@ -63,7 +63,7 @@ B> SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
 ERROR:  55P03: could not obtain lock on row in relation "accounts"
 ```
 
-*The locks are the visible damage. The quiet damage is the xid horizon: the orphan still counts as a running transaction, so no snapshot taken since it prepared can be ruled out. Watch it freeze VACUUM in `ledger` — a table the prepared transaction never touched.*
+*The prepared transaction retains an old xid horizon. Check occupied tuple slots around VACUUM in ledger, an unrelated table updated after prepare. This does not imply all VACUUM work or every table's reclamation stops.*
 
 ```transcript
 B> UPDATE ledger SET n = 1 WHERE id = 1;
@@ -90,7 +90,7 @@ B> VACUUM ledger;
 VACUUM
 ```
 
-*VACUUM ran, reported success, and reclaimed nothing. The orphan's horizon still covers every one of those versions.*
+*The next count checks that these four occupied tuple slots remain after VACUUM, not that all maintenance was a no-op.*
 
 ```transcript
 B> SELECT count(*)::int AS versions_on_page
@@ -101,7 +101,7 @@ B> SELECT count(*)::int AS versions_on_page
 (1 row)
 ```
 
-*Phase two — any session can finish the job by name. B commits the orphan.*
+*Phase two runs outside a transaction block. B, a superuser in the same database, commits the prepared transaction by name.*
 
 ```transcript
 B> COMMIT PREPARED 'transfer-42';

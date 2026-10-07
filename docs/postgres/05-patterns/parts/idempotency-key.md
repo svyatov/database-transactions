@@ -21,7 +21,7 @@ A> COMMIT;
 COMMIT
 ```
 
-*The response is lost in the network. The client retries the same request; server B picks it up.*
+*B repeats the same key after commit. No response loss or network fault is injected.*
 
 ```transcript
 B> BEGIN;
@@ -29,7 +29,7 @@ BEGIN
 
 B> INSERT INTO payments VALUES ('req-42', 30)
    ON CONFLICT (idempotency_key) DO NOTHING
-   RETURNING idempotency_key; -- 0 rows: already processed — skip the charge, return the stored result
+   RETURNING idempotency_key; -- 0 rows for this retained key: skip the balance change and read the stored amount
 INSERT 0 0
 
 B> SELECT amount FROM payments WHERE idempotency_key = 'req-42';
@@ -81,7 +81,7 @@ COMMIT
 INSERT 0 0
 ```
 
-*Even the in-flight duplicate cannot double-charge.*
+*This in-flight duplicate inserted no row. The next assertion checks database-local charges only.*
 
 ```transcript
 A> SELECT balance FROM accounts WHERE id = 1; -- 100 - 30 - 25: every charge applied exactly once

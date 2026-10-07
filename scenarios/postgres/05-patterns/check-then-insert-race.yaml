@@ -1,8 +1,8 @@
 title: The check-then-insert race
 claim: >-
-  "SELECT first, INSERT if absent" cannot enforce uniqueness: two concurrent
-  requests both see 0 rows, both insert, and the duplicate lands without any
-  error.
+  At READ COMMITTED without a UNIQUE email constraint, two concurrent
+  check-then-insert requests both see zero matching rows, both insert, and
+  the final email count is two. Neither insertion errors in this schedule.
 setup: |
   -- The app promised emails are unique — but only in code. No UNIQUE constraint.
   CREATE TABLE signups (id serial PRIMARY KEY, email text NOT NULL);

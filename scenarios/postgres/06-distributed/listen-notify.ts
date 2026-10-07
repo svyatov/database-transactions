@@ -72,7 +72,7 @@ class Listener {
 export default scenario({
   title: "NOTIFY is transactional",
   claim:
-    "NOTIFY delivers nothing until COMMIT, a rolled-back NOTIFY is never delivered, and identical notifications within one transaction are folded into one.",
+    "With a psql listener already registered, this run observes silence before COMMIT and after ROLLBACK, a payload after COMMIT, and one payload for two identical same-transaction notifications within the observation windows.",
   setup: `
     CREATE TABLE orders (id int PRIMARY KEY, customer text NOT NULL);
   `,

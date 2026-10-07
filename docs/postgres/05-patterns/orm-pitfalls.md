@@ -1,65 +1,52 @@
 # ORM pitfalls
 
-ORMs are fine. What bites is the transaction machinery they hide. The three failure
-modes below account for most "the database is slow / the table keeps growing /
-everything is locked" incidents in ORM codebases, and every one of them is a lesson
-this site has already proven, wearing a nicer API.
+Inspect the SQL and transaction settings your ORM actually uses. The examples
+below demonstrate database behavior, not the defaults or APIs of any ORM.
 
 ## Pitfall #1: the transaction that outlives the query
 
-The classic: transaction-per-request middleware (or an explicit `transaction { ... }`
-block) opens a transaction, and the handler then calls a payment API, renders a
-template, `await`s something slow. The database sees a session that is
-*idle in transaction*, holding [row locks](/postgres/03-locking/row-locks), blocking
-[DDL](/postgres/03-locking/table-locks-and-ddl), and pinning
-[VACUUM's horizon](/postgres/04-mvcc/long-transactions), while your code isn't talking to it at
-all. Here is that story end to end, including the guardrail that ends it:
+An application can update a row and then stop issuing queries while its
+transaction remains open. The example sets a 500ms idle timeout, observes the
+idle session, waits 1500ms, and checks termination and rollback:
 
 <!--@include: ./parts/idle-in-transaction-timeout.md-->
 
-The timeout is
-[`idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT):
-["Terminate any session that has been idle (that is, waiting for a client query) within an open transaction for longer than the specified amount of time."](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT)
-Note *terminate*, not "cancel a query": there is no query. The server logs a `FATAL`
-with SQLSTATE [`25P03`](https://www.postgresql.org/docs/current/errcodes-appendix.html)
-(`idle_in_transaction_session_timeout`) and hangs up; the client, as the transcript
-shows, finds a dead connection on its next statement, and the uncommitted UPDATE
-is gone. That rollback is the point: better a failed request than a database-wide
-pileup. Keep transactions free of network I/O, and set this timeout as a seatbelt,
-alongside `transaction_timeout` and `statement_timeout`,
-[both proven in chapter 8](/postgres/08-production/long-and-idle-transactions).
+No external API call runs here; the sleep models idle client time. PostgreSQL 18's
+[idle timeout contract](https://www.postgresql.org/docs/18/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT)
+terminates a session idle in an open transaction beyond the configured interval.
+The Bun client observes a closed connection on COMMIT; the independent Python
+driver can report `25P03`. The monitor asserts that the session has disappeared
+and the order remains pending. No server log is captured by this transcript.
+
+This transaction holds the lock acquired by its UPDATE until it ends. Effects
+on [DDL](/postgres/03-locking/table-locks-and-ddl) and
+[reclamation](/postgres/04-mvcc/long-transactions) depend on the lock modes and
+snapshot or xid horizon involved. Not every open transaction or `await` pins
+every row version. Keep slow external work outside the transaction where the
+application rule permits it. Choose timeouts for your workload; the values in
+this demo are test settings, not measured production thresholds.
 
 ## Pitfall #2: no transaction where you assumed one
 
-The inverse failure. Without an explicit transaction block, most ORMs run each
-`save()` / `update()` as its own small transaction, so *load entity, change field in
-memory, save* is exactly chapter 2's
-[read-modify-write lost update](/postgres/02-isolation/lost-update): the save writes every stale
-value the object was loaded with. The fixes are the
-[previous lesson's](/postgres/05-patterns/fixing-lost-updates), and ORMs ship two of them under
-friendlier names: "optimistic locking" (a version column, fix #3) and
-`SELECT ... FOR UPDATE` (usually a `lock`/`forUpdate` query option, fix #2). They only
-work if you turn them on.
+A separate read followed by a literal-value update can reproduce the
+[lost-update schedule](/postgres/02-isolation/lost-update), whether an ORM or
+handwritten SQL issues it. An explicit READ COMMITTED transaction alone does
+not repair that stale write. Verify the ORM's generated SQL and enable the
+appropriate [repair](/postgres/05-patterns/fixing-lost-updates): a relative
+UPDATE, a locking read in the same transaction, or a checked version predicate.
+No ORM feature or default is tested here.
 
 ## Pitfall #3: trusting default isolation
 
-An ORM transaction block gives you the database's default: READ COMMITTED, with every
-anomaly [chapter 2](/postgres/02-isolation/snapshots-and-the-four-levels) demonstrated at that
-level. If a unit of work needs REPEATABLE READ or SERIALIZABLE, you must say so (every
-serious ORM lets you set the isolation level per transaction), and then you own the
-[`40001` retry loop](/postgres/05-patterns/retrying-serialization-failures), because the ORM
-won't rerun your business logic for you.
-
-The through-line across all three is the same: an ORM transaction is open from its first
-statement until your code returns, so every `await` inside it holds locks and pins
-VACUUM. Keep network I/O out, and set `idle_in_transaction_session_timeout` as the
-backstop. Object-style read-modify-write is a lost update by default, so turn on your
-ORM's version-column support or lock the row at the read. And the isolation level and the
-`40001` retry are your job, not the ORM's; left alone, it will happily run write-skewed
-logic at READ COMMITTED forever.
+PostgreSQL 18 normally defaults to READ COMMITTED, but the
+[default setting](https://www.postgresql.org/docs/18/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-ISOLATION)
+can be changed by configuration or the client. Inspect the session and
+transaction level. If REPEATABLE READ or SERIALIZABLE is required, also handle
+[`40001` recovery](/postgres/05-patterns/retrying-serialization-failures).
+Whether an ORM restarts application logic depends on that ORM's contract.
+The database examples here establish no universal ORM retry behavior.
 
 ## Further reading
 
-- [PostgreSQL docs: `idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT)
-- [PostgreSQL docs: Error Codes Appendix](https://www.postgresql.org/docs/current/errcodes-appendix.html)
+- [PostgreSQL 18: Client settings](https://www.postgresql.org/docs/18/runtime-config-client.html)
 - [The same lesson on MySQL](/mysql/05-patterns/orm-pitfalls)
