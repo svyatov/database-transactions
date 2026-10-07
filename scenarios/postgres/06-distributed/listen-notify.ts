@@ -2,8 +2,8 @@ import { eq, scenario } from "../../../harness/scenario";
 
 // #region listener
 /**
- * Bun.sql has no async-notification API, so the listener is a psql subprocess —
- * the same client you'd use to eavesdrop on a channel in production.
+ * This example uses a psql subprocess as its visible notification listener.
+ * Its output exposes the channel, payload, and sending backend.
  * ponytail: assumes the docker-compose stack from this repo (run from its root).
  */
 class Listener {
