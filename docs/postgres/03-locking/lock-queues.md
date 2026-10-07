@@ -2,7 +2,9 @@
 
 Waiting requests can block later requests as well as requests held outright. This schedule follows three updates of one row and observes B completing before C. It does not establish universal FIFO fairness or a throughput bound.
 
-## First come, first locked
+<div id="first-come-first-locked" style="scroll-margin-top: calc(var(--vp-nav-height) + 48px)"></div>
+
+## Observed order: B completes before C
 
 <!--@include: ./parts/lock-queue-fifo.md-->
 

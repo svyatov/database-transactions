@@ -1,7 +1,7 @@
 import { eq, scenario } from "../../../harness/scenario";
 
 export default scenario({
-  title: "Long transactions block VACUUM",
+  title: "Tuple retention under an old snapshot",
   claim:
     "With A holding an old Repeatable Read snapshot, VACUUM leaves the inspected jobs tuple-chain fields unchanged and A still reads new. After A commits, a second VACUUM reclaims the three obsolete versions. Other tables and other VACUUM work are not observed.",
   setup: `

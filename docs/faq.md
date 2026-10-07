@@ -33,7 +33,7 @@ In PostgreSQL, one failed statement poisons the entire transaction: every later 
 
 ## Does a plain SELECT block other writers?
 
-No. A bare `SELECT` takes no row locks, so writers run right past it. That's the point of MVCC. Add `FOR UPDATE` and it does block writers (and only writers), which is exactly when you want it to. The boundary is drawn in [Row locks](/postgres/03-locking/row-locks#for-update-blocks-writers-and-only-writers).
+No. A bare `SELECT` takes no row locks, so writers run right past it. That's the point of MVCC. Add `FOR UPDATE` and it does block writers (and only writers), which is exactly when you want it to. The boundary is drawn in [Row locks](/postgres/03-locking/row-locks#an-ordinary-select-succeeds-while-update-waits).
 
 ## What is a deadlock, and which transaction gets killed?
 

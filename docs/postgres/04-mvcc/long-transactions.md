@@ -1,8 +1,12 @@
-# Long transactions block VACUUM
+<div id="long-transactions-block-vacuum" style="scroll-margin-top: calc(var(--vp-nav-height) + 48px)"></div>
+
+# Tuple retention under an old snapshot
 
 An old snapshot can prevent reclamation of obsolete versions. PostgreSQL 18's [vacuum contract](https://www.postgresql.org/docs/18/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY) preserves versions that might still be visible to another transaction. This schedule holds a Repeatable Read snapshot over three updates to one jobs row.
 
-## VACUUM ran, cleaned nothing
+<div id="vacuum-ran-cleaned-nothing" style="scroll-margin-top: calc(var(--vp-nav-height) + 48px)"></div>
+
+## VACUUM leaves the inspected tuple fields unchanged
 
 <!--@include: ./parts/long-transactions.md-->
 

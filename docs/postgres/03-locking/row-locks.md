@@ -2,9 +2,11 @@
 
 Ordinary MVCC SELECTs do not conflict with row locks. Locking SELECTs, UPDATEs and DELETEs can conflict on the same row. Table locks, functions called by a query, and other resources can still cause a read to wait. This chapter uses PostgreSQL 18; the linked transcripts state the executed patch version.
 
-## FOR UPDATE blocks writers, and only writers
+<div id="for-update-blocks-writers-and-only-writers" style="scroll-margin-top: calc(var(--vp-nav-height) + 48px)"></div>
 
-The legacy heading names the example, not a universal rule: FOR UPDATE also conflicts with other sessions' locking reads. Here B's ordinary SELECT returns 100 while A holds FOR UPDATE; B's UPDATE waits, then uses A's committed 150 and leaves 140.
+## An ordinary SELECT succeeds while UPDATE waits
+
+Here B's ordinary SELECT returns 100 while A holds FOR UPDATE; B's UPDATE waits, then uses A's committed 150 and leaves 140. FOR UPDATE also conflicts with other sessions' locking reads.
 
 <!--@include: ./parts/for-update-blocks.md-->
 
