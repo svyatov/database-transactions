@@ -32,5 +32,7 @@ Use arithmetic in SQL when it expresses the complete single-row change. Use a lo
 
 ## Further reading
 
+- [Choose a protection: stock and stale edits](/concepts/protection-choices)
+- [Checked-write evidence](/mysql/05-patterns/checked-writes)
 - [MySQL docs: Locking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
 - [The same lesson on PostgreSQL](/postgres/05-patterns/fixing-lost-updates)

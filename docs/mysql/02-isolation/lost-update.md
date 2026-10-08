@@ -1,5 +1,7 @@
 # Lost updates
 
+Try [two-writer practice](/mysql/02-isolation/practice-two-writers) before reading the results below.
+
 Two clients can read the same value, compute a replacement, and overwrite one
 another. The following InnoDB schedules run on MySQL 8.4.11 with reads **inside
 the updating transactions**. Each reads 100 and writes that saved value plus 10.
