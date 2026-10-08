@@ -19,7 +19,7 @@ Atomicity does not mean all statements succeed or every reader sees the same val
 
 A business invariant requires each serial transaction to preserve it and all relevant writers to use an appropriate protocol. A CHECK on one balance does not enforce an arbitrary cross-row rule or an external payment boundary.
 
-Durability is a documented contract, not a claimed crash test. The [PostgreSQL 18 asynchronous-commit manual](https://www.postgresql.org/docs/18/wal-async-commit.html) warns that "the most recent transactions may be lost if the database should crash." [MySQL 8.4's ACID manual](https://dev.mysql.com/doc/refman/8.4/en/mysql-acid.html) likewise identifies server settings, operating system, and hardware as durability conditions. A successful COMMIT in these demonstrations does not test crash recovery, storage reliability, or every configuration.
+Durability is a documented contract, not a claimed crash test. The [PostgreSQL 18 asynchronous-commit manual](https://www.postgresql.org/docs/18/wal-async-commit.html) warns that "the most recent transactions may be lost if the database should crash." [MySQL 8.4's ACID manual](https://dev.mysql.com/doc/refman/8.4/en/mysql-acid.html) states: "The durability aspect of the ACID model involves MySQL software features interacting with your particular hardware configuration." Its InnoDB conditions include `innodb_flush_log_at_trx_commit`, `sync_binlog`, operating-system `fsync()` support, and storage write buffers. A successful COMMIT in these demonstrations does not test crash recovery, storage reliability, or every configuration.
 
 ## Same promise, different temperament
 
