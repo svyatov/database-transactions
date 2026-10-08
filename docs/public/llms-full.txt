@@ -2619,7 +2619,7 @@ R> SELECT count(*) AS remaining FROM accounts; -- the read view is gone — and 
 ## mysql/05-patterns/advisory-locks.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: GET_LOCK serializes application-defined work with no table involved: timeout 0 gives an instant yes/no, a positive timeout gives a bounded wait, and the lock ignores transactions entirely — only RELEASE_LOCK (or disconnecting) lets go.
+- claim: In this cooperative named-lock schedule, B gets 0 with timeouts 0 and 1 while A holds the name, still gets 0 after A commits, then gets 1 after A releases it. B acquires two names and RELEASE_ALL_LOCKS reports 2.
 
 ```timeline
 A: GET_LOCK → held
@@ -2691,7 +2691,7 @@ B> SELECT GET_LOCK('migration', 0) AS got_it; -- now B is the migration runner
 (1 row)
 ```
 
-*One session can hold many named locks; RELEASE_ALL_LOCKS drops the lot. Disconnecting releases them too — a crashed runner can't jam the queue forever.*
+*B acquires a second name, then RELEASE_ALL_LOCKS releases both. Session termination is a documented release path, not executed here.*
 
 ```transcript
 B> SELECT GET_LOCK('cache-rebuild', 0) AS got_it;
@@ -2712,7 +2712,7 @@ B> SELECT RELEASE_ALL_LOCKS() AS released;
 ## mysql/05-patterns/check-then-insert-race.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: "SELECT first, INSERT if absent" cannot enforce uniqueness: two concurrent requests both see 0 rows, both insert, and the duplicate lands without any error.
+- claim: At InnoDB's default REPEATABLE READ, these two plain checks both see 0 rows. With no unique constraint, both inserts commit and the final count for the email is 2.
 
 ```timeline
 A: any bob? → 0
@@ -2773,7 +2773,7 @@ A> SELECT count(*) AS bobs FROM signups WHERE email = 'bob@example.com'; -- the 
 ## mysql/05-patterns/fix-lost-update-atomic.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: UPDATE ... SET balance = balance + 10 reads and writes in one statement: the second writer waits for the first and stacks on top — both deposits survive, at any isolation level.
+- claim: In this single-row InnoDB REPEATABLE READ schedule, the second arithmetic UPDATE waits for the first writer's commit and computes from 110; both deposits survive with a final balance of 120.
 
 *Same two +10 deposits that lost an update in chapter 2 — but the math moved into the UPDATE itself.*
 
@@ -2827,7 +2827,7 @@ A> SELECT balance FROM accounts WHERE id = 1; -- both deposits survived
 ## mysql/05-patterns/fix-lost-update-for-update.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: When the new value must be computed in application code, SELECT ... FOR UPDATE serializes the read-modify-write: the second reader waits and then reads the committed 110 — a locking read pierces the snapshot by design — so both deposits land.
+- claim: In this single-row InnoDB REPEATABLE READ schedule, both writers use SELECT ... FOR UPDATE inside their transactions. B waits, reads 110 after A commits, and the final balance is 120.
 
 *The app must apply business rules to the balance in code — so it locks the row while it reads.*
 
@@ -2854,7 +2854,7 @@ A> COMMIT;
 Query OK
 ```
 
-*B's locked read waited out A's transaction — and returns the fresh 110, not the 100 it would have seen.*
+*B's locking read waited for A's commit and returns 110. No prior plain-read snapshot is established for B here.*
 
 ```transcript
 ⏵ B resumes:
@@ -2881,9 +2881,9 @@ A> SELECT balance FROM accounts WHERE id = 1; -- both deposits survived
 ## mysql/05-patterns/fix-lost-update-version-column.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: A version column makes the lost update detectable instead of silent: the stale write matches 0 rows, and retrying against the new version lands both deposits — no locks held while the app thinks.
+- claim: In this InnoDB REPEATABLE READ schedule, B's stale version predicate affects 0 rows. B rolls back and retries from version 2 in a fresh transaction; the final balance is 120 and version is 3.
 
-*Both app servers read the row — including its version — with no locks held.*
+*Both sessions read balance and version without a locking read. The UPDATEs still acquire write locks.*
 
 ```transcript
 A> BEGIN;
@@ -2954,7 +2954,7 @@ A> SELECT balance, version FROM accounts WHERE id = 1; -- both deposits survived
 ## mysql/05-patterns/idempotency-key.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: An INSERT on an idempotency key reports 1 affected row exactly once: the first request charges, every retry — even one racing the original in flight — gets 0 affected rows and charges nothing.
+- claim: With retained primary keys and CLIENT_FOUND_ROWS absent, a committed duplicate and an in-flight duplicate each affect 0 rows after the original commits. The asserted balances show one database charge for each of the two keys; network response loss and remote charges are not executed.
 
 *The client sends 'charge $30' with idempotency key req-42. Server A processes it.*
 
@@ -2973,14 +2973,14 @@ A> COMMIT;
 Query OK
 ```
 
-*The response is lost in the network. The client retries the same request; server B picks it up.*
+*Model a same-key retry after commit. No network failure or application response is executed; B reads the stored amount.*
 
 ```transcript
 B> BEGIN;
 Query OK
 
 B> INSERT INTO payments VALUES ('req-42', 30)
-   ON DUPLICATE KEY UPDATE amount = amount; -- 0 rows: already processed — skip the charge, return the stored result
+   ON DUPLICATE KEY UPDATE amount = amount; -- 0 rows: existing key, skip the balance update; the next SELECT reads the stored amount
 Query OK, 0 rows affected
 
 B> SELECT amount FROM payments WHERE idempotency_key = 'req-42';
@@ -3027,7 +3027,7 @@ Query OK
 Query OK, 0 rows affected
 ```
 
-*Even the in-flight duplicate cannot double-charge.*
+*This in-flight duplicate affects 0 rows after A commits. No additional balance update is issued.*
 
 ```transcript
 A> SELECT balance FROM accounts WHERE id = 1; -- 100 - 30 - 25: every charge applied exactly once
@@ -3042,7 +3042,7 @@ A> SELECT balance FROM accounts WHERE id = 1; -- 100 - 30 - 25: every charge app
 ## mysql/05-patterns/implicit-commit.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Every DDL statement performs an implicit COMMIT of the current transaction first: after a mid-transaction CREATE INDEX, the "uncommitted" work is permanently committed and a later ROLLBACK undoes nothing.
+- claim: This CREATE INDEX implicitly commits the preceding InnoDB INSERT: B sees the order before A issues COMMIT, and a later ROLLBACK leaves it visible. This is one listed implicit-commit statement, not every kind of DDL.
 
 *A migration script wraps its work in a transaction, believing that makes it atomic: insert data, add an index, and if anything fails — roll back.*
 
@@ -3069,7 +3069,7 @@ B> SELECT count(*) AS visible FROM orders; -- A never said COMMIT. The CREATE IN
 (1 row)
 ```
 
-*The script now hits an error and rolls back, trusting the transaction to clean up:*
+*A now explicitly rolls back. No migration exception is injected.*
 
 ```transcript
 A> ROLLBACK;
@@ -3082,28 +3082,28 @@ B> SELECT count(*) AS visible FROM orders; -- rolled back nothing — the INSERT
 (1 row)
 ```
 
-*There is no transactional DDL in MySQL. A migration that mixes data and schema changes has commit points at every DDL statement — design for re-runnability instead of atomicity.*
+*CREATE INDEX has already committed the INSERT. Check the manual's implicit-commit list and exceptions before relying on a migration wrapper; this schedule does not execute every DDL statement.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/implicit-commit.yaml)</small>
 
 ## mysql/05-patterns/job-queue.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: The full worker loop — claim with FOR UPDATE SKIP LOCKED, work, mark done, commit — never double-processes a job and never loses one: a worker crash returns its job to the queue automatically.
+- claim: In this InnoDB schedule, B skips A's locked job and selects job 2. After an explicit rollback, B can select job 2 again; both database job states finish as done. No external work or process crash is executed.
 
 ```timeline
 A: claim → job 1
 B: claim → job 2 (skips locked job 1)
 A: job 1 done
 A: COMMIT
-B: crash → job 2 requeued
+B: ROLLBACK → job 2 available
 B: claim → job 2 (back in queue)
 B: job 2 done
 B: COMMIT
 A: both jobs done
 ```
 
-*Two workers run the same loop: claim the oldest queued job, do the work, mark it done, commit.*
+*Two sessions select the lowest available queued id under a row lock. Only database job-state changes are executed.*
 
 ```transcript
 A> BEGIN;
@@ -3127,7 +3127,7 @@ B> SELECT id, task FROM jobs WHERE state = 'queued'
 (1 row)
 ```
 
-*A finishes and commits. B crashes mid-job — its claim evaporates with its transaction.*
+*A marks job 1 done and commits. B explicitly rolls back, releasing its claim on job 2.*
 
 ```transcript
 A> UPDATE jobs SET state = 'done' WHERE id = 1;
@@ -3140,7 +3140,7 @@ B> ROLLBACK;
 Query OK
 ```
 
-*A restarted worker finds job 2 right back in the queue — nothing was lost, nothing ran twice.*
+*B starts a new transaction and selects job 2 again. No restarted process or external task execution is observed.*
 
 ```transcript
 B> BEGIN;
@@ -3172,7 +3172,7 @@ A> SELECT id, state FROM jobs ORDER BY id;
 ## mysql/05-patterns/on-duplicate-key.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: A UNIQUE constraint makes the concurrent duplicate wait for the first insert's fate and then fail with errno 1062 — and ON DUPLICATE KEY UPDATE turns that error into a clean upsert (INSERT IGNORE absorbs it, at a price).
+- claim: In this InnoDB schedule, B's duplicate INSERT waits for A's commit, then fails with 1062. A subsequent upsert increments attempts to 2 and reports 2 affected rows; INSERT IGNORE skips the duplicate and reports 0.
 
 ```timeline
 A: INSERT bob
@@ -3220,7 +3220,7 @@ B> SELECT email, attempts FROM signups; -- one row, and it counted the duplicate
 (1 row)
 ```
 
-*INSERT IGNORE also absorbs the duplicate (0 rows affected) — but it downgrades EVERY error on the statement to a warning, not just 1062. Prefer ON DUPLICATE KEY UPDATE: it targets exactly the race you mean.*
+*INSERT IGNORE skips this duplicate with 0 affected rows. The manual documents other ignorable errors too, not every error. An upsert reacts to any conflicting primary or unique key, not a named conflict target.*
 
 ```transcript
 B> INSERT IGNORE INTO signups (email) VALUES ('bob@example.com');
@@ -3232,7 +3232,7 @@ Query OK, 0 rows affected
 ## mysql/05-patterns/retry-deadlocks.ts
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Errno 1213 is transient, not fatal: the victim's transaction rerun from the top sees the survivor's committed state and succeeds — withRetry needs exactly two attempts here.
+- claim: In this forced InnoDB deadlock, B receives 1213 and its transaction rolls back. Replaying both UPDATEs in a new transaction succeeds on attempt 2; the asserted balances are 115 and 85. This does not promise eventual success for every deadlock.
 
 ```transcript
 B> BEGIN;
@@ -3297,7 +3297,7 @@ A> SELECT balance FROM accounts WHERE id = 2;
 ## mysql/06-distributed/dual-write-problem.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Two systems, two writes, no shared transaction: whichever write goes first, a failure between them leaves the database and the broker permanently disagreeing.
+- claim: Two modeled failure windows leave mismatched records: a committed order with no stand-in event, then an autocommitted stand-in event whose order fails with 3819. The broker is a local table, not an observed delivery service.
 
 *Attempt 1 — write, then publish. The order commits…*
 
@@ -3312,7 +3312,7 @@ App> COMMIT;
 Query OK
 ```
 
-*…and the process crashes before the publish step ever runs. The broker never hears about order 1.*
+*The stand-in publish is omitted after commit. This models a failure window without killing a process.*
 
 ```transcript
 App> SELECT (SELECT count(*) FROM orders) AS orders,
@@ -3323,21 +3323,21 @@ App> SELECT (SELECT count(*) FROM orders) AS orders,
 (1 row)
 ```
 
-*Attempt 2 — publish first, then write. The event goes out…*
+*Attempt 2 writes a stand-in event in autocommit before attempting the order.*
 
 ```transcript
 App> INSERT INTO broker VALUES ('order_placed: order 2');
 Query OK, 1 row affected
 ```
 
-*…and then the order INSERT fails — a constraint, a crash, a timeout, anything.*
+*The order INSERT fails its CHECK constraint with 3819. No timeout or crash is injected.*
 
 ```transcript
 App> INSERT INTO orders VALUES (2, 'mallory', -5); -- ER_CHECK_CONSTRAINT_VIOLATED
 ERROR 3819 (HY000): Check constraint 'orders_chk_1' is violated.
 ```
 
-*Downstream services now process an order that never existed.*
+*The stand-in event exists without order 2. No downstream processing is observed.*
 
 ```transcript
 App> SELECT (SELECT count(*) FROM orders WHERE id = 2) AS orders,
@@ -3353,7 +3353,7 @@ App> SELECT (SELECT count(*) FROM orders WHERE id = 2) AS orders,
 ## mysql/06-distributed/saga-compensation.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: A saga replaces one distributed transaction with a chain of local ones: every step commits immediately and is visible to everyone, and a failed step is undone by a new compensating transaction — not by ROLLBACK.
+- claim: In this single-database saga model, Reader sees the committed flight reservation between steps. The hotel UPDATE affects 0 rows; a new local compensation restores seats to 5, which Reader observes after commit.
 
 *Step 1 — book the flight. A local transaction, committed immediately.*
 
@@ -3374,7 +3374,7 @@ Saga> COMMIT;
 Query OK
 ```
 
-*A saga has no isolation: between steps, the whole world sees the half-done trip.*
+*This autocommit Reader sees the committed flight reservation between steps. Local transaction isolation still applies.*
 
 ```transcript
 Reader> SELECT seats FROM flights WHERE id = 1;
@@ -3414,6 +3414,12 @@ Saga> SELECT seats FROM flights WHERE id = 1;
 
 Saga> COMMIT;
 Query OK
+
+Reader> SELECT seats FROM flights WHERE id = 1;
+ seats 
+-------
+     5 
+(1 row)
 ```
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/saga-compensation.yaml)</small>
@@ -3421,7 +3427,7 @@ Query OK
 ## mysql/06-distributed/transactional-outbox.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Writing the order and its event in one transaction makes them atomic, and a SKIP LOCKED relay gives at-least-once delivery: a crashed relay redelivers the event instead of losing it.
+- claim: The committed attempt retains both order and outbox row; the rolled-back attempt retains neither. Rolling back the relay's DELETE makes the event selectable again, then a committed DELETE empties the outbox. No external publication, receiver effect, or process crash is executed.
 
 *The order and its event are written in ONE transaction — both land in the same database.*
 
@@ -3437,9 +3443,15 @@ Query OK, 1 row affected
 
 App> COMMIT;
 Query OK
+
+App> SELECT id FROM orders ORDER BY id;
+ id 
+----
+  1 
+(1 row)
 ```
 
-*Atomicity covers the failure path too: no committed order, no event.*
+*The second attempt explicitly rolls back. The next SELECTs assert that only order 1 and its outbox row remain.*
 
 ```transcript
 App> BEGIN;
@@ -3453,6 +3465,12 @@ Query OK, 1 row affected
 
 App> ROLLBACK;
 Query OK
+
+App> SELECT id FROM orders ORDER BY id;
+ id 
+----
+  1 
+(1 row)
 
 App> SELECT id, event FROM outbox ORDER BY id;
  id |         event         
@@ -3474,7 +3492,7 @@ Relay> SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (1 row)
 ```
 
-*…publishes it to the broker (an HTTP call — outside any transaction), deletes it, and crashes before COMMIT.*
+*The relay deletes the row and explicitly rolls back. Publication is omitted; no HTTP call or crash is executed.*
 
 ```transcript
 Relay> DELETE FROM outbox WHERE id = 1;
@@ -3484,7 +3502,7 @@ Relay> ROLLBACK;
 Query OK
 ```
 
-*The delete evaporated with the crash — the event is still in the outbox. The restarted relay publishes it AGAIN: at-least-once delivery, so consumers must be idempotent.*
+*The rolled-back DELETE leaves the event available for reselection. A later relay transaction selects and deletes it again. This establishes database reselection, not redelivery to a recipient.*
 
 ```transcript
 Relay> BEGIN;
@@ -3514,7 +3532,18 @@ Relay> SELECT count(*) AS pending FROM outbox;
 ## mysql/06-distributed/xa-transactions.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: XA PREPARE detaches a transaction from its session: it survives the session's death, keeps holding its locks, and any later session can finish it by name with XA COMMIT.
+- claim: With xa_detach_on_prepare=ON, this prepared InnoDB branch remains in XA RECOVER and blocks B's NOWAIT read before and after A's session is killed. B commits it by XID and reads balance 200. No server restart or multi-resource coordinator is executed.
+
+```transcript
+A> SET SESSION xa_detach_on_prepare = ON;
+Query OK
+
+A> SELECT @@session.xa_detach_on_prepare AS detached;
+ detached 
+----------
+        1 
+(1 row)
+```
 
 *A is one participant in a distributed transfer. It does its work, then PREPARES — phase one.*
 
@@ -3555,7 +3584,7 @@ B> SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- ER_LOCK_NOWAI
 ERROR 3572 (HY000): Statement aborted because lock(s) could not be acquired immediately and NOWAIT is set.
 ```
 
-*Now the coordinator crashes: A's connection is killed outright.*
+*M kills participant session A. No Transaction Manager process is modeled.*
 
 ```transcript
 M> CALL kill_session('A');
@@ -3565,7 +3594,7 @@ A> SELECT 1;
 ERROR ERR_MYSQL_CONNECTION_CLOSED (HY000): Connection closed
 ```
 
-*The session is gone. The prepared transaction is not — it survives anything short of XA COMMIT/XA ROLLBACK, including a full server restart. And it still holds its locks:*
+*A's session is gone. XA RECOVER still lists the prepared branch and B's NOWAIT read still fails. Server restart is not tested here.*
 
 ```transcript
 M> XA RECOVER;
@@ -3578,7 +3607,7 @@ B> SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
 ERROR 3572 (HY000): Statement aborted because lock(s) could not be acquired immediately and NOWAIT is set.
 ```
 
-*Phase two — any session can finish the job by name. B commits the orphan.*
+*Phase two: B, another permitted connection, commits this detached branch by XID.*
 
 ```transcript
 B> XA COMMIT 'transfer-42';

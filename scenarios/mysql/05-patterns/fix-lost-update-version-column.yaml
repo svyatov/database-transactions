@@ -1,8 +1,8 @@
 title: "Fixing lost updates #3: optimistic locking with a version column"
 claim: >-
-  A version column makes the lost update detectable instead of silent: the
-  stale write matches 0 rows, and retrying against the new version lands both
-  deposits — no locks held while the app thinks.
+  In this InnoDB REPEATABLE READ schedule, B's stale version predicate
+  affects 0 rows. B rolls back and retries from version 2 in a fresh
+  transaction; the final balance is 120 and version is 3.
 setup: |
   CREATE TABLE accounts (
     id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL, version int NOT NULL DEFAULT 1
@@ -10,7 +10,7 @@ setup: |
   INSERT INTO accounts VALUES (1, 'alice', 100, 1);
 sessions: [A, B]
 steps:
-  - note: Both app servers read the row — including its version — with no locks held.
+  - note: Both sessions read balance and version without a locking read. The UPDATEs still acquire write locks.
   - A: BEGIN
   - A: SELECT balance, version FROM accounts WHERE id = 1
     capture: readA

@@ -1,66 +1,28 @@
 # ORM pitfalls
 
-ORMs are fine. What bites is the transaction machinery they hide. The pitfalls from
-[the PostgreSQL lesson](/postgres/05-patterns/orm-pitfalls) (transactions held open
-across slow I/O, read-modify-write without protection, blind trust in default isolation)
-all apply on MySQL, two of them with worse defaults. And MySQL adds a fourth of its own:
-your migration tool's "transactional" migrations aren't.
+Inspect the SQL and transaction boundaries your ORM actually uses. This lesson executes SQL on MySQL 8.4 InnoDB, not a framework or migration library. It does not establish how every ORM configures transactions, locking, or retries.
 
 ## Pitfall #1: DDL in a "transaction" is the migration lie
 
-Every serious framework wraps migrations in a transaction, and on PostgreSQL that means a
-[failed migration rolls back cleanly](/postgres/01-basics/begin-commit-rollback): schema
-*and* data. On MySQL the wrapper is decorative. The
-[manual](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html): DDL statements
-"implicitly end any transaction active in the current session, as if you had done a
-`COMMIT` before executing the statement."
+A transaction wrapper cannot make the demonstrated INSERT plus CREATE INDEX atomic. The [implicit-commit manual](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html) lists statements that end an active transaction "as if you had done a `COMMIT` before executing the statement." CREATE INDEX is on that list.
 
 <!--@include: ./parts/implicit-commit.md-->
 
-A migration that inserts data, alters a table, then fails leaves the database in a state
-*no version of your code describes*: half-migrated, permanently. Write MySQL migrations
-to be *re-runnable* (idempotent steps, one DDL per migration) instead of assuming
-atomicity the engine doesn't offer.
+B sees the inserted order after CREATE INDEX and still sees it after A's ROLLBACK. The scenario executes a successful CREATE INDEX followed by explicit rollback; it does not inject a migration exception. Design recovery around these commit boundaries and make completed steps safe to inspect and resume.
+
+The same [manual section](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html) documents exceptions: CREATE TEMPORARY TABLE and DROP TEMPORARY TABLE do not implicitly commit, but their effects cannot be rolled back. Check the actual statement; "every DDL commits" is too broad. Atomic execution of a supported DDL statement is also distinct from rolling back a user transaction containing DDL and data changes.
 
 ## Pitfall #2: the transaction that outlives the query
 
-Transaction-per-request middleware opens a transaction; the handler then awaits a payment
-API or renders a template. The database sees a session idle in transaction (holding
-[row locks](/mysql/03-locking/row-locks), blocking [DDL](/mysql/03-locking/table-locks-and-ddl)
-via metadata locks, and [pinning undo history](/mysql/04-mvcc/history-list-length)) while
-your code isn't talking to it at all. MySQL makes this one *harder to survive* than
-PostgreSQL: there is no `idle_in_transaction_session_timeout` to kill the offender. The
-production chapter shows how to find the culprits yourself. The real fix is upstream: no
-network I/O inside a transaction, ever.
+Waiting for an API or rendering inside an open transaction can extend the lifetime of locks and read views already held. The relevant database behaviors are demonstrated in [row locks](/mysql/03-locking/row-locks), [metadata-lock waits](/mysql/03-locking/table-locks-and-ddl), and [retained undo history](/mysql/04-mvcc/history-list-length). Not every transaction holds all three. Keep the protected database work short; moving a remote effect outside it still requires an explicit [failure-boundary design](/mysql/06-distributed/transactional-outbox).
 
 ## Pitfall #3: no transaction where you assumed one
 
-Without an explicit block, most ORMs run each `save()` as its own autocommitted statement,
-so *load entity, change field, save* is exactly chapter 2's
-[read-modify-write lost update](/mysql/02-isolation/lost-update), writing back every stale
-field the object was loaded with. The fixes are the
-[previous lesson's](/mysql/05-patterns/fixing-lost-updates); ORMs ship two of them as
-"optimistic locking" (version column) and a `lock`/`forUpdate` query option. They only
-work if you turn them on, and on MySQL you can't lean on REPEATABLE READ to catch what
-you missed, [as PostgreSQL's would](/postgres/02-isolation/lost-update).
+If a load and save use separate transactions, or a plain read is followed by a stale absolute write, the SQL can reproduce the [lost-update schedule](/mysql/02-isolation/lost-update). Check whether your ORM exposes arithmetic updates, a locking read in the same transaction, or a version predicate. The [three repair schedules](/mysql/05-patterns/fixing-lost-updates) demonstrate those SQL protocols; their presence in an ORM must be checked separately.
 
 ## Pitfall #4: trusting default isolation
 
-An ORM transaction block gives you REPEATABLE READ (MySQL's default), which sounds
-stronger than PostgreSQL's READ COMMITTED and is, for plain reads. But every write in it
-is a [current read](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot),
-lost updates [pass silently](/mysql/02-isolation/lost-update), and there's no
-`40001` to tell you the snapshot betrayed you. If a unit of work needs SERIALIZABLE, say
-so per-transaction, and then own the [`1213` retry loop](/mysql/05-patterns/retrying-deadlocks),
-because the ORM won't rerun your business logic for you.
-
-Four habits keep these from biting. MySQL has no transactional DDL, so every migration step
-that touches the schema commits everything before it: design migrations to re-run, never
-to roll back. An ORM transaction stays open from its first statement until your code
-returns, and with no idle-in-transaction timeout to save you, keeping network I/O out of it
-falls to you. Object-style read-modify-write is a lost update by default until you turn on
-a version column or a locking read, and the isolation level and the `1213` retry loop are
-your job, not the ORM's.
+The [MySQL 8.4 manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html) states: "The default isolation level for `InnoDB` is `REPEATABLE READ`." A configured server, connection, or ORM can change it. The [REPEATABLE READ lesson](/mysql/02-isolation/repeatable-read) separates snapshot reads from locking reads and writes. That level does not reject the demonstrated stale overwrite. [SERIALIZABLE](/mysql/02-isolation/serializable) uses more locking and can produce a deadlock; it does not remove the need to handle errors and retry complete transactions where appropriate. Verify the ORM's recovery behavior rather than assuming it reruns business logic.
 
 ## Further reading
 

@@ -17,14 +17,14 @@ A> COMMIT;
 Query OK
 ```
 
-*The response is lost in the network. The client retries the same request; server B picks it up.*
+*Model a same-key retry after commit. No network failure or application response is executed; B reads the stored amount.*
 
 ```transcript
 B> BEGIN;
 Query OK
 
 B> INSERT INTO payments VALUES ('req-42', 30)
-   ON DUPLICATE KEY UPDATE amount = amount; -- 0 rows: already processed — skip the charge, return the stored result
+   ON DUPLICATE KEY UPDATE amount = amount; -- 0 rows: existing key, skip the balance update; the next SELECT reads the stored amount
 Query OK, 0 rows affected
 
 B> SELECT amount FROM payments WHERE idempotency_key = 'req-42';
@@ -71,7 +71,7 @@ Query OK
 Query OK, 0 rows affected
 ```
 
-*Even the in-flight duplicate cannot double-charge.*
+*This in-flight duplicate affects 0 rows after A commits. No additional balance update is issued.*
 
 ```transcript
 A> SELECT balance FROM accounts WHERE id = 1; -- 100 - 30 - 25: every charge applied exactly once

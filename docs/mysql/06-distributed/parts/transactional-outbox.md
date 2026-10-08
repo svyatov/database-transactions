@@ -14,9 +14,15 @@ Query OK, 1 row affected
 
 App> COMMIT;
 Query OK
+
+App> SELECT id FROM orders ORDER BY id;
+ id 
+----
+  1 
+(1 row)
 ```
 
-*Atomicity covers the failure path too: no committed order, no event.*
+*The second attempt explicitly rolls back. The next SELECTs assert that only order 1 and its outbox row remain.*
 
 ```transcript
 App> BEGIN;
@@ -30,6 +36,12 @@ Query OK, 1 row affected
 
 App> ROLLBACK;
 Query OK
+
+App> SELECT id FROM orders ORDER BY id;
+ id 
+----
+  1 
+(1 row)
 
 App> SELECT id, event FROM outbox ORDER BY id;
  id |         event         
@@ -51,7 +63,7 @@ Relay> SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (1 row)
 ```
 
-*…publishes it to the broker (an HTTP call — outside any transaction), deletes it, and crashes before COMMIT.*
+*The relay deletes the row and explicitly rolls back. Publication is omitted; no HTTP call or crash is executed.*
 
 ```transcript
 Relay> DELETE FROM outbox WHERE id = 1;
@@ -61,7 +73,7 @@ Relay> ROLLBACK;
 Query OK
 ```
 
-*The delete evaporated with the crash — the event is still in the outbox. The restarted relay publishes it AGAIN: at-least-once delivery, so consumers must be idempotent.*
+*The rolled-back DELETE leaves the event available for reselection. A later relay transaction selects and deletes it again. This establishes database reselection, not redelivery to a recipient.*
 
 ```transcript
 Relay> BEGIN;

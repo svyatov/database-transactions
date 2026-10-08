@@ -19,7 +19,7 @@ Saga> COMMIT;
 Query OK
 ```
 
-*A saga has no isolation: between steps, the whole world sees the half-done trip.*
+*This autocommit Reader sees the committed flight reservation between steps. Local transaction isolation still applies.*
 
 ```transcript
 Reader> SELECT seats FROM flights WHERE id = 1;
@@ -59,6 +59,12 @@ Saga> SELECT seats FROM flights WHERE id = 1;
 
 Saga> COMMIT;
 Query OK
+
+Reader> SELECT seats FROM flights WHERE id = 1;
+ seats 
+-------
+     5 
+(1 row)
 ```
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/06-distributed/saga-compensation.yaml)</small>

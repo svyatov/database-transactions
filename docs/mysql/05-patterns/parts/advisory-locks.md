@@ -70,7 +70,7 @@ B> SELECT GET_LOCK('migration', 0) AS got_it; -- now B is the migration runner
 (1 row)
 ```
 
-*One session can hold many named locks; RELEASE_ALL_LOCKS drops the lot. Disconnecting releases them too — a crashed runner can't jam the queue forever.*
+*B acquires a second name, then RELEASE_ALL_LOCKS releases both. Session termination is a documented release path, not executed here.*
 
 ```transcript
 B> SELECT GET_LOCK('cache-rebuild', 0) AS got_it;
