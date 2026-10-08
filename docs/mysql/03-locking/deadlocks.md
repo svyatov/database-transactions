@@ -35,3 +35,5 @@ If a wait is not a detected deadlock, [identify its blocker](/mysql/03-locking/m
 
 - [MySQL docs: InnoDB Error Handling](https://dev.mysql.com/doc/refman/8.4/en/innodb-error-handling.html)
 - [The PostgreSQL counterpart](/postgres/03-locking/deadlocks)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-locking) records the exact manual support and execution limits for this lesson.

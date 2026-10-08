@@ -53,3 +53,5 @@ recovery responsibilities; neither is a universal replacement for 2PC.
 
 - [PostgreSQL 18: PREPARE TRANSACTION](https://www.postgresql.org/docs/18/sql-prepare-transaction.html)
 - [The same lesson on MySQL](/mysql/06-distributed/xa-transactions)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-distributed) records the exact manual support and execution limits for this lesson.

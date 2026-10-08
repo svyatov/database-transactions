@@ -1,6 +1,18 @@
 # Transaction education
 
-Teaching concepts used by this project's lessons and practice material. The existing evidence vocabulary, including Claim, Scenario, Transcript, and Lesson, is defined in [CONCEPTS.md](CONCEPTS.md).
+Teaching and evidence concepts used by this project's lessons. The evidence policy follows [#31](https://github.com/svyatov/database-transactions/issues/31) and [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Claim**:
+A behavioral statement with its applicable engine/version, operation, transaction/configuration conditions, and evidence scope.
+
+**Scenario**:
+An executable schedule with named Sessions and assertions. Shared YAML can run through both harnesses; TypeScript client-code Scenarios run through Bun only.
+
+**Transcript**:
+Generated SQL, events, results, and Scenario-authored narration from one run. It is a source mirror, not independent support for every sentence or every execution.
+
+**Lesson**:
+A published explanation that uses Scenarios, documented contracts, or marked derivations. Reference-only topics need not own a Scenario.
 
 ## Language
 

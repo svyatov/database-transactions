@@ -1,5 +1,5 @@
 ---
-description: "Write skew: two transactions each check an invariant, each write to a different row, and both commit, jointly breaking the rule both of them checked. Why only SERIALIZABLE stops it, on PostgreSQL and MySQL."
+description: "The demonstrated on-call write skew, SERIALIZABLE writer participation, and the limits of locking and retry advice on PostgreSQL and MySQL."
 ---
 
 # Write skew
@@ -24,7 +24,7 @@ Alice: COMMIT
 Bob: COMMIT ← both committed; nobody is on call
 ```
 
-Formally Adya's *G2* (predicate) and *G2-item*. Snapshot-based REPEATABLE READ can't
+The linked on-call schedule is classified G2-item. No separate predicate G2 schedule is executed here. Snapshot-based REPEATABLE READ can't
 catch it: each transaction's snapshot really did contain another doctor, each UPDATE touched
 a different row, so there is nothing for a write-conflict check to object to. The decision
 each transaction made was invalidated by the *other's write*: a read-write dependency, not a
@@ -35,18 +35,11 @@ write-write one.
 | Level | SQL standard | PostgreSQL | MySQL (InnoDB) |
 |---|---|---|---|
 | REPEATABLE READ | *(not addressed)* | **happens** ([proof](/postgres/02-isolation/serializable#why-repeatable-read-isn-t-enough-write-skew)) | **happens** ([proof](/mysql/02-isolation/serializable#write-skew-at-repeatable-read)) |
-| SERIALIZABLE | prevented (by definition) | rejected with `40001` at COMMIT ([proof](/postgres/02-isolation/serializable#the-same-interleaving-serializable)) | deadlock `1213`, detected instantly ([proof](/mysql/02-isolation/serializable#serializable-stops-it-with-locks)) |
+| SERIALIZABLE | serial equivalence | D: B's `40001` at COMMIT in [this schedule](/postgres/02-isolation/serializable#the-same-interleaving-serializable) | D: B's `1213` with detection enabled in [this schedule](/mysql/02-isolation/serializable#serializable-stops-it-with-locks) |
 
-Same guarantee, opposite philosophies. PostgreSQL's SERIALIZABLE (SSI) is optimistic: both
-transactions run without blocking, and the dependency tracker aborts one at commit. MySQL's
-is pessimistic: every plain SELECT takes a shared lock, so the two UPDATEs collide with the
-other's read lock: a cycle the deadlock detector breaks on the spot. Either way your retry
-logic is not optional; only the error code differs.
+The existing timeline is illustrative. The linked PostgreSQL schedule observes B's 40001 at COMMIT; SSI can also reject earlier, and write/table locks still exist. InnoDB's explicit SERIALIZABLE transaction retains shared read locks and the shown enabled detector rejects B with 1213. Standalone autocommit SELECT is an exception. Neither victim nor instantaneous detection nor eventual retry success is universal.
 
-Multi-row invariants ("at least one on call", "the sum stays positive", "unique-ish under
-concurrency") are only automatic at SERIALIZABLE. Below it, the fix is making the conflict
-explicit: `SELECT … FOR UPDATE` on the rows the decision depends on, so the transactions
-collide on purpose.
+† Serial equivalence protects this rule only if each transaction preserves it serially and every relevant writer participates; see the [engine catalogs' derivations](/concepts/anomalies-by-engine). Another suitable coordination protocol can protect a rule below SERIALIZABLE. Locking only the different rows each writer changes is insufficient; scanned predicates, missing rows, and cooperating writers need explicit design. Retry all reads/decisions with a bound or return controlled failure. External effects remain outside that database boundary.
 
 ## Related anomalies
 

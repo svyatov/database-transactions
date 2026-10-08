@@ -1,15 +1,15 @@
 # Contributing
 
-The rule that makes this site worth trusting: **no claim without a proving scenario.**
-Prose may only state what a scenario asserts or what an official-docs quote (verbatim,
-linked) says. If you can't prove it, don't write it.
+Every behavioral claim needs stated scope and support: **Demonstrated behavior**, asserted by an executed Scenario, or a **Documented contract**, supported by an exact linked official-manual quotation. State the engine/version, operation, transaction boundary, configuration, and participating writers when they change the result. One executed schedule does not establish a universal guarantee. Unasserted returned columns and narrator notes do not become additional proofs through generation.
 
-One exception, and it has to be marked. A guarantee that's entailed by an isolation level's
+One exception, and it has to be marked. A guarantee that's entailed by stated engine or isolation
 semantics but that no scenario here demonstrates may be stated if it carries a `†`, a legend
 saying no transcript proves it, and a link to the lesson that explains why it holds — see
 [the cross-engine table](docs/concepts/anomalies-by-engine.md). Demonstrated and entailed are
 different things, and the reader gets to see which one they're looking at. A claim you merely
 believe still doesn't ship.
+
+The accepted policy in [#31](https://github.com/svyatov/database-transactions/issues/31) also requires application-model and external-effect limits. Do not call an explicit database rollback a process crash or a narrated publication an observed receiver effect. Advice and hypothetical symptoms must not imply executed or measured guarantees.
 
 ## Setup
 
@@ -25,14 +25,14 @@ uv sync --directory python    # optional: the cross-driver check
 1. **Write the scenario** in `scenarios/<db>/<NN-chapter>/<slug>.yaml` (`<db>` is
    `postgres` or `mysql`): `title`, `claim`, `setup` SQL, `sessions`, and an ordered list
    of `steps`. The format is defined by `harness/loader.ts` (~150 lines — read it) and
-   any existing scenario shows the idiom. Every claim is asserted: `expect:` (subset row
+   any existing scenario shows the idiom. Assert each claimed Scenario outcome: `expect:` (subset row
    match), `affected:`, `error:` on `<session>.fails:` steps; a statement that must block
    gets `blocks: p1`, resolved later by `- success: p1` or `- failure: p1`. Teaching
    remarks go in `comment:` (rendered as `-- …` in the transcript) and `note:` steps.
    Scenarios whose *client-side code* is the lesson (retry loops, listeners) may instead
    be TypeScript files default-exporting `scenario({...})` — see
    `scenarios/postgres/05-patterns/retry-serialization-failures.ts`.
-2. **Keep transcripts deterministic** — CI regenerates them and fails on any diff:
+2. **Keep transcripts deterministic**: database-relevant CI regenerates them and fails on any diff:
    - `ORDER BY` on every multi-row SELECT; no timestamps, durations, or raw pids/oids
      in output (xid and pid *columns* are normalized automatically; an id inside SQL
      text is not — on PostgreSQL filter `pg_stat_activity` by `application_name`; on
@@ -56,10 +56,7 @@ uv sync --directory python    # optional: the cross-driver check
 
 ### Giving a pattern a second act
 
-A chapter 5 lesson teaches a pattern as a working recipe. Its *second act* is a chapter 7
-scenario that prices what the recipe costs at scale when something goes wrong — the incident a
-team actually gets paged for. `queue-bloat.yaml` is the first: the job queue's claim/complete
-loop, run under a worker that hangs mid-transaction, turns throughput into unreclaimable disk.
+A chapter 7 Scenario can examine a failure boundary of a chapter 5 recipe. `queue-bloat.yaml` executes the job queue's own SQL under one idle worker with an assigned transaction ID. Its fixed schedule asserts row counts, heap pages, and occupied slots before and after VACUUM. It measures neither a production throughput rate nor a disk-full incident.
 
 Three moves build one:
 
@@ -72,23 +69,21 @@ Three moves build one:
    queue-bloat, entry 7 ("a table keeps growing") and entry 9 ("two workers process the same
    job") — and links the scenario as its proof.
 
-The trap, learned the hard way building this one: the failure mode is usually already proven
-somewhere in chapters 3–4, and a scenario that restates it is a duplicate, not a second act.
-VACUUM freezing behind an old snapshot was already `long-transactions`. A second act has to claim
-only what the *composition* adds. Here that was a rate: the bloat grows with the queue's
-throughput, a number no single-mechanism lesson shows.
+Check existing chapter 3/4 evidence before adding a duplicate. The long-transactions example concerns an old snapshot; queue-bloat concerns its stated assigned-xid removal horizon and queue schedule. Claim only the composition's asserted observations. Neither schedule measures a universal rate, and neither establishes that all VACUUM work stops.
 
 ## Before opening a PR
 
 ```sh
 bunx tsc --noEmit                     # types
-bun test                              # every claim re-verified, both databases
+bun test                              # Scenario assertions, both databases
 bun run gen                           # then `git diff` must be empty — transcripts committed & stable
 uv run --directory python pytest      # the second pair of drivers agrees
 bun run docs:anchors                  # every internal `#anchor` points at a real heading
 bun run docs:references               # registered audit citations match their pinned source excerpts
 bun run docs:build                    # site builds, every link's target page exists
 ```
+
+Serialize these database commands. Python checks shared YAML only; TypeScript client code has no Python parity. CI's path filter can skip database execution for prose-only changes. Semantic claim assessment, assertion execution, driver agreement, artifact stability, and rendered-reader QA must be reported separately.
 
 `docs:build` only checks that a link's *page* exists — it strips the `#fragment` first, so a
 stale heading slug sails through. `docs:anchors` is what catches that.

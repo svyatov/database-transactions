@@ -48,3 +48,5 @@ relay delivery, disconnect replay, or consumer deduplication is tested here.
 - [PostgreSQL 18: NOTIFY](https://www.postgresql.org/docs/18/sql-notify.html)
 - [PostgreSQL 18: LISTEN](https://www.postgresql.org/docs/18/sql-listen.html)
 - [MySQL outbox polling](/mysql/06-distributed/transactional-outbox)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-distributed) records the exact manual support and execution limits for this lesson.

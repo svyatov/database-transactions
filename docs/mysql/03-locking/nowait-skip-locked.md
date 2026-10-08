@@ -47,3 +47,5 @@ Both options are unsafe for statement-based replication. They can still encounte
 ## Further reading
 
 - [The PostgreSQL counterpart](/postgres/03-locking/nowait-skip-locked)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-locking) records the exact manual support and execution limits for this lesson.

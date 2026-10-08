@@ -40,3 +40,5 @@ receiver deduplication, or recovery coordinator is exercised here.
 
 - [Garcia-Molina & Salem, Sagas (1987)](https://www.cs.princeton.edu/techreports/1987/070.pdf)
 - [The same lesson on MySQL](/mysql/06-distributed/sagas)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-distributed) records the exact manual support and execution limits for this lesson.

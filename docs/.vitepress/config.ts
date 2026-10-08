@@ -290,7 +290,7 @@ export function buildCurriculum(
 
 function crossDriver(): string {
   const ran = existsSync(new URL("../../.cross-driver-ok", import.meta.url));
-  return ran ? ", and re-proven through psycopg and PyMySQL" : "";
+  return ran ? "; shared YAML has an independent psycopg/PyMySQL check" : "";
 }
 
 // Orientation pages that otherwise fall outside every section sidebar. Listing them
@@ -721,8 +721,7 @@ const curriculum = buildCurriculum(sidebarPostgres, sidebarMysql);
 
 export default defineConfig({
   title: "Database Transactions",
-  description:
-    "Learn database transactions from verified, runnable examples — every claim proven against a real database.",
+  description: "Learn database transactions from asserted database runs, documented contracts, and marked derivations.",
   base: BASE_PATH,
   cleanUrls: true,
   // Site-wide head tags, identical on every page. `head` hrefs are NOT auto-prefixed with `base`

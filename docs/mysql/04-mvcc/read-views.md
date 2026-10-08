@@ -34,3 +34,5 @@ open transaction harmless. Next: [history-list growth](/mysql/04-mvcc/history-li
 ## Further reading
 
 - [The PostgreSQL counterpart](/postgres/04-mvcc/snapshots-under-the-hood)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-mvcc) records the exact manual support and execution limits for this lesson.

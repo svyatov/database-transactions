@@ -54,3 +54,5 @@ is needed when stronger isolation rejects the transaction.
 - [PostgreSQL 18: Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)
 - [PostgreSQL 18: Row-Level Locks](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS)
 - [The same lesson on MySQL](/mysql/05-patterns/fixing-lost-updates)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-patterns) records the exact manual support and execution limits for this lesson.

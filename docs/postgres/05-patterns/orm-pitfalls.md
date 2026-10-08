@@ -50,3 +50,5 @@ The database examples here establish no universal ORM retry behavior.
 
 - [PostgreSQL 18: Client settings](https://www.postgresql.org/docs/18/runtime-config-client.html)
 - [The same lesson on MySQL](/mysql/05-patterns/orm-pitfalls)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-patterns) records the exact manual support and execution limits for this lesson.

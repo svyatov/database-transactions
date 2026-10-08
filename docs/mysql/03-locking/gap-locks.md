@@ -35,3 +35,5 @@ identify the actual wait. Next: [lock queues](/mysql/03-locking/lock-queues).
 ## Further reading
 
 - [MySQL docs: Locks Set by Different SQL Statements](https://dev.mysql.com/doc/refman/8.4/en/innodb-locks-set.html)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-locking) records the exact manual support and execution limits for this lesson.

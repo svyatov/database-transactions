@@ -11,8 +11,9 @@ both updates complete and the asserted balance is 211.
 ## Grant order: don't bet on FIFO
 
 The [transaction scheduling manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-scheduling.html)
-documents CATS: waiting transactions receive weights based on how many transactions they
-block; equal weights favor the longest wait. This contract is not established by the
+documents CATS weights using "the number of transactions that a transaction blocks" and
+states: "If weights are equal, priority is given to the longest waiting transaction."
+This contract applies to transactions waiting for locks on the same object. It is not established by the
 transcript, which checks completion and final state without asserting grant order.
 
 Do not build application ordering or eventual-completion promises on that schedule.
@@ -25,3 +26,5 @@ Shorten the holding transaction, reduce contention, or choose an appropriate
 
 - [MySQL docs: The innodb_lock_waits View](https://dev.mysql.com/doc/refman/8.4/en/sys-innodb-lock-waits.html)
 - [The PostgreSQL counterpart](/postgres/03-locking/lock-queues)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-locking) records the exact manual support and execution limits for this lesson.

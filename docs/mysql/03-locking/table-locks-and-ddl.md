@@ -43,3 +43,5 @@ Inspect `performance_schema.metadata_locks` and process states via
 ## Further reading
 
 - [The PostgreSQL counterpart](/postgres/03-locking/table-locks-and-ddl)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-locking) records the exact manual support and execution limits for this lesson.

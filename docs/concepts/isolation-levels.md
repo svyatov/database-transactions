@@ -1,73 +1,45 @@
 ---
-description: "The four SQL-standard transaction isolation levels (READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE): what each permits, how MVCC snapshots implement them, and where PostgreSQL and MySQL diverge."
+description: "The four standard isolation names, scoped PostgreSQL 18 and MySQL 8.4 consistent/current operations, and the limits of demonstrated schedules."
 ---
 
 # Isolation levels
 
-Isolation (the I in [ACID](/concepts/what-is-a-transaction#acid)) answers one question:
-what do concurrent transactions see of each other's work? Perfect isolation (every
-transaction behaves as if it ran alone) costs performance, so SQL lets you trade correctness
-for speed by choosing an *isolation level*.
+Isolation specifies how concurrent operations interact. SERIALIZABLE committed participating transactions have an effect equivalent to some serial ordering; it does not automatically repair incorrect serial business logic. Performance depends on the workload and implementation, and is not measured by this site's schedules.
 
 ## The SQL standard's four levels
 
-The standard defines the levels by which *anomalies* they permit:
+The [PostgreSQL 18 manual's standard comparison](https://www.postgresql.org/docs/18/transaction-iso.html#MVCC-ISOLEVEL-TABLE) documents these minimum restrictions. The table names permitted phenomena, not a claim that every run produces them.
 
 | Level | Dirty read | Non-repeatable read | Phantom read |
 |---|---|---|---|
 | READ UNCOMMITTED | permitted | permitted | permitted |
-| READ COMMITTED | — | permitted | permitted |
-| REPEATABLE READ | — | — | permitted |
-| SERIALIZABLE | — | — | — |
+| READ COMMITTED | excluded | permitted | permitted |
+| REPEATABLE READ | excluded | excluded | permitted |
+| SERIALIZABLE | excluded | excluded | excluded |
 
-The vocabulary, in one line each:
+The standard's SERIALIZABLE definition also excludes serialization anomalies. Its classic three-column table alone does not characterize every [lost-update](/concepts/lost-update), [write-skew](/concepts/write-skew), or [read-only](/concepts/isolation-anomalies#the-read-only-anomaly) schedule. The [engine catalogs](/concepts/anomalies-by-engine) distinguish asserted examples from wider contracts.
 
-- **[Dirty read](/concepts/dirty-read)**: seeing another transaction's *uncommitted* data.
-- **[Non-repeatable read](/concepts/non-repeatable-read)**: reading the same row twice and
-  getting different data, because someone committed in between.
-- **[Phantom read](/concepts/phantom-read)**: running the same *range query* twice and
-  getting new rows.
+## Snapshots and operations {#how-mvcc-engines-implement-the-ladder-snapshots}
 
-The standard's list is famously incomplete: it says nothing about
-**[lost updates](/concepts/lost-update)**, **[write skew](/concepts/write-skew)**, or the
-**read-only anomaly**. All three are real, and the
-[anomaly catalog](/concepts/isolation-anomalies) maps every one of them to the levels that
-stop it, per engine, with proof.
+PostgreSQL stores tuple versions; InnoDB reconstructs older records using undo. This is not one identical storage algorithm. MVCC consistent reads can avoid conflicting row-write locks, but table/metadata locks, locking reads, and SERIALIZABLE InnoDB reads have separate rules.
 
-## How MVCC engines implement the ladder: snapshots
+| Operation | PostgreSQL 18 | MySQL 8.4 InnoDB |
+|---|---|---|
+| Default level | READ COMMITTED | REPEATABLE READ |
+| READ UNCOMMITTED | M: maps to READ COMMITTED; D: [dirty value excluded](/postgres/02-isolation/read-committed#no-dirty-reads-even-if-you-ask-for-them) | D: [dirty value read then rolled back](/mysql/02-isolation/snapshots-and-the-four-levels#read-uncommitted-means-it) |
+| READ COMMITTED plain consistent SELECT | Statement snapshot plus own prior writes | Statement snapshot plus own prior writes |
+| REPEATABLE READ plain consistent SELECT | First non-transaction-control statement establishes snapshot; own writes remain visible | First consistent read establishes snapshot; own writes remain visible |
+| Updating/locking commands | RC target rechecks and RR changed-target conflicts are [separate rules](/postgres/02-isolation/repeatable-read) | Current reads differ from the consistent snapshot, [demonstrated here](/mysql/02-isolation/repeatable-read) |
+| SERIALIZABLE | SSI adds dependency checks; ordinary write locks and errors still exist | With autocommit disabled or inside BEGIN, plain SELECTs acquire shared locks; standalone autocommit reads are an exception |
 
-Both PostgreSQL and InnoDB (MySQL's default engine) use *MVCC*, multi-version concurrency
-control: writers create new row *versions* instead of overwriting in place, and plain reads
-look at a *snapshot*, a frozen view of which transactions' work is visible. Readers don't
-block writers; writers don't block readers. On this architecture the levels differ mainly in
-*when the snapshot is taken*:
-
-- **READ COMMITTED**: a fresh snapshot for every statement. Each statement sees everything
-  committed before *it* began; two statements in one transaction may disagree.
-- **REPEATABLE READ**: one snapshot for the whole transaction. What you saw once, you'll see
-  again.
-- **SERIALIZABLE**: the per-transaction snapshot, plus a mechanism for the interleavings a
-  snapshot alone can't catch, and here the two engines part ways completely.
+These are Documented contracts under the named operations, illustrated by linked Scenarios. PostgreSQL's [18 isolation manual](https://www.postgresql.org/docs/18/transaction-iso.html) says: "each query does see the effects of previous updates executed within its own transaction". For READ COMMITTED plain SELECT, it also says "sees only data committed before the query began". InnoDB's [8.4 isolation manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html) says for SERIALIZABLE: "InnoDB implicitly converts all plain SELECT statements to SELECT ... FOR SHARE" when autocommit is disabled. Its [consistent-read manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html) specifies "no changes made by later or uncommitted transactions" and the "snapshot established by the first such read in that transaction", with the own-write exception and different current-DML rules. Neither contract makes every statement or every SQL function a stable snapshot read.
 
 ## Same names, different contracts
 
-| | PostgreSQL | MySQL (InnoDB) |
-|---|---|---|
-| **Default level** | READ COMMITTED | REPEATABLE READ |
-| **READ UNCOMMITTED** | silently behaves as READ COMMITTED: dirty reads are impossible at every level ([proof](/postgres/02-isolation/read-committed#no-dirty-reads-even-if-you-ask-for-them)) | means it, really serves uncommitted data ([proof](/mysql/02-isolation/snapshots-and-the-four-levels#read-uncommitted-means-it)) |
-| **REPEATABLE READ** | also blocks phantoms; writing through a stale snapshot aborts with `40001` ([proof](/postgres/02-isolation/repeatable-read)) | plain SELECTs are snapshot-stable, but UPDATE/DELETE are *current reads* that bypass the snapshot ([proof](/mysql/02-isolation/repeatable-read)) |
-| **SERIALIZABLE** | optimistic: SSI dependency tracking, conflicts abort with `40001` ([proof](/postgres/02-isolation/serializable)) | pessimistic: every read takes a shared lock, conflicts surface as deadlocks `1213` ([proof](/mysql/02-isolation/serializable)) |
-
-The practical consequence: an application tuned for one engine's contract can carry a silent
-bug on the other, the sharpest example being
-[lost updates](/concepts/lost-update#who-prevents-it), which PostgreSQL's REPEATABLE READ
-rejects and MySQL's lets through.
+The [lost-update Scenarios](/concepts/lost-update) read and write inside their shown transactions. PostgreSQL REPEATABLE READ rejects a post-snapshot changed target with 40001; InnoDB REPEATABLE READ permits the demonstrated stale literal write. Values read outside the protected transaction need separate protection. SERIALIZABLE conflicts can wait or fail, and a retry requires fresh decisions rather than only resending a write.
 
 ## Go deeper
 
-- [PostgreSQL: snapshots & the four levels](/postgres/02-isolation/snapshots-and-the-four-levels),
-  how to set levels, and the two PostgreSQL-specific facts worth internalizing
-- [MySQL: snapshots & the four levels](/mysql/02-isolation/snapshots-and-the-four-levels),
-  the level table as InnoDB actually implements it, dirty reads included
-- [The anomaly catalog](/concepts/isolation-anomalies): every anomaly, every level, both
-  engines
+- [PostgreSQL snapshots and levels](/postgres/02-isolation/snapshots-and-the-four-levels)
+- [MySQL snapshots and levels](/mysql/02-isolation/snapshots-and-the-four-levels)
+- [The complete reference comparison](/concepts/anomalies-by-engine)

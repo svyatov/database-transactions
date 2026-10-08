@@ -9,7 +9,7 @@
   <div class="hero-visual" aria-hidden="true">
     <div class="hero-visual-bar">
       <span class="dot" /><span class="dot" /><span class="dot" />
-      <span class="hero-visual-title">verified transcript</span>
+      <span class="hero-visual-title">illustrative deadlock, PostgreSQL</span>
     </div>
     <div class="transcript">
       <pre><code><span class="tx-line tx-s1"><span class="tx-prompt">A&gt;</span> BEGIN;</span>
@@ -22,7 +22,7 @@
 <span class="tx-line tx-s2">⏳ B  waiting on A's lock (row id=1)</span>
 <span class="tx-line tx-s2">⏵ B  ERROR 40P01: deadlock detected</span>
 <span class="tx-line tx-s1"><span class="tx-prompt">A&gt;</span> COMMIT;</span>
-<span class="tx-line tx-s1">⏵ A  COMMIT — the survivor wins</span></code></pre>
+<span class="tx-line tx-s1">⏵ A  COMMIT, shown survivor</span></code></pre>
     </div>
   </div>
 </template>

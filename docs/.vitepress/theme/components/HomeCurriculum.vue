@@ -13,7 +13,7 @@ const curriculum = theme.value.curriculum ?? [];
     <div class="curriculum-inner">
       <div class="home-block-head">
         <h2>The curriculum</h2>
-        <p>Eight chapters, each proven against PostgreSQL and MySQL. Pick a database and start anywhere.</p>
+        <p>Eight chapters per engine, with asserted examples and scoped reference material. Pick a database and start anywhere.</p>
       </div>
       <ul class="curriculum-grid">
         <li v-for="c in curriculum" :key="c.chapter" class="curriculum-card">

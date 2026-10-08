@@ -1,65 +1,42 @@
 ---
-description: "One row per isolation anomaly, one column per engine: the weakest level at which PostgreSQL and MySQL each prevent it, every cell linked to the transcript that proves it."
+description: "Operation-scoped PostgreSQL and MySQL anomaly comparison, separating asserted schedules, documented contracts, and unexecuted derivations."
 ---
 
 # Anomalies by engine
 
-Ask PostgreSQL and MySQL the same question (*at which isolation level do you stop me from
-losing an update?*) and you get answers two levels apart. PostgreSQL says REPEATABLE READ and
-hands you a `40001` to retry. MySQL says SERIALIZABLE, and gets there with locks. That single
-divergence decides whether the default isolation level in your ORM is safe for a
-read-modify-write, and it's the row this page exists for.
+The same isolation name does not imply the same operation contract. This comparison concerns PostgreSQL 18 and MySQL 8.4 InnoDB transactional tables, under the transaction boundaries in the linked lessons. Own writes, sequences, stale values read outside the protected transaction, and external effects require separate scope.
 
-Below, each row is one anomaly from the [catalog](/concepts/isolation-anomalies), and each cell
-names the weakest isolation level at which that engine prevents it, or says the engine prevents
-it at every level it offers.
+**D** is a demonstrated asserted schedule, not all executions. **M** is a Documented contract in the linked engine catalog/manual. **†** is an Entailed guarantee without a direct Scenario at that level. Its derivation is in the linked catalog's “How to use this table” section. The comparison preserves every reference topic, including unexecuted predicate and read-only variants.
 
-One caution before you read across a row: the two columns are separate ladders. MySQL offers
-READ UNCOMMITTED and PostgreSQL doesn't, so a cell means "the weakest rung *this* engine offers
-that stops this anomaly," never a position on one shared scale. Levels are spelled the way
-you'd type them after `SET TRANSACTION ISOLATION LEVEL`.
+Each row states the weakest relevant exclusion for its specified operation, not one universal ladder for all SQL. PostgreSQL accepts READ UNCOMMITTED as READ COMMITTED; InnoDB has a distinct READ UNCOMMITTED implementation.
 
-| Code | Anomaly | PostgreSQL | MySQL |
+| Code | Anomaly or operation | PostgreSQL | MySQL InnoDB |
 |---|---|---|---|
-| G0 | **Dirty write** | every level ([proof](/postgres/02-isolation/anomaly-catalog#dirty-writes-g0)) | every level ([proof](/mysql/02-isolation/anomaly-catalog#dirty-writes-g0)) |
-| G1a | **Dirty read** (aborted read) | every level ([proof](/postgres/02-isolation/read-committed#no-dirty-reads-even-if-you-ask-for-them)) | READ COMMITTED † ([READ UNCOMMITTED really serves it](/mysql/02-isolation/snapshots-and-the-four-levels#read-uncommitted-means-it)) |
-| G1b | **Intermediate read** | every level ([proof](/postgres/02-isolation/anomaly-catalog#intermediate-reads-g1b)) | READ COMMITTED ([proof](/mysql/02-isolation/anomaly-catalog#intermediate-reads-g1b)) |
-| G1c | **Circular information flow** | every level ([proof](/postgres/02-isolation/anomaly-catalog#circular-information-flow-g1c)) | READ COMMITTED ([proof](/mysql/02-isolation/anomaly-catalog#circular-information-flow-g1c)) |
-| OTV | **Observed transaction vanishes** | every level ([proof](/postgres/02-isolation/anomaly-catalog#observed-transaction-vanishes-otv)) | READ COMMITTED ([proof](/mysql/02-isolation/anomaly-catalog#observed-transaction-vanishes-otv)) |
-| P2 | **Non-repeatable read** | REPEATABLE READ ([proof](/postgres/02-isolation/repeatable-read#one-snapshot-no-phantoms)) | REPEATABLE READ *for plain `SELECT`s* ([proof](/mysql/02-isolation/repeatable-read#one-snapshot-no-phantoms)) |
-| G-single | **Read skew** | REPEATABLE READ ([proof](/postgres/02-isolation/read-committed#read-skew-a-total-that-never-existed)) | SERIALIZABLE †: the weaker level's [current reads](/mysql/02-isolation/repeatable-read#your-delete-and-your-select-live-in-different-worlds) write through its own snapshot |
-| PMP | **Phantom read** | REPEATABLE READ ([proof](/postgres/02-isolation/repeatable-read#one-snapshot-no-phantoms)) | SERIALIZABLE †: the weaker level's [current reads](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot) see the phantoms its `SELECT`s don't |
-| P4 | **Lost update** | REPEATABLE READ *as a retryable `40001`* ([proof](/postgres/02-isolation/lost-update#repeatable-read-turns-it-into-an-error)) | SERIALIZABLE † *with locks, so you retry on deadlock `1213`* ([the lesson](/mysql/02-isolation/serializable#serializable-stops-it-with-locks)) |
-| G2-item / G2 | **Write skew** (item & predicate) | SERIALIZABLE *as a retryable `40001`* ([proof](/postgres/02-isolation/serializable#the-same-interleaving-serializable)) | SERIALIZABLE *with locks* ([proof](/mysql/02-isolation/serializable#serializable-stops-it-with-locks)) |
-| — | **Read-only anomaly** (Fekete et al.) | SERIALIZABLE *as a retryable `40001`* ([proof](/postgres/02-isolation/serializable#it-even-protects-read-only-transactions)) | not catalogued |
+| G0 | Overwrite an uncommitted target | M: target row locks at every level; D: [RC wait](/postgres/02-isolation/anomaly-catalog#dirty-writes-g0) | † target locks at every level; D: [RU wait](/mysql/02-isolation/anomaly-catalog#dirty-writes-g0) |
+| G1a | Read concurrent uncommitted table changes | M: excluded at every level; D: [RU alias](/postgres/02-isolation/read-committed#no-dirty-reads-even-if-you-ask-for-them) | M: excluded from RC; D: [dirty RU value](/mysql/02-isolation/snapshots-and-the-four-levels#read-uncommitted-means-it) |
+| G1b | Intermediate draft read | † excluded at every level; D: [RC example](/postgres/02-isolation/anomaly-catalog#intermediate-reads-g1b) | † excluded from RC; D: [RU/RC examples](/mysql/02-isolation/anomaly-catalog#intermediate-reads-g1b) |
+| G1c | Cycle through dirty cross-reads | † excluded at every level; D: [RC example](/postgres/02-isolation/anomaly-catalog#circular-information-flow-g1c) | † excluded from RC; D: [RU/RC examples](/mysql/02-isolation/anomaly-catalog#circular-information-flow-g1c) |
+| OTV | Committed rows hidden by an uncommitted overwrite | † excluded at every level; D: [RC example](/postgres/02-isolation/anomaly-catalog#observed-transaction-vanishes-otv) | † excluded from RC; D: [RU/RC examples](/mysql/02-isolation/anomaly-catalog#observed-transaction-vanishes-otv) |
+| P2 | Repeated plain consistent SELECT after a concurrent commit | M: excluded at RR; D: [stable rows](/postgres/02-isolation/repeatable-read#one-snapshot-no-phantoms) | M: excluded for consistent SELECTs at RR; D: [stable rows](/mysql/02-isolation/repeatable-read#one-snapshot-no-phantoms) |
+| G-single | Read skew | † excluded between RR plain reads without own modifications; D: [RC/RR totals](/postgres/02-isolation/read-committed#read-skew-a-total-that-never-existed) | † excluded between RR consistent reads without own modifications; D: [totals](/mysql/02-isolation/read-committed#read-skew-a-total-that-never-existed); mixed [DELETE/SELECT](/mysql/02-isolation/repeatable-read#your-delete-and-your-select-live-in-different-worlds) differs; † SERIALIZABLE participating locks |
+| PMP | Changed matching set after a concurrent commit | M: excluded for RR plain reads; D: [new row excluded](/postgres/02-isolation/repeatable-read#one-snapshot-no-phantoms) | M: excluded for RR consistent SELECTs; current DML can reach post-snapshot rows; † SERIALIZABLE retained range locks, [derivation](/mysql/02-isolation/anomaly-catalog#how-to-use-this-table) |
+| P4 | Read and stale literal write inside the shown transaction | M: RR changed-target rejection; D: [40001 and fresh retry](/postgres/02-isolation/lost-update#repeatable-read-turns-it-into-an-error) | D: [loss at RC/RR](/mysql/02-isolation/lost-update); † SERIALIZABLE retained read locks, [derivation](/mysql/02-isolation/anomaly-catalog#how-to-use-this-table), no direct P4 execution at that level |
+| G2-item | On-call count and different-row writes | M: SERIALIZABLE serial equivalence; D: [RR loss and B's rejection](/postgres/02-isolation/serializable#the-same-interleaving-serializable) | † SERIALIZABLE rule protection; D: [RR loss and B's 1213](/mysql/02-isolation/serializable#serializable-stops-it-with-locks) |
+| G2 | Predicate variant beyond the on-call schedule | M: SERIALIZABLE serial equivalence; no predicate Scenario here, [catalog](/postgres/02-isolation/anomaly-catalog#how-to-use-this-table) | † SERIALIZABLE participating range locks; no predicate Scenario here, [derivation](/mysql/02-isolation/anomaly-catalog#how-to-use-this-table) |
+| Fekete example | Read-only report anomaly | M: SERIALIZABLE serial equivalence; D: [RR results and SERIALIZABLE cashier rejection](/postgres/02-isolation/serializable#it-even-protects-read-only-transactions) | Not catalogued or executed here |
 
-† The guarantee holds, but no transcript on this site demonstrates it at that level. It follows
-from the level's semantics rather than from a scenario we ran, and the link goes to the lesson
-that explains it instead. [Hermitage](https://github.com/ept/hermitage), the cross-database suite
-both catalogs answer, marks nothing: its reader cannot tell a tested cell from an asserted one.
-Four cells here are asserted, and they say so.
+† Every derived cell above lacks a direct execution of its universal exclusion. Exclusive target locks exclude dirty overwrites; excluding concurrent uncommitted versions excludes intermediate drafts and dirty cross-reads/OTV. A stable consistent snapshot excludes intervening commits between those reads, provided own changes do not alter the observed rule. Retained SERIALIZABLE read/range locks prevent competing writers invalidating protected reads/predicates before the transaction ends. These are the catalogs' explicit derivations, not stronger-level guarantees inferred from a single weaker-level run.
+
+A cycle with both old reads can still lack a serial ordering at READ COMMITTED; excluding a dirty-read cycle is not serializability. A read-skew guarantee for consistent SELECTs is not a guarantee for mixed current DML and snapshot reads.
 
 ## What the P4 row is telling you
 
-Two adjacent cells, two levels apart, and the gap is the whole reason this site has two tracks.
-PostgreSQL's REPEATABLE READ refuses to let a transaction overwrite a row it can no longer see,
-so a lost update surfaces as an error you retry. MySQL's REPEATABLE READ gives your `SELECT` a
-frozen snapshot and your `UPDATE` a live one, so the read-modify-write completes and one
-deposit vanishes. Nothing errors. Nothing warns.
+PostgreSQL REPEATABLE READ rejects the demonstrated post-snapshot changed target; the successful fresh retry is a separate asserted branch. InnoDB REPEATABLE READ permits the shown stale literal write. Neither result protects values read outside the transaction or nonparticipating writers. [Single-row protocols](/mysql/05-patterns/fixing-lost-updates) offer alternative scoped repairs.
 
-The `G-single` and `PMP` rows carry the same divergence for the same reason: a MySQL statement
-that writes, or that reads `FOR UPDATE`, ignores the snapshot the transaction's plain reads live
-in. That is why those cells collapse to SERIALIZABLE rather than to REPEATABLE READ with an
-asterisk. On MySQL, the isolation knob protects reads; read-modify-write is
-[fixed with locks or SQL arithmetic](/mysql/05-patterns/fixing-lost-updates).
+SERIALIZABLE protects a rule only when every relevant writer participates and each transaction preserves it in serial execution. InnoDB standalone autocommit reads do not retain the explicit-transaction protection. Conflicts can wait, fail, or succeed. Recovery must repeat fresh reads and decisions under a bound, or return controlled failure; no successful commit or external deduplication is automatic.
 
 ## The full breakdown
 
-This table collapses each engine's per-level grid to a single answer per anomaly. When you've
-picked your engine, the answer sheet for it has one cell per anomaly per level, and a proof in
-each:
-
-- **[PostgreSQL's anomaly catalog](/postgres/02-isolation/anomaly-catalog)**: three levels;
-  READ UNCOMMITTED is omitted because it aliases READ COMMITTED.
-- **[MySQL's anomaly catalog](/mysql/02-isolation/anomaly-catalog)**: four levels, and a READ
-  UNCOMMITTED column that really does serve dirty data.
+- [PostgreSQL catalog](/postgres/02-isolation/anomaly-catalog): every reference cell and its D/M/† support, with unexecuted variants stated.
+- [MySQL catalog](/mysql/02-isolation/anomaly-catalog): consistent/current scope, explicit SERIALIZABLE participation, and unexecuted variants.
+- [Hermitage](https://github.com/ept/hermitage): a separate suite. Neither project catalog claims complete execution coverage of it.
