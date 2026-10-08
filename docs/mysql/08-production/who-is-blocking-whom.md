@@ -1,34 +1,18 @@
 # Who is blocking whom
 
-The most common production page: "everything that touches table X is hanging." Chapter 3
-[introduced the monitoring views](/mysql/03-locking/monitoring-locks); this is the
-end-to-end incident. Detect, identify, decide, kill:
+On MySQL 8.4 InnoDB, the controlled incident has one blocker A and one waiter B. The query identifies their connections and asserts that A's processlist command is `Sleep` with no current statement. This is a row-lock demonstration; [metadata-lock diagnosis](/mysql/03-locking/table-locks-and-ddl) uses different state.
 
 <!--@include: ./parts/who-is-blocking-whom.md-->
 
 ## Reading the output
 
-The queue view (`sys.innodb_lock_waits`) answers the three incident questions in a single
-row. Who's stuck? That's `waiting_pid` and its exact statement, the query your users are
-watching hang. Who's responsible? That's `blocking_pid`, and the join to the processlist
-is the damning part: `command = Sleep`, no statement running. The blocker isn't *doing*
-anything; it's an open transaction someone's code forgot to close, still holding
-[row locks](/mysql/03-locking/row-locks) it acquired ages ago.
+`waiting_pid`, `waiting_query`, and `blocking_pid` identify this wait edge. `Sleep` alone means an idle connection; combined here with a blocking InnoDB lock, it identifies an idle transaction holding that lock. It does not establish why the application left it open or how long every lock has been held.
 
-And what now? The view even pre-writes the remediation for you
-(`sql_kill_blocking_connection`). `KILL <id>` rolls the blocker's transaction back; the
-transcript proves the waiter completes and the blocker's uncommitted work vanishes with it.
+The [MySQL view manual](https://dev.mysql.com/doc/refman/8.4/en/sys-innodb-lock-waits.html) lists `sql_kill_blocking_connection` as a generated statement to terminate the blocking session. The example executes `KILL CONNECTION` through a helper that uses lesson session tags. B's waiting update completes and its separate read of row 2 observes A's change rolled back. The final row 1 value alone would not establish that rollback, because B overwrites the same row.
 
-`KILL` is the incident-response tool, not the fix. The fix is whatever lets a
-transaction sit idle while holding locks.
-[The next lesson](/mysql/08-production/long-and-idle-transactions) hunts those down
-before anyone gets paged.
+This proves recovery for the demonstrated edge, not drainage of every production queue. Other blockers, rollback time, deadlocks, and client retries can change recovery. Check authorization and application effects before terminating a real connection; `KILL QUERY` is a different operation. The [KILL manual](https://dev.mysql.com/doc/refman/8.4/en/kill.html) states: "KILL CONNECTION is the same as KILL with no modifier". Termination and rollback need not complete immediately.
 
-The shape to remember: one query names waiter, blocker, and the blocker's state, and a
-blocker parked at `command = Sleep` is idle-in-transaction, locks with nobody home. Kill it
-and its transaction rolls back, the queue drains, and the waiter's statement finishes on
-its own with no retry logic in play. That the fix is a `KILL` and not a code change is the
-whole reason the next lesson exists: to find these before the page ever fires.
+Correct the application path that retains the transaction. The [long-transaction detector](/mysql/08-production/long-and-idle-transactions) helps find candidates; it does not automatically decide which sessions are safe to end.
 
 ## Further reading
 

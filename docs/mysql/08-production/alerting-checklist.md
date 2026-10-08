@@ -1,36 +1,21 @@
 # Alerting checklist
 
-Six numbers cover most transaction incidents on this site. Every one is queryable with
-plain SQL, every mechanism behind them is proven by a scenario in the chapters above.
+Candidate signals for MySQL 8.4 InnoDB, not a complete incident detector. Set thresholds from workload baselines and service objectives. The linked schedules demonstrate selected mechanisms, not alert accuracy or production recovery time. Views require privileges and instrumentation; metrics require available, enabled counters and comparable sample intervals.
 
-| # | Alert | Query source | Backed by |
+| # | Signal | Query source | Evidence and limit |
 |---|---|---|---|
-| 1 | Oldest transaction age > minutes | `min(trx_started)` in `information_schema.innodb_trx` | [find-long-transactions](/mysql/08-production/long-and-idle-transactions) |
-| 2 | Idle-in-transaction sessions > seconds | `innodb_trx` ⋈ processlist `command = 'Sleep'` | [find-long-transactions](/mysql/08-production/long-and-idle-transactions) |
-| 3 | Lock waits now | rows in `sys.innodb_lock_waits` | [who-is-blocking-whom](/mysql/08-production/who-is-blocking-whom) |
-| 4 | Deadlock rate | Δ `lock_deadlocks` (INNODB_METRICS) | [deadlock-counter](/mysql/08-production/logs-and-counters) |
-| 5 | Lock-timeout rate | Δ `lock_timeouts` (INNODB_METRICS) | [lock timeouts](/mysql/03-locking/nowait-skip-locked) |
-| 6 | Purge backlog sustained | `trx_rseg_history_len` (INNODB_METRICS) | [history-list-health](/mysql/08-production/history-list-health) |
+| 1 | Oldest transaction age | `min(trx_started)` in `information_schema.innodb_trx` | [Detector](/mysql/08-production/long-and-idle-transactions): transaction age, not read-view age |
+| 2 | Idle connections with an InnoDB transaction | `innodb_trx` joined to processlist `command = 'Sleep'` | [Detector](/mysql/08-production/long-and-idle-transactions): one tagged idle reader |
+| 3 | Current InnoDB row-lock waits | rows in `sys.innodb_lock_waits` | [Blocker diagnosis](/mysql/08-production/who-is-blocking-whom): one waiter; metadata waits need other views |
+| 4 | Detected deadlock rate | comparable Δ `lock_deadlocks` samples | [Counter](/mysql/08-production/logs-and-counters): one asserted delta |
+| 5 | InnoDB row-lock timeout rate | comparable Δ `lock_timeouts` samples | [Timeout](/mysql/03-locking/nowait-skip-locked): error asserted, metric delta not asserted |
+| 6 | Sustained history-list growth | `trx_rseg_history_len` | [History health](/mysql/08-production/history-list-health): lower bound, not bytes or culprit proof |
 
-Reading the board:
+Use the signals to select an investigation. An old idle transaction plus a growing history list is consistent with read-view retention, but does not identify the only cause. Check other readers, write load, and purge capacity before expecting cleanup. Short transaction ages do not prove hot-row contention; inspect the actual wait edges. Deadlock reports can guide [lock ordering](/mysql/03-locking/deadlocks) and [range-lock](/mysql/03-locking/gap-locks) investigation. Retries must respect the [application boundary](/mysql/05-patterns/retrying-deadlocks).
 
-- 1, 2, and 6 firing together is one forgotten transaction: alert 2's join names it, so
-  kill it or fix the code path and the other alerts drain on their own.
-- 3 spiking while 1 stays quiet is hot-row contention, not a stuck session. Look at
-  [lock queues](/mysql/03-locking/lock-queues) and whether a
-  [SKIP LOCKED](/mysql/05-patterns/job-queue) or
-  [atomic-update](/mysql/05-patterns/fixing-lost-updates) shape fits.
-- 4 climbing steadily points at lock ordering first
-  ([deadlock avoidance](/mysql/03-locking/deadlocks)), then
-  [gap locks](/mysql/03-locking/gap-locks) if the statements involve ranges or inserts,
-  and every consumer wants the [retry loop](/mysql/05-patterns/retrying-deadlocks).
-- 5 without 4 means the waits are long but acyclic, usually one slow writer everyone
-  queues behind, and alert 3's view names it.
+Timeouts without detected deadlocks do not prove an acyclic wait graph: [`innodb_deadlock_detect`](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlock-detection.html) can be disabled. The manual states: "At times, it may be more efficient to disable deadlock detection". In that configuration, lock wait timeouts resolve deadlocks. Check configuration and waits, not just counter correlations.
 
-What's deliberately *not* here: anomaly detection for
-[lost updates and write skew](/mysql/02-isolation/anomaly-catalog). No counter sees them. They look like successful transactions. They're prevented by
-[code patterns](/mysql/05-patterns/fixing-lost-updates), caught by application-level
-invariant checks, and that's precisely why the patterns chapter exists.
+These metrics do not validate application invariants. The [lost-update and write-skew schedules](/mysql/02-isolation/anomaly-catalog) can commit without errors; use writer coordination and application-level invariant checks.
 
 ## Further reading
 

@@ -3625,7 +3625,7 @@ B> SELECT balance FROM accounts WHERE id = 1;
 ## mysql/08-production/deadlock-counter.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Every deadlock increments the server-wide lock_deadlocks counter in INNODB_METRICS — deadlocks are countable and alertable even if nobody saw the error, because the counter only ever goes up.
+- claim: On MySQL 8.4 InnoDB with deadlock detection and the lock_deadlocks metric enabled, this opposite-order schedule raises 1213 and the server-wide counter increases by at least one. This is not a permanent incident record.
 
 ```timeline
 A: debit id=1
@@ -3633,6 +3633,20 @@ B: debit id=2
 A: credit id=2 → ⏳ waits
 B: credit id=1 ← 1213 Deadlock found when trying to get lock
 A: ⏵ credit id=2 → completes
+```
+
+```transcript
+M> SELECT @@innodb_deadlock_detect AS detection;
+ detection 
+-----------
+         1 
+(1 row)
+
+M> SELECT status FROM information_schema.INNODB_METRICS WHERE name = 'lock_deadlocks';
+ status  
+---------
+ enabled 
+(1 row)
 ```
 
 *The same two opposite-order transfers as chapter 3 — one will be the victim.*
@@ -3663,27 +3677,35 @@ A> COMMIT;
 Query OK
 ```
 
-*The error flashed by in one client's logs. The server remembers it forever:*
+*The detected deadlock is also visible as a counter delta in this run:*
 
 ```transcript
 M> SELECT im.count - b.n >= 1 AS deadlocks_since_snapshot
    FROM information_schema.INNODB_METRICS im, deadlocks_before b
    WHERE im.name = 'lock_deadlocks'
-    -- a monotonic counter — graph its rate and alert on spikes
+    -- sample rates within one enabled interval; account for restart and reset
  deadlocks_since_snapshot 
 --------------------------
                         1 
 (1 row)
 ```
 
-*For the full story of the LAST deadlock (both statements, both lock chains), read the LATEST DETECTED DEADLOCK section of SHOW ENGINE INNODB STATUS — or set innodb_print_all_deadlocks=ON to log every one.*
+*Documented separately: SHOW ENGINE INNODB STATUS reports the latest detected deadlock; innodb_print_all_deadlocks enables error-log reports. This scenario does not inspect either log output or retention.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/deadlock-counter.yaml)</small>
 
 ## mysql/08-production/find-long-transactions.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Two joins on information_schema.innodb_trx find the forgotten transaction: the oldest open transaction by trx_started, and the session that holds one open while doing nothing — including the read-only kind that never shows up in write metrics but still pins purge.
+- claim: On MySQL 8.4 InnoDB, the tagged session A appears in innodb_trx after reading orders: it is older than one second, its processlist command is Sleep, and trx_rows_modified is zero. Transaction age does not establish read-view age or prove that this session is the cause of a production backlog.
+
+```transcript
+A> SELECT @@session.transaction_isolation AS isolation_level;
+ isolation_level 
+-----------------
+ REPEATABLE-READ 
+(1 row)
+```
 
 *A starts a 'quick report'… and never gets around to committing.*
 
@@ -3698,7 +3720,7 @@ A> SELECT count(*) AS orders FROM orders;
 (1 row)
 ```
 
-*Detector 1 — the oldest open transaction, its owner, and how long it's been open:*
+*Detector 1: the oldest tagged transaction, its owner, and a lower bound on its age.*
 
 ```transcript
 M> SELECT CAST(sn.variable_value AS CHAR) AS session_name, t.trx_state,
@@ -3729,16 +3751,18 @@ M> SELECT CAST(sn.variable_value AS CHAR) AS session_name, p.command
 (1 row)
 ```
 
-*Detector 3 — why it matters even for a read-only report: A never wrote a row (it doesn't even have a real transaction ID), yet its read view is exactly what purge must wait for.*
+*Detector 3: A has modified no rows. This observation does not identify a purge blocker or rely on an implementation-specific transaction ID.*
 
 ```transcript
-M> SELECT t.trx_rows_modified AS rows_modified,
-          CAST(t.trx_id AS UNSIGNED) > 281474976710656 AS never_wrote
+M> SELECT t.trx_rows_modified AS rows_modified
    FROM information_schema.innodb_trx t
-    -- read-only — and still the oldest read view on the server
- rows_modified | never_wrote 
----------------+-------------
-             0 |           1 
+   JOIN performance_schema.threads th ON th.processlist_id = t.trx_mysql_thread_id
+   JOIN performance_schema.user_variables_by_thread sn ON sn.thread_id = th.thread_id
+   WHERE sn.variable_name = 'session_name' AND sn.variable_value = 'A'
+    -- no modified rows in the observed transaction
+ rows_modified 
+---------------
+             0 
 (1 row)
 
 A> COMMIT;
@@ -3750,7 +3774,15 @@ Query OK
 ## mysql/08-production/history-list-health.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: Two queries make undo bloat diagnosable: INNODB_METRICS' history list length says purge is falling behind, and a join on innodb_trx names the session whose old read view is holding it back.
+- claim: On MySQL 8.4 InnoDB, R retains a REPEATABLE READ view of v=0 while 150 single-row updates commit. The history-list metric is at least 150 and the tagged oldest transaction is R. This run does not measure bytes, identify read-view age from transaction age, or assert later purge drainage.
+
+```transcript
+R> SELECT @@session.transaction_isolation AS isolation_level;
+ isolation_level 
+-----------------
+ REPEATABLE-READ 
+(1 row)
+```
 
 *R opens a read view and goes quiet; the write workload keeps humming.*
 
@@ -3768,7 +3800,7 @@ A> CALL bump(150); -- 150 committed single-row transactions
 Query OK
 ```
 
-*Check 1 — is history piling up? (Baseline is 'usually less than a few thousand'.)*
+*Check 1: the history-list metric is at least 150 in this schedule.*
 
 ```transcript
 M> SELECT count >= 150 AS history_backlog
@@ -3779,7 +3811,7 @@ M> SELECT count >= 150 AS history_backlog
 (1 row)
 ```
 
-*Check 2 — who is the oldest read view that purge is waiting for?*
+*Check 2: find the oldest tagged transaction, a candidate for investigation.*
 
 ```transcript
 M> SELECT CAST(sn.variable_value AS CHAR) AS session_name,
@@ -3789,33 +3821,53 @@ M> SELECT CAST(sn.variable_value AS CHAR) AS session_name,
    JOIN performance_schema.user_variables_by_thread sn ON sn.thread_id = th.thread_id
    WHERE sn.variable_name = 'session_name'
    ORDER BY t.trx_started LIMIT 1
-    -- end this transaction and purge catches up on its own
+    -- transaction age is not read-view age; production attribution needs more evidence
  session_name | older_than_1s 
 --------------+---------------
  R            |             1 
+(1 row)
+
+A> SELECT v FROM counters;
+  v  
+-----
+ 150 
+(1 row)
+
+R> SELECT v FROM counters;
+ v 
+---
+ 0 
 (1 row)
 
 R> COMMIT;
 Query OK
 ```
 
+*R releases its read view; background purge and other readers determine later cleanup, which is not asserted here.*
+
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/history-list-health.yaml)</small>
 
 ## mysql/08-production/timeout-guardrails.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: max_execution_time cuts a runaway SELECT short without touching the session, and wait_timeout kills a connection that goes idle — rolling back whatever transaction it silently held open.
+- claim: On MySQL 8.4, SELECT SLEEP(2) returns interrupted=1 with max_execution_time=100 and the session remains usable. With wait_timeout=1, A's next query fails after an idle wait and B sees the original InnoDB balance. This run does not measure exact elapsed time or test general SELECT error handling.
 
-*Guardrail 1 — max_execution_time: a per-session (or per-query) ceiling for SELECTs.*
+*Guardrail 1: max_execution_time applies to eligible read-only SELECTs, not all statements.*
 
 ```transcript
 A> SET SESSION max_execution_time = 100;
 Query OK
 
-A> SELECT SLEEP(2) AS interrupted; -- cut short at 100ms — SLEEP reports 1 when its wait is interrupted
+A> SELECT SLEEP(2) AS interrupted; -- SLEEP reports interruption; no exact duration is asserted
  interrupted 
 -------------
            1 
+(1 row)
+
+A> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     100 
 (1 row)
 
 A> SET SESSION max_execution_time = 0;
@@ -3848,17 +3900,18 @@ B> SELECT balance FROM accounts WHERE id = 1; -- rolled back with the session
 (1 row)
 ```
 
-*The third guardrail, innodb_lock_wait_timeout, was proven in chapter 3 — remember it rolls back the STATEMENT, not the transaction.*
+*The third guardrail, innodb_lock_wait_timeout, was proven in chapter 3 — with innodb_rollback_on_timeout=OFF it rolls back the waiting statement; ON requests transaction rollback. See the chapter 3 evidence and manual.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/timeout-guardrails.yaml)</small>
 
 ## mysql/08-production/who-is-blocking-whom.yaml
 
 - engine: mysql (MySQL 8.4.11)
-- claim: One query on sys.innodb_lock_waits names the waiter and the blocker, and a join to the processlist shows the blocker is sitting idle in transaction — and killing it drains the queue.
+- claim: On MySQL 8.4 InnoDB, sys.innodb_lock_waits identifies B waiting on A while A's processlist command is Sleep. KILL CONNECTION A releases this wait; B updates row 1 and observes A's row 2 change rolled back. This one-waiter schedule does not establish recovery for every queue.
 
 ```timeline
-A: UPDATE, then goes to lunch (idle in txn)
+A: UPDATE row 1, holds lock
+A: UPDATE row 2, then idle
 B: UPDATE balance = 300 → ⏳ waits
 M: who blocks whom? → B waits on sleeping A
 M: KILL A
@@ -3872,6 +3925,9 @@ A> BEGIN;
 Query OK
 
 A> UPDATE accounts SET balance = 200 WHERE id = 1;
+Query OK, 1 row affected
+
+A> UPDATE accounts SET balance = 200 WHERE id = 2;
 Query OK, 1 row affected
 
 B> UPDATE accounts SET balance = 300 WHERE id = 1;
@@ -3891,7 +3947,7 @@ M> SELECT w.waiting_pid, w.waiting_query,
 (1 row)
 ```
 
-*The culprit isn't running anything — command Sleep, no current statement, holding locks. sys.innodb_lock_waits even pre-writes the KILL statement for you (sql_kill_blocking_connection). The fix is blunt:*
+*The culprit isn't running anything — command Sleep, no current statement, holding locks. sys.innodb_lock_waits even pre-writes the KILL statement for you (sql_kill_blocking_connection). This run ends the connection; production use requires privileges and an application recovery decision.*
 
 ```transcript
 M> CALL kill_session('A');
@@ -3904,10 +3960,16 @@ Query OK
 ⏵ B resumes:
 Query OK, 1 row affected
 
-B> SELECT balance FROM accounts WHERE id = 1; -- A's 200 rolled back with its death; B's 300 committed
+B> SELECT balance FROM accounts WHERE id = 1; -- B's autocommit update completed
  balance 
 ---------
      300 
+(1 row)
+
+B> SELECT balance FROM accounts WHERE id = 2; -- A's separate uncommitted change was rolled back
+ balance 
+---------
+     100 
 (1 row)
 ```
 
