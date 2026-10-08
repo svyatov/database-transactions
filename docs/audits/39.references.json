@@ -1,0 +1,161 @@
+{
+  "document": "docs/audits/39-mysql-pitfalls-production.md",
+  "baseline": "7a9913800bb15b2d0d76a0fcc80febbbcc6c53a8",
+  "section": "## Outside-slice reconciliation",
+  "references": [
+    {
+      "reference": "docs/errors/1205.md:3,11,27,35",
+      "expected": [
+        "description: \"MySQL raises error 1205 when a statement waits longer than innodb_lock_wait_timeout for a row lock, rolling back only that statement, so the transaction survives and can retry after the blocker commits.\"",
+        "MySQL raises error `1205` when a statement waits longer than `innodb_lock_wait_timeout` for a row lock, rolling back only that statement, so the transaction survives and can retry after the blocker commits.",
+        "B's update queues behind A's lock for one second, then fails with `ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction`. Despite the \"try restarting transaction\" wording, InnoDB rolled back only this one statement by default, so B's transaction is still open: once A commits, B can simply rerun the update. That's the key contrast with a deadlock ([`1213`](/errors/1213)), which discards the whole transaction and leaves nothing to retry in place.",
+        "PostgreSQL's equivalent is [`55P03`](/errors/55P03), raised when its `lock_timeout` expires. Same idea, two differences: PostgreSQL's default is no timeout at all (wait forever) rather than InnoDB's 50 seconds, and PostgreSQL reuses that one `55P03` for the `NOWAIT` fast-fail too, where MySQL splits it out as [`3572`](/errors/3572)."
+      ]
+    },
+    {
+      "reference": "docs/errors/57014.md:33",
+      "expected": [
+        "There's no exact match in the proven set. MySQL's closest lever is `max_execution_time` (which raises error `3024`), and it's narrower: it caps `SELECT` statements only, where PostgreSQL's `statement_timeout` applies to any statement. The [MySQL long & idle transactions lesson](/mysql/08-production/long-and-idle-transactions) covers it, but no page here claims `3024`, because no scenario on this site emits it yet."
+      ]
+    },
+    {
+      "reference": "docs/errors/1213.md:41",
+      "expected": [
+        "This is a true mirror of PostgreSQL's [`40P01`](/errors/40P01): the same opposite-order locking, the same abort-one-so-the-other-finishes resolution. The one difference is timing. InnoDB detects the cycle immediately, while PostgreSQL waits out `deadlock_timeout` (one second by default) before it checks."
+      ]
+    },
+    {
+      "reference": "docs/concepts/what-is-a-transaction.md:38-39",
+      "expected": [
+        "- **MySQL carries on**: only the failed statement is rolled back; the transaction stays",
+        "  usable and may still commit its successful statements"
+      ]
+    },
+    {
+      "reference": "docs/concepts/transactional-outbox.md:2,7-25,44-55,59-65",
+      "expected": [
+        "description: The dual-write problem (you cannot atomically write to a database and a message broker) and the transactional outbox pattern that shrinks it to at-least-once delivery. With proofs on PostgreSQL and MySQL.",
+        "Inside one database, `BEGIN` … `COMMIT` can always save you. This page is about the moment",
+        "that stops being true: your transaction needs to reach a *second* system, a message broker,",
+        "a search index, another service's API. There is no `BEGIN` that spans your database and",
+        "Kafka.",
+        "",
+        "## The dual-write problem",
+        "",
+        "Write to the database and publish to the broker: two writes, two systems, and a process",
+        "that can die between them. It doesn't matter which write goes first; each order picks",
+        "which lie you end up with:",
+        "",
+        "```timeline",
+        "App: INSERT order, COMMIT ← the order exists",
+        "App: publish \"order placed\" — process dies ← the event is lost",
+        "Broker: downstream never learns about the order",
+        "```",
+        "",
+        "Write-first loses events (downstream never learns about the order); publish-first invents",
+        "them (downstream processes an order that was never placed). Retries don't fix this. They",
+        "A separate *relay* process moves events from the outbox table to the broker, typically a",
+        "`SKIP LOCKED` job-queue worker pointed at the outbox: crash-safe, parallelizable, five lines",
+        "of SQL.",
+        "",
+        "## At-least-once, by construction",
+        "",
+        "The relay itself still performs two writes to two systems: \"publish to the broker\" and",
+        "\"delete from the outbox\". If it dies between them, the event is delivered *twice*. That is",
+        "not a bug to fix but the deal you signed: the dual-write problem never disappears; the outbox",
+        "shrinks it from \"events can be lost or invented\" down to \"events can repeat\", and repeats",
+        "are handled with *idempotent consumers*. Exactly-once is not on the menu; idempotent",
+        "at-least-once is how grown-ups spell it.",
+        "Both tracks prove the failure and the fix with a real crashed relay:",
+        "",
+        "- [PostgreSQL: dual writes & the outbox](/postgres/06-distributed/transactional-outbox),",
+        "  plus [LISTEN/NOTIFY](/postgres/06-distributed/listen-notify), the transactional wake-up",
+        "  call that removes the relay's polling latency",
+        "- [MySQL: the outbox pattern](/mysql/06-distributed/transactional-outbox), no LISTEN/NOTIFY",
+        "  there: the relay polls, or graduates to binlog-based CDC"
+      ]
+    },
+    {
+      "reference": "docs/faq.md:28,36",
+      "expected": [
+        "Don't read-then-write in the application; either compute the new value in a single SQL statement, lock the row with `SELECT ... FOR UPDATE`, or use a version column and retry on conflict. All three fixes are worked through in [Fixing lost updates](/postgres/05-patterns/fixing-lost-updates).",
+        "No. A bare `SELECT` takes no row locks, so writers run right past it. That's the point of MVCC. Add `FOR UPDATE` and it does block writers (and only writers), which is exactly when you want it to. The boundary is drawn in [Row locks](/postgres/03-locking/row-locks#an-ordinary-select-succeeds-while-update-waits)."
+      ]
+    },
+    {
+      "reference": "README.md:6,15-22,55-56",
+      "expected": [
+        "concurrency patterns, where **every single claim is proven by executable code** running against",
+        "holds it to one rule, nothing is claimed and everything is demonstrated:",
+        "",
+        "- Every session transcript you see in the docs is **generated from a real run** against",
+        "  the database, never hand-written, so it can never drift from actual behavior.",
+        "- Every lesson ships with a **scenario**: an executable definition that orchestrates",
+        "  concurrent sessions and **asserts** the outcome (`bun test` runs them all).",
+        "- CI regenerates every transcript on every push and fails if anything changed.",
+        "  A green build literally means \"every statement on the site was just re-verified\".",
+        "(psycopg + PyMySQL, via a thin Python harness). Two drivers agreeing on every assertion is",
+        "the proof that a claim is database behavior, not a driver artifact. Where they genuinely"
+      ]
+    },
+    {
+      "reference": "CONTRIBUTING.md:3-10",
+      "expected": [
+        "The rule that makes this site worth trusting: **no claim without a proving scenario.**",
+        "Prose may only state what a scenario asserts or what an official-docs quote (verbatim,",
+        "linked) says. If you can't prove it, don't write it.",
+        "",
+        "One exception, and it has to be marked. A guarantee that's entailed by an isolation level's",
+        "semantics but that no scenario here demonstrates may be stated if it carries a `†`, a legend",
+        "saying no transcript proves it, and a link to the lesson that explains why it holds — see",
+        "[the cross-engine table](docs/concepts/anomalies-by-engine.md). Demonstrated and entailed are"
+      ]
+    },
+    {
+      "reference": "docs/about/methodology.md:11,20,62,70,75,84-90",
+      "expected": [
+        "in one place and hold it to one rule: *nothing here is claimed; everything is demonstrated.*",
+        "their statements in a precise order, and asserts every outcome:",
+        "A green build therefore means, literally: *every transcript on this site was just reproduced",
+        "harness is the sole transcript generator, and the transcript is the only code a lesson",
+        "psycopg + PyMySQL) runs every scenario under pytest against the same databases. A claim only",
+        "the transcripts. [`/llms-full.txt`](/llms-full.txt) is every transcript on this site,",
+        "concatenated, each one labelled with the scenario that produced it and the claim it proves.",
+        "[`/ledger.jsonl`](/ledger.jsonl) is the structured form: one JSON Lines record per scenario,",
+        "carrying the engine and the version it reported, the claim, the sessions, and every error",
+        "code the database emitted during the run.",
+        "",
+        "The ledger comes with no schema-stability guarantee. Its shape grows as this site does, and"
+      ]
+    },
+    {
+      "reference": "scripts/gen-transcripts.ts:152-153",
+      "expected": [
+        "    \"> runs. Every claim on this site is proven by a scenario that CI replays against pinned\",",
+        "    \"> engine versions on every push, and fails on any drift.\","
+      ]
+    },
+    {
+      "reference": "docs/public/llms.txt:4-5",
+      "expected": [
+        "> runs. Every claim on this site is proven by a scenario that CI replays against pinned",
+        "> engine versions on every push, and fails on any drift."
+      ]
+    },
+    {
+      "reference": "docs/.vitepress/config.ts:237,291-293",
+      "expected": [
+        "  return `MIT Licensed · Every transcript on this site was generated by a real database run${clauses}.`;",
+        "function crossDriver(): string {",
+        "  const ran = existsSync(new URL(\"../../.cross-driver-ok\", import.meta.url));",
+        "  return ran ? \", and re-proven through psycopg and PyMySQL\" : \"\";"
+      ]
+    },
+    {
+      "reference": "docs/.vitepress/theme/components/HomeCurriculum.vue:16",
+      "expected": [
+        "        <p>Eight chapters, each proven against PostgreSQL and MySQL. Pick a database and start anywhere.</p>"
+      ]
+    }
+  ]
+}

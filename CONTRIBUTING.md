@@ -86,11 +86,20 @@ bun test                              # every claim re-verified, both databases
 bun run gen                           # then `git diff` must be empty — transcripts committed & stable
 uv run --directory python pytest      # the second pair of drivers agrees
 bun run docs:anchors                  # every internal `#anchor` points at a real heading
+bun run docs:references               # registered audit citations match their pinned source excerpts
 bun run docs:build                    # site builds, every link's target page exists
 ```
 
 `docs:build` only checks that a link's *page* exists — it strips the `#fragment` first, so a
 stale heading slug sails through. `docs:anchors` is what catches that.
+
+For an audit handoff with source-line citations, add a `docs/audits/*.references.json`
+manifest with the document path, full baseline commit SHA, level-two section heading,
+and each citation's exact source lines in order. `docs:references` checks every backtick
+`path:lines` citation in that section against the manifest and the pinned Git source,
+including comma-separated lines and ranges. A line that exists but contains different
+text fails. Review whether the excerpt supports the disposition separately; the check
+does not decide semantic relevance. Historical commits must be available locally.
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org)
 (`feat(03-locking): …`, `fix(harness): …`).

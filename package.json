@@ -17,6 +17,7 @@
     "gen": "bun scripts/gen-transcripts.ts",
     "lesson": "bun scripts/lesson.ts",
     "docs:anchors": "bun scripts/check-anchors.ts",
+    "docs:references": "bun scripts/check-audit-references.ts",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
