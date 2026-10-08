@@ -1,5 +1,9 @@
 # MySQL pitfalls and production audit, issue #39
 
+<script setup>
+import referencesUrl from './39.references.json?url'
+</script>
+
 This existing-content audit applies [#31](https://github.com/svyatov/database-transactions/issues/31) to [#39](https://github.com/svyatov/database-transactions/issues/39). The baseline is `7a9913800bb15b2d0d76a0fcc80febbbcc6c53a8`. The completion comment records the checked commits, inventory counts, execution results, and reader-QA verdict. Raw inventories, baseline snapshots, correspondence records, assertion mutations, and execution evidence remain in temporary storage for the review handoff.
 
 ## Coverage and occurrence identity
@@ -47,6 +51,8 @@ MySQL's documentation llms endpoint was inaccessible, so the versioned HTML manu
 ## Outside-slice reconciliation
 
 These baseline locations go to the shared-content audit #40. They are not unresolved #39 claims.
+
+The <a :href="referencesUrl">reference manifest</a> pins these citations and their exact excerpts to commit `7a9913800bb15b2d0d76a0fcc80febbbcc6c53a8`; `bun run docs:references` verifies them.
 
 | Baseline locations | Required reconciliation |
 |---|---|

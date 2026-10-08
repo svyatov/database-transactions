@@ -12,3 +12,4 @@ Golden rule: **no claim without a proving scenario** ([CONTRIBUTING.md](../CONTR
 - [ ] `bunx tsc --noEmit` and `bunx biome ci .` pass
 - [ ] Docs build clean — `bun run docs:build` (pages) and `bun run docs:anchors` (heading anchors)
 - [ ] Both database tracks kept in parity where the lesson applies
+- [ ] `bun run docs:references` verifies registered audit source-line citations

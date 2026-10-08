@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Audit source references use historical baseline commits.
       # Only re-prove against the databases when something that can change the proof changed.
       # Prose-only edits skip the ~135s×2 DB suite; the site still builds and deploys from the
       # committed transcripts/ledger/llms files. Default is to run the heavy steps — a path is
@@ -57,6 +59,8 @@ jobs:
       # docs:build strips the #fragment before checking a link — this checks the fragment.
       - name: Check every internal anchor link resolves
         run: bun run docs:anchors
+      - name: Check audit source references against pinned excerpts
+        run: bun run docs:references
       # Same compose file as local dev — one source of truth for the DB versions and config.
       - if: steps.filter.outputs.db == 'true'
         run: docker compose up -d --wait
