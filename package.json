@@ -1,7 +1,7 @@
 {
   "name": "database-transactions",
   "version": "0.1.0",
-  "description": "Learn database transactions from verified, runnable examples — every claim proven against a real database",
+  "description": "Learn database transactions from asserted runs, documented contracts, and marked derivations",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.4.2",

@@ -1,50 +1,34 @@
 ---
-description: What a database transaction is, and what ACID (atomicity, consistency, isolation, durability) actually promises. Every claim linked to a proof run on real PostgreSQL and MySQL.
+description: "Transaction boundaries and ACID, with scoped table-write demonstrations and separate documented durability and error-recovery contracts."
 ---
 
 # What is a transaction?
 
-A transaction groups several statements into one unit of work that either fully happens or
-fully doesn't. The classic example: moving money between two accounts takes two UPDATEs, and
-the world must never see (or keep) only one of them.
-
-That single sentence hides four distinct promises, named by the most durable acronym in
-databases.
+A transaction groups transactional database work that commits together or is discarded by rollback. The two-account transfer demonstrations assert the original balances after rollback on [PostgreSQL](/postgres/01-basics/what-is-a-transaction) and [MySQL InnoDB](/mysql/01-basics/what-is-a-transaction). This boundary excludes external effects, PostgreSQL sequence counters, nontransactional MySQL tables, and operations that cause implicit commits.
 
 ## ACID
 
-| Property | Meaning | Proven on |
+| Property | Scoped meaning | Support |
 |---|---|---|
-| **Atomicity** | All of the transaction's writes survive, or none do | [PostgreSQL](/postgres/01-basics/what-is-a-transaction#atomicity-demonstrated) · [MySQL](/mysql/01-basics/what-is-a-transaction#atomicity-demonstrated) |
-| **Consistency** | Constraints hold before and after, never "in between" for others | [PostgreSQL](/postgres/01-basics/what-is-a-transaction#atomicity-demonstrated) · [MySQL](/mysql/01-basics/what-is-a-transaction#atomicity-demonstrated) |
-| **Isolation** | Concurrent transactions don't trample each other, *to a configurable degree* | [PostgreSQL](/postgres/02-isolation/snapshots-and-the-four-levels) · [MySQL](/mysql/02-isolation/snapshots-and-the-four-levels) |
-| **Durability** | Once COMMIT returns, the data survives a crash | prose only: crash tests don't fit in a transcript |
+| **Atomicity** | Transactional table changes share commit/rollback | The two linked transfer Scenarios assert explicit rollback, not every failure |
+| **Consistency** | Declared constraints and correct serial transaction logic preserve their stated rules | CHECK failures are demonstrated; arbitrary application rules are not automatic |
+| **Isolation** | Concurrent operations follow the engine's selected isolation contract | [Levels](/concepts/isolation-levels), assertions, manual contracts, and marked derivations |
+| **Durability** | Acknowledged persistence depends on durability settings and storage behavior | Documented support below; no server-crash experiment here |
 
-Two of the letters carry the weight in day-to-day work. *Atomicity* is what lets you write
-the two UPDATEs without a plan for "the first succeeded and the second didn't": statements
-that succeeded *inside* a rolled-back transaction leave no trace, since there is no "partial
-commit". *Isolation* is the interesting one, because it is *configurable*: its dial is the
-[isolation level](/concepts/isolation-levels), and most of this site is about what each
-setting silently gives away.
+Atomicity does not mean all statements succeed or every reader sees the same values. A failed InnoDB statement can leave earlier work to be committed unless the transaction is rolled back. READ UNCOMMITTED can expose uncommitted changes. Isolation and error handling therefore need their own conditions.
+
+A business invariant requires each serial transaction to preserve it and all relevant writers to use an appropriate protocol. A CHECK on one balance does not enforce an arbitrary cross-row rule or an external payment boundary.
+
+Durability is a documented contract, not a claimed crash test. The [PostgreSQL 18 asynchronous-commit manual](https://www.postgresql.org/docs/18/wal-async-commit.html) warns that "the most recent transactions may be lost if the database should crash." [MySQL 8.4's ACID manual](https://dev.mysql.com/doc/refman/8.4/en/mysql-acid.html) likewise identifies server settings, operating system, and hardware as durability conditions. A successful COMMIT in these demonstrations does not test crash recovery, storage reliability, or every configuration.
 
 ## Same promise, different temperament
 
-The definition above is engine-neutral; the behavior around failure is not. When a statement
-inside a transaction fails:
+- **PostgreSQL**: an ordinary statement error inside BEGIN leaves a failed transaction block. Ordinary statements fail until full rollback or recovery to a valid savepoint. A standalone failed statement ends its implicit transaction. See [error-state assertions](/postgres/01-basics/begin-commit-rollback) and [savepoint recovery](/postgres/01-basics/savepoints). Connection loss is a separate case.
+- **MySQL InnoDB**: the demonstrated CHECK/duplicate-key errors roll back the statement, retaining earlier work until explicit rollback or commit. Deadlocks roll back the transaction; row-lock timeout rollback depends on innodb_rollback_on_timeout. The [8.4 error manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-error-handling.html) states for a deadlock: "Retry the entire transaction when this happens." See [the basic error schedule](/mysql/01-basics/begin-commit-rollback) and [timeout scope](/errors/1205).
 
-- **PostgreSQL dooms the transaction**: nothing in it can ever commit; every subsequent
-  statement fails until you roll back, fully or to a savepoint
-  ([proof](/postgres/01-basics/begin-commit-rollback)).
-- **MySQL carries on**: only the failed statement is rolled back; the transaction stays
-  usable and may still commit its successful statements
-  ([proof](/mysql/01-basics/begin-commit-rollback)).
-
-Code ported between the two on the assumption that "errors work the same everywhere" is
-wrong in both directions.
+Complete-operation retries need fresh reads and decisions, a bound, and a separate policy for effects outside the database transaction. Neither engine promises every retry succeeds.
 
 ## See it happen
 
-- [PostgreSQL: what is a transaction?](/postgres/01-basics/what-is-a-transaction). A
-  transfer dies on a `CHECK` constraint; watch the already-successful credit vanish
-- [MySQL: what is a transaction?](/mysql/01-basics/what-is-a-transaction). The same demo,
-  plus what happens on non-transactional storage engines
+- [PostgreSQL transfer](/postgres/01-basics/what-is-a-transaction): CHECK failure and full rollback, with another session excluding the uncommitted credit at READ COMMITTED.
+- [MySQL transfer](/mysql/01-basics/what-is-a-transaction): the failed debit leaves the earlier credit visible to its own transaction until explicit rollback.

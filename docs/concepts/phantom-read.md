@@ -5,9 +5,7 @@ description: A phantom read is running the same range query twice and getting ne
 # Phantom read
 
 A *phantom read* is running the same *range query* twice inside one transaction and getting
-new rows. No row you already saw has changed (that would be a
-[non-repeatable read](/concepts/non-repeatable-read)). Instead, rows that *match your WHERE
-clause* appear out of nowhere, inserted and committed by someone else between your two reads.
+a changed matching set because another transaction committed an insert, deletion, or predicate-changing update. A changed value in a row already read is the related [non-repeatable read](/concepts/non-repeatable-read). The existing illustration below uses an insert.
 
 ```timeline
 Session A: BEGIN
@@ -17,6 +15,8 @@ Session B: COMMIT
 Session A: SELECT count(*) WHERE amount > 100 → 3 ← a phantom row appeared
 Session A: COMMIT
 ```
+
+This is an illustrative timeline. The linked Scenario contains the executed setup and assertions.
 
 The distinction matters because phantoms are about *predicates*, not rows: you can lock
 every row you read and still get phantoms, because the new row didn't exist to be locked.
@@ -31,12 +31,7 @@ predicate-many-preceders), and why the standard's REPEATABLE READ is allowed to 
 | REPEATABLE READ | *permitted* | prevented, stronger than the standard requires ([proof](/postgres/02-isolation/repeatable-read#one-snapshot-no-phantoms)) | prevented for plain SELECTs ([proof](/mysql/02-isolation/repeatable-read#one-snapshot-no-phantoms)); [current reads see phantoms](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot) |
 | SERIALIZABLE | prevented | prevented | prevented |
 
-Both engines beat the standard here: a per-transaction snapshot freezes the *whole database*,
-predicates included, so plain SELECTs at REPEATABLE READ are phantom-free on both. The
-engines' fine print differs: MySQL's writes and locking reads bypass the snapshot and do see
-phantoms (InnoDB's [gap locks](/mysql/03-locking/gap-locks) exist to control what those
-current reads meet), while PostgreSQL keeps one view for everything and instead
-[aborts stale writes](/postgres/02-isolation/repeatable-read#the-write-conflict-sqlstate-40001).
+Both engines exclude later concurrent commits from REPEATABLE READ consistent SELECTs in one transaction, plus their own writes. This is not a frozen view for every operation. InnoDB current DML can reach post-snapshot rows; [gap locks](/mysql/03-locking/gap-locks) depend on the query, index, and level. PostgreSQL changing/locking commands have a [changed-target conflict rule](/postgres/02-isolation/repeatable-read#the-write-conflict-sqlstate-40001). The SERIALIZABLE table exclusions use [contracts and marked derivations](/concepts/anomalies-by-engine), not new executions here.
 
 ## Related anomalies
 

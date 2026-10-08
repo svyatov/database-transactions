@@ -60,5 +60,5 @@ await runScenario(s, dialect, {
     : undefined,
   event: (e) => console.log(render(e)),
 });
-console.log("✓ every assertion held — the claim above was just verified against your database");
+console.log("✓ every Scenario assertion held in this run; broader contracts and derivations are not executions");
 process.exit(0);

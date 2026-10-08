@@ -14,11 +14,10 @@ will hand you at 3am.
 
 If you're undecided, or you're learning this topic rather than shipping on a particular stack,
 start with [PostgreSQL](/postgres/01-basics/what-is-a-transaction). Its snapshot model makes
-the isolation lessons visible: each transaction gets a consistent view of the database, and the
-anomalies show up as clean, explainable differences between what two sessions see. Once that
+the isolation lessons visible: plain SELECTs use statement snapshots at READ COMMITTED and a stable transaction snapshot at REPEATABLE READ, plus their own writes. The
+anomalies show up as differences between what two sessions see. Once that
 clicks, the [MySQL track](/mysql/01-basics/what-is-a-transaction) teaches you the contrasts:
-current reads that step outside the snapshot, locking that bites in different places, deadlocks
-that arrive more often than you'd like. The other track is always one click away in the nav.
+current reads that use different visibility from consistent SELECTs and locking under different conditions. These examples do not compare deadlock rates. The other track is always one click away in the nav.
 
 ## Where do I jump in?
 
@@ -37,13 +36,8 @@ The eight chapters in the sidebar run in order, so wherever you enter, forward i
 
 ## How do I run it myself?
 
-Clone the repo, bring up the databases, and every lesson on this site replays live in your own
-terminal, pausing between steps so you can watch two sessions collide. Two containers and one
-command: [run it locally](/about/run-locally).
+Clone the repo and bring up the databases to replay Scenarios on their named engines. `--step` pauses before statements; reference-only material has no local replay. The notification example runs psql inside the Compose container: [run it locally](/about/run-locally).
 
 ## Why trust any of this?
 
-Because none of it is a claim. Every scenario runs against a real PostgreSQL and a real MySQL,
-and every transcript you read was generated from that run, then re-proven in CI through a
-second, completely independent pair of drivers, so a claim only stands when both agree. The
-machinery is documented in [how this site works](/about/methodology).
+Scenarios assert particular runs on their own engine. Shared YAML also has independent Python-driver checks; TypeScript client code does not. Broader explanations use exact manual support or marked derivations. CI can reuse committed evidence for prose-only changes, so a green build does not mean every sentence was executed. The evidence limits are documented in [how this site works](/about/methodology).

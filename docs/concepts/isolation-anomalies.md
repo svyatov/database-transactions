@@ -1,13 +1,12 @@
 ---
-description: "Every transaction isolation anomaly with its formal Adya name: dirty read, non-repeatable read, phantom, lost update, write skew, and the obscure ones, each linked to executable proofs on PostgreSQL and MySQL."
+description: "Transaction anomaly names and reference links, with separate demonstrated schedules, documented exclusions, and unexecuted variants."
 ---
 
 # The anomaly catalog
 
 Every isolation anomaly with a formal name. The codes (G0, G1a, …) come from Adya's
 dependency-graph formalism, popularized by [Hermitage](https://github.com/ept/hermitage),
-Martin Kleppmann's cross-database isolation test suite; this catalog covers every case
-Hermitage tests.
+Martin Kleppmann's cross-database isolation test suite. This reference retains the named cases but does not claim complete Hermitage execution coverage; the engine catalogs state unexecuted variants explicitly.
 
 | Code | Anomaly | In one line |
 |---|---|---|
@@ -24,7 +23,7 @@ Hermitage tests.
 | — | [Read-only anomaly](#the-read-only-anomaly) | even a pure report can observe an impossible state |
 
 Which isolation level stops which anomaly is an *engine* answer, not a *standard* answer.
-The per-engine answer sheets, one cell per anomaly per level, each with its proof:
+The per-engine answer sheets distinguish D (asserted schedule), M (Documented contract), † (explained Entailed guarantee), and unexecuted cells:
 [PostgreSQL's answers](/postgres/02-isolation/anomaly-catalog) ·
 [MySQL's answers](/mysql/02-isolation/anomaly-catalog).
 
@@ -49,9 +48,7 @@ happen tells you what a level is really made of.
 
 ### Dirty write (G0)
 
-Two transactions interleave writes to the same rows before either commits. Every isolation
-level of both engines prevents it: writes always take exclusive row locks, so the result is
-always *one transaction's* writes, never a mix.
+Overwriting another transaction's uncommitted target is the dirty-write event. Interleaving statements or a mixed final state alone is not its definition. The displayed UPDATE waits are demonstrated at the catalogs' stated levels. † The all-level exclusion follows from their documented exclusive target locks, which require the first writer to end before a conflicting overwrite. No Transcript executes every level or excludes every read/write cycle.
 See it proven: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#dirty-writes-g0) ·
 [MySQL](/mysql/02-isolation/anomaly-catalog#dirty-writes-g0).
 
@@ -80,15 +77,13 @@ See it: [PostgreSQL](/postgres/02-isolation/anomaly-catalog#observed-transaction
 
 ### The read-only anomaly
 
-The strangest of all (Fekete et al.): a transaction that only *reads* observes a state that
-no serial ordering of the committed transactions could produce: the report it printed is
-retroactively wrong. Only SERIALIZABLE prevents it.
+A transaction that only reads can observe a result with no compatible serial ordering of the committed participating transactions. The PostgreSQL demonstration models a report with SELECT results, not printing or publication. SERIALIZABLE supplies documented serial equivalence; other suitably designed coordination can also protect a particular application rule. MySQL has no corresponding read-only Scenario catalogued here.
 See it: [PostgreSQL](/postgres/02-isolation/serializable#it-even-protects-read-only-transactions).
 
 ## Further reading
 
 - [Hermitage](https://github.com/ept/hermitage): runnable isolation tests for PostgreSQL,
-  MySQL, Oracle, and more; both tracks of this site prove every case it covers
+  MySQL, Oracle, and more; it is a separate suite, not claimed full execution coverage here
 - [PostgreSQL's anomaly catalog](/postgres/02-isolation/anomaly-catalog) ·
   [MySQL's anomaly catalog](/mysql/02-isolation/anomaly-catalog): same anomalies,
   meaningfully different answers
