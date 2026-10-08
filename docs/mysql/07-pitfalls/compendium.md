@@ -143,8 +143,9 @@ drainage or disk shrinkage. No retained-byte or disk-growth measurement is made.
 
 ## 13. Events lost (or invented) between the database and the broker
 
-**Observed model:** the dual-write schedule omits one database-modeled write or commits
-a modeled publication after an order rollback. It does not execute a broker or crash.
+**Observed model:** one branch omits the stand-in event after the order commits. The
+other autocommits the stand-in event before the order INSERT fails with CHECK error `3819`.
+Neither branch executes a broker or crash; the second has no explicit order rollback.
 The outbox schedule commits or rolls back order and outbox rows together and demonstrates
 relay reselection after DELETE rollback.
 **Repair scope:** an outbox protects the database-local boundary. Delivery progress,
