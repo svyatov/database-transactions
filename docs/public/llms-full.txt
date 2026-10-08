@@ -2770,6 +2770,67 @@ A> SELECT count(*) AS bobs FROM signups WHERE email = 'bob@example.com'; -- the 
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/check-then-insert-race.yaml)</small>
 
+## mysql/05-patterns/checked-stock.yaml
+
+- engine: mysql (MySQL 8.4.11)
+- claim: Two buyers each request four of five units. B waits for A; after A commits, B's checked decrement affects zero rows and B rolls back. One unit remains. A subsequent unguarded decrement leaves minus three.
+
+```transcript
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
+B> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
+A> BEGIN;
+Query OK
+
+B> BEGIN;
+Query OK
+
+A> UPDATE stock SET quantity = quantity - 4 WHERE id = 1 AND quantity >= 4;
+Query OK, 1 row affected
+
+B> UPDATE stock SET quantity = quantity - 4 WHERE id = 1 AND quantity >= 4;
+⏳ B is waiting for a lock…
+
+A> COMMIT;
+Query OK
+
+⏵ B resumes:
+Query OK, 0 rows affected
+
+B> ROLLBACK;
+Query OK
+
+A> SELECT quantity FROM stock WHERE id = 1;
+ quantity 
+----------
+        1 
+(1 row)
+```
+
+*Contrast an unconditional decrement after the checked rejection. This deliberately breaks the stock rule.*
+
+```transcript
+B> BEGIN;
+Query OK
+
+B> UPDATE stock SET quantity = quantity - 4 WHERE id = 1;
+Query OK, 1 row affected
+
+B> COMMIT;
+Query OK
+
+A> SELECT quantity FROM stock WHERE id = 1;
+ quantity 
+----------
+       -3 
+(1 row)
+```
+
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/checked-stock.yaml)</small>
+
 ## mysql/05-patterns/fix-lost-update-atomic.yaml
 
 - engine: mysql (MySQL 8.4.11)
@@ -3293,6 +3354,76 @@ A> SELECT balance FROM accounts WHERE id = 2;
 ```
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/retry-deadlocks.ts)</small>
+
+## mysql/05-patterns/stale-edit.yaml
+
+- engine: mysql (MySQL 8.4.11)
+- claim: Both editors load version 1 outside their save transactions. A saves version 2. B's version-1 replacement affects zero rows; after rollback a fresh read still returns A's text and version 2. Then blindly using the latest version with B's old draft replaces A's edit.
+
+```transcript
+A> SELECT body, version FROM documents WHERE id = 1;
+   body   | version 
+----------+---------
+ Original |       1 
+(1 row)
+
+B> SELECT body, version FROM documents WHERE id = 1;
+   body   | version 
+----------+---------
+ Original |       1 
+(1 row)
+
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
+B> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+
+A> BEGIN;
+Query OK
+
+A> UPDATE documents SET body = 'A edit', version = version + 1 WHERE id = 1 AND version = 1;
+Query OK, 1 row affected
+
+A> COMMIT;
+Query OK
+
+B> BEGIN;
+Query OK
+
+B> UPDATE documents SET body = 'B edit', version = version + 1 WHERE id = 1 AND version = 1;
+Query OK, 0 rows affected
+
+B> ROLLBACK;
+Query OK
+
+B> SELECT body, version FROM documents WHERE id = 1;
+  body  | version 
+--------+---------
+ A edit |       2 
+(1 row)
+```
+
+*Contrast blindly substituting the latest version while keeping B's old draft. This deliberately replaces A's edit.*
+
+```transcript
+B> BEGIN;
+Query OK
+
+B> UPDATE documents SET body = 'B edit', version = version + 1 WHERE id = 1 AND version = 2;
+Query OK, 1 row affected
+
+B> COMMIT;
+Query OK
+
+A> SELECT body, version FROM documents WHERE id = 1;
+  body  | version 
+--------+---------
+ B edit |       3 
+(1 row)
+```
+
+<small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/stale-edit.yaml)</small>
 
 ## mysql/06-distributed/dual-write-problem.yaml
 
@@ -6971,6 +7102,61 @@ A> SELECT count(*)::int AS bobs FROM signups WHERE email = 'bob@example.com'; --
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/05-patterns/check-then-insert-race.yaml)</small>
 
+## postgres/05-patterns/checked-stock.yaml
+
+- engine: postgres (PostgreSQL 18.6)
+- claim: Two buyers each request four of five units. B waits for A; after A commits, B's checked decrement affects zero rows and B rolls back. One unit remains. A subsequent unguarded decrement leaves minus three.
+
+```transcript
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+A> UPDATE stock SET quantity = quantity - 4 WHERE id = 1 AND quantity >= 4;
+UPDATE 1
+
+B> UPDATE stock SET quantity = quantity - 4 WHERE id = 1 AND quantity >= 4;
+⏳ B is waiting for a lock…
+
+A> COMMIT;
+COMMIT
+
+⏵ B resumes:
+UPDATE 0
+
+B> ROLLBACK;
+ROLLBACK
+
+A> SELECT quantity FROM stock WHERE id = 1;
+ quantity 
+----------
+        1 
+(1 row)
+```
+
+*Contrast an unconditional decrement after the checked rejection. This deliberately breaks the stock rule.*
+
+```transcript
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+B> UPDATE stock SET quantity = quantity - 4 WHERE id = 1;
+UPDATE 1
+
+B> COMMIT;
+COMMIT
+
+A> SELECT quantity FROM stock WHERE id = 1;
+ quantity 
+----------
+       -3 
+(1 row)
+```
+
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/05-patterns/checked-stock.yaml)</small>
+
 ## postgres/05-patterns/fix-lost-update-atomic.yaml
 
 - engine: postgres (PostgreSQL 18.6)
@@ -7491,6 +7677,70 @@ A> SELECT balance FROM accounts WHERE id = 1;
 ```
 
 <small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/05-patterns/retry-serialization-failures.ts)</small>
+
+## postgres/05-patterns/stale-edit.yaml
+
+- engine: postgres (PostgreSQL 18.6)
+- claim: Both editors load version 1 outside their save transactions. A saves version 2. B's version-1 replacement affects zero rows; after rollback a fresh read still returns A's text and version 2. Then blindly using the latest version with B's old draft replaces A's edit.
+
+```transcript
+A> SELECT body, version FROM documents WHERE id = 1;
+   body   | version 
+----------+---------
+ Original |       1 
+(1 row)
+
+B> SELECT body, version FROM documents WHERE id = 1;
+   body   | version 
+----------+---------
+ Original |       1 
+(1 row)
+
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+A> UPDATE documents SET body = 'A edit', version = version + 1 WHERE id = 1 AND version = 1;
+UPDATE 1
+
+A> COMMIT;
+COMMIT
+
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+B> UPDATE documents SET body = 'B edit', version = version + 1 WHERE id = 1 AND version = 1;
+UPDATE 0
+
+B> ROLLBACK;
+ROLLBACK
+
+B> SELECT body, version FROM documents WHERE id = 1;
+  body  | version 
+--------+---------
+ A edit |       2 
+(1 row)
+```
+
+*Contrast blindly substituting the latest version while keeping B's old draft. This deliberately replaces A's edit.*
+
+```transcript
+B> BEGIN ISOLATION LEVEL READ COMMITTED;
+BEGIN
+
+B> UPDATE documents SET body = 'B edit', version = version + 1 WHERE id = 1 AND version = 2;
+UPDATE 1
+
+B> COMMIT;
+COMMIT
+
+A> SELECT body, version FROM documents WHERE id = 1;
+  body  | version 
+--------+---------
+ B edit |       3 
+(1 row)
+```
+
+<small>Verified against PostgreSQL 18.6 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/postgres/05-patterns/stale-edit.yaml)</small>
 
 ## postgres/06-distributed/dual-write-problem.yaml
 
