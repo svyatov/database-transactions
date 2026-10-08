@@ -1,8 +1,9 @@
 # Pitfalls compendium
 
-Every transaction bug this site can prove, in one place: keyed by what you'd actually
-observe. Each entry links to the scenario that reproduces it and the lesson that fixes
-it. If you're staring at a live incident, start with the
+These PostgreSQL examples are keyed by symptoms. Each entry distinguishes the
+linked Scenario's observed database behavior from a production hypothesis or
+recommended repair. They are not an exhaustive bug list or proof of all schedules.
+For a live incident, start with the
 [symptom triage table](/postgres/08-production/symptom-triage) instead.
 
 **Jump to your symptom:**
@@ -24,102 +25,128 @@ it. If you're staring at a live incident, start with the
 ## 1. Increments vanish under load
 
 **Broken:** read a value, compute in application code, write it back. At the default
-READ COMMITTED, concurrent writers silently overwrite each other.
-**Fix:** atomic `SET x = x + …`, `SELECT … FOR UPDATE`, or a version column.
+READ COMMITTED, the shown stale absolute writes lose one increment.
+**Fix:** relative `SET x = x + …`, `SELECT … FOR UPDATE` in the same transaction,
+or a checked version column, under the lesson's participating-writer protocol.
+These are single-row repairs, not protection for arbitrary cross-row rules or external effects.
 **Proof:** [the lost update](/postgres/02-isolation/lost-update) ·
 [all three fixes](/postgres/05-patterns/fixing-lost-updates)
 
 ## 2. Duplicates despite an "is it taken?" check
 
 **Broken:** `SELECT` then `INSERT`, both transactions honestly saw no row.
-**Fix:** a `UNIQUE` constraint, with `ON CONFLICT` for control flow.
+**Fix:** a `UNIQUE` constraint on the intended identity, with `ON CONFLICT` for the
+specified conflict path. Other errors still need handling.
 **Proof:** [check-then-insert](/postgres/05-patterns/check-then-insert)
 
 ## 3. A customer is charged twice
 
-**Broken:** the client retried; the operation ran twice, each run individually correct.
-**Fix:** an idempotency key: gate and work in one transaction.
+**Example boundary:** the linked Scenario charges a database balance, not a payment
+provider. It tests postcommit and in-flight duplicates, not a lost network response.
+**Fix:** a stable retained idempotency key, with gate and database-local work in one
+transaction and all writers using the protocol. External charges need their own policy.
 **Proof:** [idempotency keys](/postgres/05-patterns/idempotency)
 
 ## 4. An invariant across rows breaks with no error
 
 **Broken:** "at least one doctor on call" checked per-transaction; two transactions
-update *different* rows: write skew, invisible to every level below SERIALIZABLE.
-**Fix:** SERIALIZABLE (plus retries), or serialize explicitly with a lock.
+update *different* rows: the shown REPEATABLE READ schedule breaks the rule.
+**Fix:** SERIALIZABLE with bounded complete-transaction retries, or a shared locking
+protocol used by every relevant writer. Retry can fail; a lock on only each writer's
+different row does not coordinate the rule. General isolation guarantees and their
+marked derivations are in the linked lesson.
 **Proof:** [write skew](/postgres/02-isolation/serializable)
 
 ## 5. A "trivial" migration takes the site down
 
-**Broken:** `ALTER TABLE` queued behind one long reader; every later query queued
-behind the `ALTER`. The queue, not the DDL, is the outage.
-**Fix:** `lock_timeout` around DDL, split risky changes into stages.
+**Broken:** the shown `ALTER TABLE` waits behind a reader, and a later SELECT waits
+behind that incompatible queued request. This is not a claim that every later operation waits.
+**Fix:** a workload-specific `lock_timeout` around DDL and staged changes where suitable.
+The timeout bounds that wait, not the entire migration or every outage.
 **Proof:** [table locks & DDL](/postgres/03-locking/table-locks-and-ddl)
 
 ## 6. The connection pool is empty, but the database is idle
 
 **Broken:** sessions parked `idle in transaction` (an ORM or a stray `await` between
-BEGIN and COMMIT), each holding locks and a pooled connection.
-**Fix:** `idle_in_transaction_session_timeout` / `transaction_timeout`, and fix the code.
+BEGIN and COMMIT) can occupy connections and retain locks or cleanup horizons.
+The linked Scenarios execute no ORM or connection pool and do not prove pool exhaustion.
+**Fix:** tune `idle_in_transaction_session_timeout` or PostgreSQL 17+ `transaction_timeout`,
+handle lost connections, and correct the application transaction lifetime.
 **Proof:** [ORM pitfalls](/postgres/05-patterns/orm-pitfalls) ·
 [find & kill them](/postgres/08-production/long-and-idle-transactions)
 
 ## 7. A table keeps growing though rows are deleted
 
-**Broken:** DELETE only [marks tuples dead](/postgres/04-mvcc/dead-tuples-and-bloat); one old
-transaction, even read-only, keeps VACUUM from reclaiming anything.
-**Fix:** keep transactions short; monitor the vacuum dashboard; hunt the oldest xact.
+**Broken:** DELETE does not immediately remove [old row versions](/postgres/04-mvcc/dead-tuples-and-bloat); one old
+retained snapshot can prevent removal of relevant old versions, even in a read-only
+transaction. That does not stop every VACUUM task, and file size can also be reusable space.
+**Fix:** keep transaction lifetimes appropriate; investigate horizons, estimates, and
+file sizes together. Age alone is not a complete diagnosis.
 **Proof:** [long transactions](/postgres/04-mvcc/long-transactions) ·
 [bloat & vacuum health](/postgres/08-production/bloat-and-vacuum-health)
 
 ## 8. Random `40001` errors under load
 
 **Broken:** treating serialization failures as bugs (or worse, ignoring them). At
-REPEATABLE READ and SERIALIZABLE they are the *design*.
-**Fix:** a retry loop around every RR/SSI transaction; keep transaction bodies re-runnable.
+REPEATABLE READ and SERIALIZABLE, documented conflict handling can reject work.
+**Fix:** a bounded full-transaction retry policy where the business operation permits it.
+The linked client Scenario exercises one RR retry; exhaustion, `40P01`, and external
+effect deduplication are not executed by that wrapper.
 **Proof:** [the retry wrapper](/postgres/05-patterns/retrying-serialization-failures)
 
 ## 9. Two workers process the same job
 
-**Broken:** claiming jobs with a plain `SELECT`, or marking them "running" in a
-transaction that then crashes and revives nothing.
-**Fix:** claim-work-complete inside one transaction with `FOR UPDATE SKIP LOCKED`.
+**Example boundary:** the linked queue selects different database rows and makes a
+rolled-back selection available again. It executes no task effect, plain-SELECT failure,
+worker-process crash, or stale-claim reaper.
+**Fix:** the shown `FOR UPDATE SKIP LOCKED` selection and database-local completion
+belong in one transaction. It skips conflicting row locks, not all waits, and cannot
+promise duplicate-free email, global FIFO order, or prompt crash recovery.
 **Proof:** [the job queue](/postgres/05-patterns/job-queue)
 
 ## 10. Events reach the broker for data that doesn't exist (or never reach it)
 
-**Broken:** writing the database and publishing to a broker as two separate writes.
-**Fix:** the transactional outbox; accept at-least-once, make consumers idempotent.
+**Model:** separately committed local tables produce an order without an event and
+an event without an order. No broker or HTTP service runs.
+**Fix:** commit order and outbox intent together. The relay demonstrates rollback,
+reselection, and deletion, not delivery. The linked † duplicate-publication inference
+explains the external commit boundary; eventual delivery needs retention, retries,
+receiver availability, and a consumer repeat policy.
 **Proof:** [dual writes & the outbox](/postgres/06-distributed/transactional-outbox)
 
 ## 11. Locks are held, VACUUM is stuck, and no session owns any of it
 
-**Broken:** an orphaned prepared transaction from a two-phase commit whose coordinator
-died between the phases. Nothing expires it.
-**Fix:** `SELECT gid FROM pg_prepared_xacts;` then `COMMIT PREPARED` / `ROLLBACK PREPARED`.
+**Example:** the prepared transaction retains a lock and constrains relevant tuple
+cleanup after its originating backend is terminated. No coordinator or server crash runs.
+**Fix:** inspect `pg_prepared_xacts`, which lists all prepared work, and resolve the
+global decision with its owner or coordinator. Permitted owners or superusers can run
+`COMMIT PREPARED` or `ROLLBACK PREPARED` outside a transaction block in the same database.
+Do not choose a decision solely because a backend is absent. Preparation has no automatic expiry.
 **Proof:** [two-phase commit](/postgres/06-distributed/two-phase-commit)
 
 ## 12. A deadlock, and both transactions looked innocent
 
 **Broken:** two code paths locking the same rows in different orders.
-**Fix:** consistent lock ordering; retry `40P01` like `40001`; watch the counter.
+**Fix:** consistent ordering for the relevant lock set, and a bounded complete-transaction
+retry policy for `40P01` when repeatable work permits it. Ordering two rows is not proof
+against every kind of deadlock. Watch reset-aware counter rates.
 **Proof:** [deadlocks](/postgres/03-locking/deadlocks) ·
-[the permanent trace](/postgres/08-production/logs-and-counters)
+[the counter delta](/postgres/08-production/logs-and-counters)
 
 ## 13. A job queue balloons on disk while autovacuum runs clean
 
-**Broken:** the [job queue](/postgres/05-patterns/job-queue) loop is correct, but one worker hangs
-mid-transaction and never commits. Its snapshot pins the vacuum horizon, so every job the queue
-drains during the hang leaves a dead version VACUUM can't reclaim. The table grows with throughput
-while autovacuum runs on schedule and cleans nothing.
-**Fix:** switch to claim-by-state with a short transaction and a reaper
-([job queue](/postgres/05-patterns/job-queue)); watch the
-[bloat & vacuum dashboard](/postgres/08-production/bloat-and-vacuum-health) so the slope shows up
-before the disk does.
+**Measured case:** one READ COMMITTED worker retains an assigned xid while B completes
+1001 jobs. The 1200-row heap grows from 9 to 17 pages; manual VACUUM leaves 2201 occupied
+tuple slots. After A commits and another VACUUM runs, that count becomes 1200.
+No autovacuum schedule, workload rate, disk-full event, or retained RC snapshot is demonstrated.
+**Advice:** shorten transaction lifetimes and investigate the
+[vacuum dashboard](/postgres/08-production/bloat-and-vacuum-health). Claimed-state recovery
+is a different queue design whose reaper and duplicate-effect policy are not verified here.
 **Proof:** [queue bloat from a hung worker](/postgres/07-pitfalls/queue-bloat)
 
 This is entries [7](#_7-a-table-keeps-growing-though-rows-are-deleted) and
 [9](#_9-two-workers-process-the-same-job) composed: the queue's SKIP LOCKED loop meets the frozen
-horizon, and the bill is a rate neither half predicts on its own.
+horizon. The case measures growth in this schedule, not a universal throughput-to-disk rate.
 
 ---
 

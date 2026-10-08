@@ -4,19 +4,19 @@
 A: A claims job 1, then hangs
 B: 9 pages
 B: B claims job 2 (skips A's job 1)
-B: job 2 done, one dead version
+B: job 2 completion update
 B: COMMIT
 B: drain 250
 B: 9 → 11 pages
 B: drain 750
 B: 11 → 17 pages
-B: 2201 line pointers (1200 live + 1001 dead)
+B: 2201 occupied tuple slots
 B: VACUUM, while A still hangs
-B: still 2201, nothing reclaimed
+B: still 2201 occupied tuple slots
 A: A finally commits, the hang ends
 B: same VACUUM, a moment later
 B: 2201 → 1200, reclaimed
-B: still 17 pages, space is free inside, not returned
+B: heap file still 17 pages
 ```
 
 *A is a worker that claims a job and then hangs: the connection stays open and the transaction never commits. This is the queue's own flavor of "idle in transaction."*
@@ -31,9 +31,17 @@ A> SELECT id, task FROM jobs WHERE state = 'queued'
 ----+--------------------
   1 | send welcome email 
 (1 row)
+
+B> SELECT backend_xid IS NOT NULL AS has_xid
+   FROM pg_stat_activity WHERE application_name = 'A'
+    -- A retains an assigned xid; READ COMMITTED does not establish a transaction-wide RR snapshot
+ has_xid 
+---------
+ t       
+(1 row)
 ```
 
-*The queue is 1200 rows in 9 pages, and it keeps humming while A sits there. B is a healthy worker running the exact chapter 5 loop. Watch one cycle produce one dead version: B skips A's locked job 1 and claims job 2.*
+*The queue is 1200 rows in 9 pages, and it keeps humming while A sits there. B is a worker using the chapter 5 selection predicate and completion update. B skips A's locked job 1 and claims job 2.*
 
 ```transcript
 B> SELECT (pg_relation_size('jobs') / 8192)::int AS pages;
@@ -59,7 +67,7 @@ B> COMMIT;
 COMMIT
 ```
 
-*That cycle left exactly one dead version: the old 'queued' tuple of job 2. Now B runs the same body a thousand more times. drain(n) is that cycle in a procedure — claim, mark done, COMMIT, repeat — so the per-job COMMIT is why CALL runs outside a transaction block. The SQL a reader trusts is the SQL they just watched.*
+*B runs the same selection and completion body a thousand more times. drain(n) commits each cycle, so CALL runs outside a transaction block. Task names are data: no email is sent in this Scenario.*
 
 ```transcript
 B> CALL drain(250); -- 250 more claim/complete cycles
@@ -79,9 +87,18 @@ B> SELECT (pg_relation_size('jobs') / 8192)::int AS pages;
 -------
     17 
 (1 row)
+
+B> SELECT count(*)::int AS jobs,
+          count(*) FILTER (WHERE state = 'done')::int AS done,
+          count(*) FILTER (WHERE state = 'queued')::int AS queued
+   FROM jobs;
+ jobs | done | queued 
+------+------+--------
+ 1200 | 1001 |    199 
+(1 row)
 ```
 
-*The table is still 1200 live rows and has nearly doubled on disk. Count the line pointers across every page: 1200 live plus 1001 dead, none of the dead ones removable while A's snapshot might still need the 'queued' versions they replaced.*
+*There are 1200 current rows and 1001 additional occupied tuple slots. † The horizon explanation is an inference from PostgreSQL 18's old-transaction vacuum guidance, linked in the lesson. READ COMMITTED does not give A a transaction-wide RR snapshot or access to every old version.*
 
 ```transcript
 B> SELECT count(*)::int AS occupied
@@ -97,7 +114,7 @@ B> VACUUM jobs;
 VACUUM
 ```
 
-*VACUUM ran, reported success, and reclaimed nothing. Same silent no-op as the long transactions lesson, now with a price tag: the line-pointer count has not moved.*
+*VACUUM completed, but the occupied line-pointer count did not fall. This measurement does not prove that VACUUM did no other maintenance.*
 
 ```transcript
 B> SELECT count(*)::int AS occupied
@@ -113,7 +130,7 @@ A> COMMIT;
 COMMIT
 ```
 
-*The instant A's snapshot is gone, the identical VACUUM can remove all 1001 dead versions. The occupied count falls to the 1200 live rows.*
+*After A commits, a second VACUUM reduces occupied tuple slots to 1200. Commit alone does not perform that cleanup.*
 
 ```transcript
 B> VACUUM jobs;
@@ -129,7 +146,7 @@ B> SELECT count(*)::int AS occupied
 (1 row)
 ```
 
-*But the file never shrank. VACUUM freed the space inside the 17 pages for the queue to reuse; it did not hand it back to the OS, and only VACUUM FULL would, under a table lock. Page count is why you can't measure this bug with pg_relation_size alone: the disk you bought during the hang stays bought.*
+*The heap file stays at 17 pages in this run. Ordinary VACUUM can truncate entirely empty trailing pages under suitable locking conditions, but does not compact live rows. VACUUM FULL and other table rewrites are separate operations, not executed here. File size alone does not measure reusable space.*
 
 ```transcript
 B> SELECT (pg_relation_size('jobs') / 8192)::int AS pages;

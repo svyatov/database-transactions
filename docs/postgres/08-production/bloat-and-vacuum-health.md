@@ -1,48 +1,23 @@
 # Bloat & vacuum health
 
-Chapter 4 showed the mechanism with a microscope:
-[dead tuples](/postgres/04-mvcc/dead-tuples-and-bloat) on the page, [VACUUM](/postgres/04-mvcc/vacuum)
-reclaiming them, [one old snapshot starving it all](/postgres/04-mvcc/long-transactions). This
-lesson is the dashboard version: the same facts from `pg_stat_user_tables`, the view
-your monitoring should already be scraping.
+This PostgreSQL 18.6 Scenario observes estimated table statistics before and after manual VACUUM. It does not measure production scan speed, free bytes, autovacuum scheduling, or wraparound prevention. Compare it with the [page-level tuple lesson](/postgres/04-mvcc/dead-tuples-and-bloat) and the [queue's occupied-slot measurements](/postgres/07-pitfalls/queue-bloat).
 
 <!--@include: ./parts/vacuum-health.md-->
 
 ## Reading the dashboard
 
-Start with `n_dead_tup`, the
-["Estimated number of dead rows"](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW).
-It's estimated because it comes from the statistics system rather than a table scan,
-which is what keeps it cheap enough to poll every minute. Watch its ratio to `n_live_tup`
-rather than the raw count: a queue table that's 99% dead tuples explains its own slow
-scans. When you need exact numbers, the
-[pgstattuple](https://www.postgresql.org/docs/current/pgstattuple.html) extension scans
-for real.
+The [statistics manual](https://www.postgresql.org/docs/18/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW) defines `n_dead_tup` as "Estimated number of dead rows". Here the forced statistics flush is followed by asserted estimates of five live and three dead rows. After manual VACUUM the view reports five live, zero dead, and a non-null `last_vacuum`. Estimates are not exact heap counts, and accumulated statistics can lag or remain cached within a monitoring transaction.
 
-`last_vacuum` and `last_autovacuum` tell you when cleanup last ran, manually or via the
-daemon. A hot table whose `last_autovacuum` is days old is either configured wrong or,
-more often, blocked by [something holding the
-horizon](/postgres/04-mvcc/long-transactions). Cross-check with
-[detector 3](/postgres/08-production/long-and-idle-transactions).
+`last_vacuum` records manual vacuum activity; `last_autovacuum` records automatic activity. Neither timestamp proves that every old version was removable. This run checks the manual field only. An old automatic timestamp can reflect workload thresholds, configuration, scheduling, or lock interference; a retained horizon can limit removal even when vacuum runs. A timestamp alone does not identify the cause.
 
-`age(datfrozenxid)` against `autovacuum_freeze_max_age` is the
-[wraparound](/postgres/04-mvcc/wraparound) margin, and the scenario renders it as a
-boolean on purpose because that's what your alert should be. Once the age reaches the
-threshold (200 million transactions by default), PostgreSQL forces an anti-wraparound
-autovacuum on the table, and it does so even if you've turned autovacuum off. Alert at
-half that margin and you'll never meet the forced pass.
+Documented scope: PostgreSQL 18's [freeze policy](https://www.postgresql.org/docs/18/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND) uses per-table `relfrozenxid`; database `datfrozenxid` is the minimum across tables. `autovacuum_freeze_max_age` is a launch threshold, 200 million by default, not the actual xid-wraparound boundary. Anti-wraparound vacuum can be invoked even with ordinary autovacuum disabled. Starting it does not prove completion.
 
-Poll `pg_stat_user_tables` for the dead-to-live ratio and the age of `last_autovacuum`
-on your busiest tables, and bloat announces itself long before disk-full does. When
-vacuum looks like it "stopped working," the fault is almost never vacuum's: it's the
-oldest open transaction or an orphaned [prepared
-transaction](/postgres/06-distributed/two-phase-commit) pinning the horizon. Wraparound
-stays a boolean rather than a graph to admire: `age(datfrozenxid) <
-autovacuum_freeze_max_age / 2`, or a human gets paged.
+The Scenario asserts only that the current database age is below that configured threshold. Alerting at half the threshold is an example policy, not an engine guarantee or proof that forced vacuum can never occur. Track age trends and table-level ages too; a boolean alone does not show how rapidly the remaining margin is consumed. No threshold crossing or xid exhaustion is executed.
+
+Operational advice: use dead/live estimates, vacuum timestamps, table sizes, and workload trends as investigation signals, not a guaranteed scan-performance diagnosis. Check [old transactions](/postgres/08-production/long-and-idle-transactions), [prepared work](/postgres/06-distributed/two-phase-commit), and replication-slot horizons when removal is constrained. These are candidates, not a claim that vacuum tuning is never needed. The [pgstattuple extension](https://www.postgresql.org/docs/18/pgstattuple.html) can inspect a relation for more detailed tuple and free-space statistics, with scan cost and concurrent-activity limits; it is not executed here.
 
 ## Further reading
 
-- [PostgreSQL docs: pg_stat_all_tables](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW)
-- [PostgreSQL docs: routine vacuuming](https://www.postgresql.org/docs/current/routine-vacuuming.html),
-  including the wraparound section chapter 4 walked through
+- [PostgreSQL 18: Table Statistics](https://www.postgresql.org/docs/18/monitoring-stats.html#MONITORING-PG-STAT-ALL-TABLES-VIEW)
+- [PostgreSQL 18: Routine Vacuuming](https://www.postgresql.org/docs/18/routine-vacuuming.html)
 - [The same lesson on MySQL](/mysql/08-production/history-list-health)
