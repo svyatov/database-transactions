@@ -334,6 +334,7 @@ const concepts = (collapsed: boolean): DefaultTheme.SidebarItem => ({
       link: "/concepts/what-is-a-transaction",
     },
     { text: "Isolation levels", link: "/concepts/isolation-levels" },
+    { text: "Choose a protection", link: "/concepts/protection-choices" },
     {
       text: "The anomaly catalog",
       link: "/concepts/isolation-anomalies",
@@ -392,6 +393,7 @@ export const sidebarPostgres: DefaultTheme.SidebarItem[] = [
       },
       { text: "Serializable", link: "/postgres/02-isolation/serializable" },
       { text: "Lost updates", link: "/postgres/02-isolation/lost-update" },
+      { text: "Practice: two writers", link: "/postgres/02-isolation/practice-two-writers" },
       {
         text: "The anomaly catalog",
         link: "/postgres/02-isolation/anomaly-catalog",
@@ -555,6 +557,7 @@ export const sidebarMysql: DefaultTheme.SidebarItem[] = [
       { text: "Repeatable Read", link: "/mysql/02-isolation/repeatable-read" },
       { text: "Serializable", link: "/mysql/02-isolation/serializable" },
       { text: "Lost updates", link: "/mysql/02-isolation/lost-update" },
+      { text: "Practice: two writers", link: "/mysql/02-isolation/practice-two-writers" },
       {
         text: "The anomaly catalog",
         link: "/mysql/02-isolation/anomaly-catalog",

@@ -1,0 +1,32 @@
+title: Checked document replacement after an editing interval
+claim: >-
+  Both editors load version 1 outside their save transactions. A saves version 2.
+  B's version-1 replacement affects zero rows; after rollback a fresh read still
+  returns A's text and version 2. Then blindly using the latest version with B's old draft replaces A's edit.
+setup: |
+  CREATE TABLE documents (id int PRIMARY KEY, body varchar(100) NOT NULL, version int NOT NULL);
+  INSERT INTO documents VALUES (1, 'Original', 1);
+sessions: [A, B]
+steps:
+  - A: SELECT body, version FROM documents WHERE id = 1
+    expect: [{ body: Original, version: 1 }]
+  - B: SELECT body, version FROM documents WHERE id = 1
+    expect: [{ body: Original, version: 1 }]
+
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
+  - A: UPDATE documents SET body = 'A edit', version = version + 1 WHERE id = 1 AND version = 1
+    affected: 1
+  - A: COMMIT
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
+  - B: UPDATE documents SET body = 'B edit', version = version + 1 WHERE id = 1 AND version = 1
+    affected: 0
+  - B: ROLLBACK
+  - B: SELECT body, version FROM documents WHERE id = 1
+    expect: [{ body: A edit, version: 2 }]
+  - note: Contrast blindly substituting the latest version while keeping B's old draft. This deliberately replaces A's edit.
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
+  - B: UPDATE documents SET body = 'B edit', version = version + 1 WHERE id = 1 AND version = 2
+    affected: 1
+  - B: COMMIT
+  - A: SELECT body, version FROM documents WHERE id = 1
+    expect: [{ body: B edit, version: 3 }]

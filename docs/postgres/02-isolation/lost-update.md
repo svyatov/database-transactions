@@ -1,5 +1,7 @@
 # Lost updates
 
+Try [two-writer practice](/postgres/02-isolation/practice-two-writers) before reading the results below.
+
 Two transactions can read the same balance, compute a new value in application code,
 and write that stale value back. The [concept lesson](/concepts/lost-update) defines
 the lost-update problem. These PostgreSQL 18.6 Scenarios compare that specific

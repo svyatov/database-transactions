@@ -51,6 +51,8 @@ is needed when stronger isolation rejects the transaction.
 
 ## Further reading
 
+- [Choose a protection: stock and stale edits](/concepts/protection-choices)
+- [Checked-write evidence](/postgres/05-patterns/checked-writes)
 - [PostgreSQL 18: Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)
 - [PostgreSQL 18: Row-Level Locks](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS)
 - [The same lesson on MySQL](/mysql/05-patterns/fixing-lost-updates)
