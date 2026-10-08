@@ -7853,25 +7853,25 @@ B> SELECT count(*)::int AS versions_on_page
 ## postgres/07-pitfalls/queue-bloat.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: A stuck worker's open transaction pins the vacuum horizon, so every claim/complete cycle the queue drains during the hang leaves a dead row version VACUUM cannot reclaim — the queue table grows with its throughput, not its backlog, and the identical VACUUM frees all of it the moment the worker's transaction ends.
+- claim: In this READ COMMITTED schedule on an 8 KiB-page heap, A holds a row lock and an assigned transaction ID while B completes 1001 jobs. The heap grows from 9 to 17 pages with 1200 rows; VACUUM leaves 2201 occupied line pointers while A is open. After A commits, another VACUUM reduces that count to 1200, without reducing the 17-page file.
 
 ```timeline
 A: A claims job 1, then hangs
 B: 9 pages
 B: B claims job 2 (skips A's job 1)
-B: job 2 done, one dead version
+B: job 2 completion update
 B: COMMIT
 B: drain 250
 B: 9 → 11 pages
 B: drain 750
 B: 11 → 17 pages
-B: 2201 line pointers (1200 live + 1001 dead)
+B: 2201 occupied tuple slots
 B: VACUUM, while A still hangs
-B: still 2201, nothing reclaimed
+B: still 2201 occupied tuple slots
 A: A finally commits, the hang ends
 B: same VACUUM, a moment later
 B: 2201 → 1200, reclaimed
-B: still 17 pages, space is free inside, not returned
+B: heap file still 17 pages
 ```
 
 *A is a worker that claims a job and then hangs: the connection stays open and the transaction never commits. This is the queue's own flavor of "idle in transaction."*
@@ -7886,9 +7886,17 @@ A> SELECT id, task FROM jobs WHERE state = 'queued'
 ----+--------------------
   1 | send welcome email 
 (1 row)
+
+B> SELECT backend_xid IS NOT NULL AS has_xid
+   FROM pg_stat_activity WHERE application_name = 'A'
+    -- A retains an assigned xid; READ COMMITTED does not establish a transaction-wide RR snapshot
+ has_xid 
+---------
+ t       
+(1 row)
 ```
 
-*The queue is 1200 rows in 9 pages, and it keeps humming while A sits there. B is a healthy worker running the exact chapter 5 loop. Watch one cycle produce one dead version: B skips A's locked job 1 and claims job 2.*
+*The queue is 1200 rows in 9 pages, and it keeps humming while A sits there. B is a worker using the chapter 5 selection predicate and completion update. B skips A's locked job 1 and claims job 2.*
 
 ```transcript
 B> SELECT (pg_relation_size('jobs') / 8192)::int AS pages;
@@ -7914,7 +7922,7 @@ B> COMMIT;
 COMMIT
 ```
 
-*That cycle left exactly one dead version: the old 'queued' tuple of job 2. Now B runs the same body a thousand more times. drain(n) is that cycle in a procedure — claim, mark done, COMMIT, repeat — so the per-job COMMIT is why CALL runs outside a transaction block. The SQL a reader trusts is the SQL they just watched.*
+*B runs the same selection and completion body a thousand more times. drain(n) commits each cycle, so CALL runs outside a transaction block. Task names are data: no email is sent in this Scenario.*
 
 ```transcript
 B> CALL drain(250); -- 250 more claim/complete cycles
@@ -7934,9 +7942,18 @@ B> SELECT (pg_relation_size('jobs') / 8192)::int AS pages;
 -------
     17 
 (1 row)
+
+B> SELECT count(*)::int AS jobs,
+          count(*) FILTER (WHERE state = 'done')::int AS done,
+          count(*) FILTER (WHERE state = 'queued')::int AS queued
+   FROM jobs;
+ jobs | done | queued 
+------+------+--------
+ 1200 | 1001 |    199 
+(1 row)
 ```
 
-*The table is still 1200 live rows and has nearly doubled on disk. Count the line pointers across every page: 1200 live plus 1001 dead, none of the dead ones removable while A's snapshot might still need the 'queued' versions they replaced.*
+*There are 1200 current rows and 1001 additional occupied tuple slots. † The horizon explanation is an inference from PostgreSQL 18's old-transaction vacuum guidance, linked in the lesson. READ COMMITTED does not give A a transaction-wide RR snapshot or access to every old version.*
 
 ```transcript
 B> SELECT count(*)::int AS occupied
@@ -7952,7 +7969,7 @@ B> VACUUM jobs;
 VACUUM
 ```
 
-*VACUUM ran, reported success, and reclaimed nothing. Same silent no-op as the long transactions lesson, now with a price tag: the line-pointer count has not moved.*
+*VACUUM completed, but the occupied line-pointer count did not fall. This measurement does not prove that VACUUM did no other maintenance.*
 
 ```transcript
 B> SELECT count(*)::int AS occupied
@@ -7968,7 +7985,7 @@ A> COMMIT;
 COMMIT
 ```
 
-*The instant A's snapshot is gone, the identical VACUUM can remove all 1001 dead versions. The occupied count falls to the 1200 live rows.*
+*After A commits, a second VACUUM reduces occupied tuple slots to 1200. Commit alone does not perform that cleanup.*
 
 ```transcript
 B> VACUUM jobs;
@@ -7984,7 +8001,7 @@ B> SELECT count(*)::int AS occupied
 (1 row)
 ```
 
-*But the file never shrank. VACUUM freed the space inside the 17 pages for the queue to reuse; it did not hand it back to the OS, and only VACUUM FULL would, under a table lock. Page count is why you can't measure this bug with pg_relation_size alone: the disk you bought during the hang stays bought.*
+*The heap file stays at 17 pages in this run. Ordinary VACUUM can truncate entirely empty trailing pages under suitable locking conditions, but does not compact live rows. VACUUM FULL and other table rewrites are separate operations, not executed here. File size alone does not measure reusable space.*
 
 ```transcript
 B> SELECT (pg_relation_size('jobs') / 8192)::int AS pages;
@@ -7999,7 +8016,7 @@ B> SELECT (pg_relation_size('jobs') / 8192)::int AS pages;
 ## postgres/08-production/deadlock-counter.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Every deadlock increments pg_stat_database.deadlocks — a counter you can alert on even when nobody was watching the error logs.
+- claim: This two-row deadlock emits 40P01 and increments pg_stat_database.deadlocks by one after a statistics flush. By the PostgreSQL 18 statistics contract, resets and unclean server restarts can clear this cumulative counter; neither is executed here.
 
 ```timeline
 A: holds row 1
@@ -8048,7 +8065,7 @@ B> ROLLBACK;
 ROLLBACK
 ```
 
-*The app retried, the users never noticed. But the database remembers:*
+*No retry is executed here. After B rolls back, flush its statistics and read the counter delta:*
 
 ```transcript
 B> SELECT pg_stat_force_next_flush();
@@ -8071,12 +8088,12 @@ M> SELECT (d.deadlocks - s.deadlocks)::int AS new_deadlocks
 ## postgres/08-production/find-long-transactions.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: Three pg_stat_activity queries find the forgotten transaction: the oldest xact_start, sessions sitting idle in transaction, and the backend_xmin that pins VACUUM's horizon.
+- claim: Three pg_stat_activity queries identify A's idle READ ONLY REPEATABLE READ transaction, its age over one second, and a retained backend_xmin with no assigned backend_xid. These fields are diagnostics, not a cleanup measurement.
 
-*A starts a 'quick report' at REPEATABLE READ… and never gets around to committing.*
+*A starts a READ ONLY report at REPEATABLE READ and pauses before committing.*
 
 ```transcript
-A> BEGIN ISOLATION LEVEL REPEATABLE READ;
+A> BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 BEGIN
 
 A> SELECT count(*)::int AS orders FROM orders;
@@ -8104,23 +8121,25 @@ M> SELECT application_name, state, now() - xact_start > interval '1 second' AS o
 ```transcript
 M> SELECT application_name
    FROM pg_stat_activity
-   WHERE state = 'idle in transaction' AND now() - state_change > interval '1 second';
+   WHERE state = 'idle in transaction' AND now() - state_change > interval '1 second'
+   ORDER BY application_name;
  application_name 
 ------------------
  A                
 (1 row)
 ```
 
-*Detector 3 — the reason it matters even for a read-only report: A's snapshot (backend_xmin) is what VACUUM must preserve.*
+*Detector 3: A retains a snapshot horizon (backend_xmin), without an assigned top-level xid. An xid is not a count of writes; this query does not execute VACUUM or measure storage reclamation.*
 
 ```transcript
-M> SELECT application_name, backend_xid IS NOT NULL AS wrote_anything,
-          backend_xmin IS NOT NULL AS pins_vacuum_horizon
+M> SELECT application_name, backend_xid IS NOT NULL AS has_xid,
+          backend_xmin IS NOT NULL AS retains_snapshot
    FROM pg_stat_activity
-   WHERE backend_xmin IS NOT NULL AND pid <> pg_backend_pid();
- application_name | wrote_anything | pins_vacuum_horizon 
-------------------+----------------+---------------------
- A                | f              | t                   
+   WHERE backend_xmin IS NOT NULL AND pid <> pg_backend_pid()
+   ORDER BY application_name;
+ application_name | has_xid | retains_snapshot 
+------------------+---------+------------------
+ A                | f       | t                
 (1 row)
 
 A> COMMIT;
@@ -8132,7 +8151,7 @@ COMMIT
 ## postgres/08-production/timeout-guardrails.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: statement_timeout cancels a runaway statement (SQLSTATE 57014) but keeps the session; transaction_timeout kills the whole transaction — connection and all — and its work rolls back.
+- claim: statement_timeout emits 57014 and preserves the session. In an explicit transaction, the next query emits 25P02 until ROLLBACK. A 500ms transaction_timeout terminates A while idle and its balance update rolls back.
 
 *statement_timeout: the per-statement seatbelt.*
 
@@ -8144,7 +8163,7 @@ A> SELECT pg_sleep(2); -- query_canceled
 ERROR:  57014: canceling statement due to statement timeout
 ```
 
-*Only the statement died — the session and its transaction state are fine.*
+*The canceled standalone statement's implicit transaction ended; the session remains usable.*
 
 ```transcript
 A> SELECT 'still here' AS session;
@@ -8154,7 +8173,32 @@ A> SELECT 'still here' AS session;
 (1 row)
 ```
 
-*transaction_timeout (PostgreSQL 17+): a hard ceiling on the whole transaction — idle or busy.*
+*In an explicit transaction, statement cancellation leaves the transaction failed.*
+
+```transcript
+A> BEGIN;
+BEGIN
+
+A> UPDATE accounts SET balance = 999 WHERE id = 1;
+UPDATE 1
+
+A> SELECT pg_sleep(2);
+ERROR:  57014: canceling statement due to statement timeout
+
+A> SELECT balance FROM accounts WHERE id = 1;
+ERROR:  25P02: current transaction is aborted, commands ignored until end of transaction block
+
+A> ROLLBACK;
+ROLLBACK
+
+M> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     100 
+(1 row)
+```
+
+*transaction_timeout (PostgreSQL 17+) terminates the session when its transaction exceeds the limit. This run exercises the idle case; prepared transactions are exempt by the manual contract.*
 
 ```transcript
 A> RESET statement_timeout;
@@ -8170,7 +8214,7 @@ A> UPDATE accounts SET balance = 999 WHERE id = 1;
 UPDATE 1
 ```
 
-*This timeout doesn't cancel a statement — it terminates the backend:*
+*After the transaction timeout interval, A's backend is absent:*
 
 ```transcript
 M> SELECT count(*)::int AS backends FROM pg_stat_activity WHERE application_name = 'A';
@@ -8179,11 +8223,11 @@ M> SELECT count(*)::int AS backends FROM pg_stat_activity WHERE application_name
         0 
 (1 row)
 
-A> COMMIT; -- the server logged FATAL; Bun sees a dead socket
+A> COMMIT; -- psycopg can receive 25P04; Bun reports the closed connection
 ERROR:  ERR_POSTGRES_CONNECTION_CLOSED: Connection closed
 ```
 
-*The killed transaction's work rolled back, as always:*
+*The update from the terminated transaction is absent:*
 
 ```transcript
 M> SELECT balance FROM accounts WHERE id = 1;
@@ -8198,7 +8242,7 @@ M> SELECT balance FROM accounts WHERE id = 1;
 ## postgres/08-production/vacuum-health.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: pg_stat_user_tables shows dead tuples accumulating and when vacuum last ran, and age(datfrozenxid) vs autovacuum_freeze_max_age is the wraparound alert.
+- claim: After five inserts and three updates, pg_stat_user_tables reports estimated live/dead counts 5/3; after manual VACUUM it reports 5/0 and a last_vacuum timestamp. The database xid age is below the configured freeze-launch threshold, not a demonstrated wraparound safety guarantee.
 
 ```transcript
 A> INSERT INTO inventory SELECT g, 10 FROM generate_series(1, 5) g;
@@ -8214,39 +8258,39 @@ A> SELECT pg_stat_force_next_flush(); -- stats reach the views lazily; force it 
 (1 row)
 ```
 
-*Chapter 4 proved updates leave dead tuples behind; pg_stat_user_tables is where you SEE them:*
+*These are statistics estimates, not an exact heap scan. The small run reports five live and three dead rows:*
 
 ```transcript
-M> SELECT relname, n_live_tup::int, n_dead_tup::int, last_vacuum IS NULL AS never_vacuumed
+M> SELECT relname, n_live_tup::int, n_dead_tup::int, last_vacuum IS NULL AS no_vacuum_timestamp
    FROM pg_stat_user_tables WHERE relname = 'inventory';
-  relname  | n_live_tup | n_dead_tup | never_vacuumed 
------------+------------+------------+----------------
- inventory |          5 |          3 | t              
+  relname  | n_live_tup | n_dead_tup | no_vacuum_timestamp 
+-----------+------------+------------+---------------------
+ inventory |          5 |          3 | t                   
 (1 row)
 ```
 
-*VACUUM cleans up — and the same view proves it happened:*
+*After manual VACUUM, the estimate is zero dead rows and last_vacuum is present:*
 
 ```transcript
 A> VACUUM inventory;
 VACUUM
 
-M> SELECT relname, n_live_tup::int, n_dead_tup::int, last_vacuum IS NOT NULL AS vacuumed
+M> SELECT relname, n_live_tup::int, n_dead_tup::int, last_vacuum IS NOT NULL AS has_vacuum_timestamp
    FROM pg_stat_user_tables WHERE relname = 'inventory';
-  relname  | n_live_tup | n_dead_tup | vacuumed 
------------+------------+------------+----------
- inventory |          5 |          0 | t        
+  relname  | n_live_tup | n_dead_tup | has_vacuum_timestamp 
+-----------+------------+------------+----------------------
+ inventory |          5 |          0 | t                    
 (1 row)
 ```
 
-*The one number that must never reach its limit: the database's xid age vs the emergency threshold.*
+*Compare database xid age with the configured autovacuum freeze-launch threshold. Below it is not proof that freezing will finish in time:*
 
 ```transcript
-M> SELECT age(datfrozenxid) < current_setting('autovacuum_freeze_max_age')::int AS wraparound_ok
+M> SELECT age(datfrozenxid) < current_setting('autovacuum_freeze_max_age')::int AS below_freeze_threshold
    FROM pg_database WHERE datname = current_database();
- wraparound_ok 
----------------
- t             
+ below_freeze_threshold 
+------------------------
+ t                      
 (1 row)
 ```
 
@@ -8255,7 +8299,7 @@ M> SELECT age(datfrozenxid) < current_setting('autovacuum_freeze_max_age')::int 
 ## postgres/08-production/who-is-blocking-whom.yaml
 
 - engine: postgres (PostgreSQL 18.6)
-- claim: One join on pg_stat_activity + pg_blocking_pids() names the blocker, shows that it's sitting idle in transaction, and shows the last statement it ran — and pg_terminate_backend() drains the queue.
+- claim: In this one-waiter schedule, pg_stat_activity and pg_blocking_pids() identify idle blocker A and waiting B. After M signals A's termination, B's update resumes; A's uncommitted 200 is absent and B commits 300.
 
 ```timeline
 A: UPDATE, then goes to lunch (idle in txn)
@@ -8274,6 +8318,9 @@ BEGIN
 A> UPDATE accounts SET balance = 200 WHERE id = 1;
 UPDATE 1
 
+B> BEGIN;
+BEGIN
+
 B> UPDATE accounts SET balance = 300 WHERE id = 1;
 ⏳ B is waiting for a lock…
 ```
@@ -8288,14 +8335,15 @@ M> SELECT waiter.application_name AS waiter,
           blocker.query             AS blocker_last_query
    FROM pg_stat_activity waiter
    JOIN pg_stat_activity blocker ON blocker.pid = ANY (pg_blocking_pids(waiter.pid))
-   WHERE waiter.wait_event_type = 'Lock';
+   WHERE waiter.wait_event_type = 'Lock'
+   ORDER BY waiter.application_name, blocker.application_name;
  waiter |                 waiting_query                  | blocker |    blocker_state    |               blocker_last_query               
 --------+------------------------------------------------+---------+---------------------+------------------------------------------------
  B      | UPDATE accounts SET balance = 300 WHERE id = 1 | A       | idle in transaction | UPDATE accounts SET balance = 200 WHERE id = 1 
 (1 row)
 ```
 
-*The culprit isn't running anything — it's IDLE, holding locks. The fix is blunt:*
+*M has permission to signal A. A true return means the signal was sent, not that termination has finished:*
 
 ```transcript
 M> SELECT pg_terminate_backend(pid) AS terminated
@@ -8312,7 +8360,22 @@ M> SELECT pg_terminate_backend(pid) AS terminated
 ⏵ B resumes:
 UPDATE 1
 
-B> SELECT balance FROM accounts WHERE id = 1; -- A's 200 rolled back with its termination; B's 300 committed
+M> SELECT balance FROM accounts WHERE id = 1; -- A's uncommitted 200 is absent; B's 300 is not yet committed
+ balance 
+---------
+     100 
+(1 row)
+
+B> SELECT balance FROM accounts WHERE id = 1; -- B sees its own uncommitted update
+ balance 
+---------
+     300 
+(1 row)
+
+B> COMMIT;
+COMMIT
+
+M> SELECT balance FROM accounts WHERE id = 1;
  balance 
 ---------
      300 

@@ -1,33 +1,21 @@
 # Alerting checklist
 
-Six numbers cover nearly every incident in this book. Each query below was proven in a
-lesson; thresholds are starting points to tune, not laws.
+These PostgreSQL 18 signals are operational starting points, not measured coverage of all incidents. The linked Scenarios demonstrate individual fields and schedules. The aggregations, sampling intervals, and example thresholds below are recommendations, not executed alerting rules or engine guarantees.
 
-| # | Alert when… | Query core | Proven in |
+| # | Signal to investigate | Query core or example policy | Evidence and limits |
 |---|---|---|---|
-| 1 | A transaction is older than a few minutes | `max(now() - xact_start)` from `pg_stat_activity` | [Long & idle transactions](/postgres/08-production/long-and-idle-transactions) |
-| 2 | Sessions sit `idle in transaction` for more than seconds | `count(*) WHERE state = 'idle in transaction' AND now() - state_change > '30 seconds'` | [Long & idle transactions](/postgres/08-production/long-and-idle-transactions) |
-| 3 | More than a handful of sessions wait on locks | `count(*) WHERE wait_event_type = 'Lock'` | [Who is blocking whom](/postgres/08-production/who-is-blocking-whom) |
-| 4 | The deadlock counter jumps | `deadlocks` from `pg_stat_database` (rate) | [Logs & counters](/postgres/08-production/logs-and-counters) |
-| 5 | Dead tuples dominate a hot table, or autovacuum hasn't touched it lately | `n_dead_tup / greatest(n_live_tup, 1)`, `now() - last_autovacuum` | [Bloat & vacuum health](/postgres/08-production/bloat-and-vacuum-health) |
-| 6 | Wraparound margin is half spent | `age(datfrozenxid) > autovacuum_freeze_max_age / 2` | [Bloat & vacuum health](/postgres/08-production/bloat-and-vacuum-health), [Wraparound](/postgres/04-mvcc/wraparound) |
+| 1 | Old open transactions | `max(now() - xact_start)` from `pg_stat_activity`, filtered to relevant sessions | [Long & idle transactions](/postgres/08-production/long-and-idle-transactions) demonstrates age over one second, not a universal maximum-age limit. |
+| 2 | Idle transactions | `count(*) WHERE state = 'idle in transaction' AND now() - state_change > interval '30 seconds'` | The [same lesson](/postgres/08-production/long-and-idle-transactions) uses one second. Thirty seconds is a tunable example. |
+| 3 | Lock waiters | `count(*) WHERE wait_event_type = 'Lock'` | [Who is blocking whom](/postgres/08-production/who-is-blocking-whom) demonstrates one row-lock waiter; count alone does not identify a root cause. |
+| 4 | Increasing deadlock rate | Changes in `pg_stat_database.deadlocks` over collection time | [Logs & counters](/postgres/08-production/logs-and-counters) asserts a delta of one. Handle counter resets and collection gaps. |
+| 5 | Rising dead-row estimates or old vacuum timestamps | `n_dead_tup / greatest(n_live_tup, 1)::numeric`, `now() - last_autovacuum` | [Vacuum health](/postgres/08-production/bloat-and-vacuum-health) demonstrates manual vacuum and estimates. Use numeric division, handle null timestamps, and investigate rather than diagnose from the ratio alone. |
+| 6 | Rising xid age | Example warning at `age(datfrozenxid) > current_setting('autovacuum_freeze_max_age')::int / 2` | [Vacuum health](/postgres/08-production/bloat-and-vacuum-health) checks below the full launch threshold. Half is advice, not the wraparound boundary or a prevention guarantee. |
 
-Three of these alerts are really one story. Alerts 1 through 3 are the same incident
-caught at different ages: one forgotten transaction becomes a lock queue becomes a full
-pool, so alert 1 fires first and you treat it as the root rather than three separate
-pages.
+Signals 1 through 3 can occur together, but a transaction need not hold a conflicting lock and a lock queue need not originate in an idle transaction. A full application pool is not measured by these database examples. Investigate the actual waits and application connection use before assigning a common cause.
 
-Alert 4 is different in kind: it's a rate, not a level. The deadlock counter
-[never resets on its own](/postgres/08-production/logs-and-counters), so a steady trickle
-under load can be normal for your workload while a step change is the thing worth paging
-on.
+Choose warning levels from workload needs, growth rates, monitoring privileges, and response time. A stale `last_autovacuum` value does not mean vacuum never ran, and a fresh one does not prove all cleanup succeeded. Counter rates need reset handling; xid age benefits from a trend and table-level investigation as well as a warning threshold.
 
-Every alert here also has a matching guardrail that prevents the page instead of
-announcing it:
-[`statement_timeout` / `idle_in_transaction_session_timeout` / `transaction_timeout`](/postgres/08-production/long-and-idle-transactions),
-[`lock_timeout` for DDL](/postgres/03-locking/table-locks-and-ddl), and
-[`log_lock_waits`](/postgres/08-production/logs-and-counters). An alert that fires often is
-a setting waiting to be set.
+The [timeout controls](/postgres/08-production/long-and-idle-transactions) and [DDL lock timeout](/postgres/03-locking/table-locks-and-ddl) can bound specific work or waits at the cost of errors or terminated sessions. [Lock-wait logging](/postgres/08-production/logs-and-counters) supplies diagnostics, not prevention. None of these settings guarantees an alert will not fire.
 
 ## Further reading
 

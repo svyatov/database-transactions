@@ -1,8 +1,8 @@
 title: Timeout guardrails
 claim: >-
-  statement_timeout cancels a runaway statement (SQLSTATE 57014) but keeps the
-  session; transaction_timeout kills the whole transaction — connection and
-  all — and its work rolls back.
+  statement_timeout emits 57014 and preserves the session. In an explicit
+  transaction, the next query emits 25P02 until ROLLBACK. A 500ms
+  transaction_timeout terminates A while idle and its balance update rolls back.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 100);
@@ -14,28 +14,42 @@ steps:
     error: "57014"
     comment: query_canceled
 
-  - note: Only the statement died — the session and its transaction state are fine.
+  - note: The canceled standalone statement's implicit transaction ended; the session remains usable.
   - A: SELECT 'still here' AS session
     expect: [{ session: still here }]
 
+  - note: In an explicit transaction, statement cancellation leaves the transaction failed.
+  - A: BEGIN
+  - A: UPDATE accounts SET balance = 999 WHERE id = 1
+    affected: 1
+  - A.fails: SELECT pg_sleep(2)
+    error: "57014"
+  - A.fails: SELECT balance FROM accounts WHERE id = 1
+    error: "25P02"
+  - A: ROLLBACK
+  - M: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+
   - note: >-
-      transaction_timeout (PostgreSQL 17+): a hard ceiling on the whole
-      transaction — idle or busy.
+      transaction_timeout (PostgreSQL 17+) terminates the session when its
+      transaction exceeds the limit. This run exercises the idle case;
+      prepared transactions are exempt by the manual contract.
   - A: RESET statement_timeout
   - A: SET transaction_timeout = '500ms'
   - A: BEGIN
   - A: UPDATE accounts SET balance = 999 WHERE id = 1
+    affected: 1
 
   - sleep: 1200 # let the timeout fire (invisible: the point is what M sees next)
 
-  - note: "This timeout doesn't cancel a statement — it terminates the backend:"
+  - note: "After the transaction timeout interval, A's backend is absent:"
   - M: SELECT count(*)::int AS backends FROM pg_stat_activity WHERE application_name = 'A'
     expect: [{ backends: 0 }]
 
   - A.fails: COMMIT
     error: ["25P04", "ERR_POSTGRES_CONNECTION_CLOSED"] # psycopg sees the FATAL's SQLSTATE; Bun.sql only notices the closed socket
-    comment: the server logged FATAL; Bun sees a dead socket
+    comment: psycopg can receive 25P04; Bun reports the closed connection
 
-  - note: "The killed transaction's work rolled back, as always:"
+  - note: "The update from the terminated transaction is absent:"
   - M: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]

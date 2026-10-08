@@ -1,8 +1,8 @@
 title: Who is blocking whom
 claim: >-
-  One join on pg_stat_activity + pg_blocking_pids() names the blocker, shows
-  that it's sitting idle in transaction, and shows the last statement it ran —
-  and pg_terminate_backend() drains the queue.
+  In this one-waiter schedule, pg_stat_activity and pg_blocking_pids() identify
+  idle blocker A and waiting B. After M signals A's termination, B's update
+  resumes; A's uncommitted 200 is absent and B commits 300.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 100);
@@ -11,8 +11,10 @@ steps:
   - note: A updates a row and then… goes to lunch. The transaction stays open.
   - A: BEGIN
   - A: UPDATE accounts SET balance = 200 WHERE id = 1
+    affected: 1
     tl: UPDATE, then goes to lunch (idle in txn)
 
+  - B: BEGIN
   - B: UPDATE accounts SET balance = 300 WHERE id = 1
     blocks: p1
     tl: UPDATE balance = 300
@@ -27,6 +29,7 @@ steps:
       FROM pg_stat_activity waiter
       JOIN pg_stat_activity blocker ON blocker.pid = ANY (pg_blocking_pids(waiter.pid))
       WHERE waiter.wait_event_type = 'Lock'
+      ORDER BY waiter.application_name, blocker.application_name
     tl: who blocks whom? → B waits on idle A
     expect:
       - waiter: B
@@ -35,7 +38,7 @@ steps:
         blocker_state: idle in transaction
         blocker_last_query: UPDATE accounts SET balance = 200 WHERE id = 1
 
-  - note: "The culprit isn't running anything — it's IDLE, holding locks. The fix is blunt:"
+  - note: "M has permission to signal A. A true return means the signal was sent, not that termination has finished:"
   - M: |
       SELECT pg_terminate_backend(pid) AS terminated
       FROM pg_stat_activity WHERE application_name = 'A'
@@ -45,6 +48,12 @@ steps:
   - note: A's transaction dies and rolls back; B gets the lock and finishes at last.
   - success: p1
     affected: 1
+  - M: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+    comment: A's uncommitted 200 is absent; B's 300 is not yet committed
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 300 }]
-    comment: A's 200 rolled back with its termination; B's 300 committed
+    comment: B sees its own uncommitted update
+  - B: COMMIT
+  - M: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 300 }]
