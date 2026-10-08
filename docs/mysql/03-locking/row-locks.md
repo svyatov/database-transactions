@@ -43,3 +43,5 @@ actual query/index path. Next: [gap locks](/mysql/03-locking/gap-locks).
 
 - [MySQL docs: Locks Set by Different SQL Statements](https://dev.mysql.com/doc/refman/8.4/en/innodb-locks-set.html)
 - [The PostgreSQL record-lock modes](/postgres/03-locking/row-locks)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-locking) records the exact manual support and execution limits for this lesson.

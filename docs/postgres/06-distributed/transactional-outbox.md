@@ -55,3 +55,5 @@ missed notifications; no relay latency is measured here.
 - [PostgreSQL 18: Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html)
 - [Transactional outbox design](https://microservices.io/patterns/data/transactional-outbox.html)
 - [The same lesson on MySQL](/mysql/06-distributed/transactional-outbox)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-distributed) records the exact manual support and execution limits for this lesson.

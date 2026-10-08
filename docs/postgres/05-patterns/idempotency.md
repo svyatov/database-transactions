@@ -43,3 +43,5 @@ the same database transaction; it does not make a remote charge atomic.
 - [PostgreSQL 18: INSERT](https://www.postgresql.org/docs/18/sql-insert.html#SQL-ON-CONFLICT)
 - [PostgreSQL 18: Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html)
 - [The same lesson on MySQL](/mysql/05-patterns/idempotency)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-patterns) records the exact manual support and execution limits for this lesson.

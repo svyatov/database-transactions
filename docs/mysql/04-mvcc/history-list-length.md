@@ -33,3 +33,5 @@ uses the same metric. Next: [purge](/mysql/04-mvcc/purge).
 ## Further reading
 
 - [MySQL docs: Undo Logs](https://dev.mysql.com/doc/refman/8.4/en/innodb-undo-logs.html)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-mvcc) records the exact manual support and execution limits for this lesson.

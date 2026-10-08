@@ -40,3 +40,5 @@ work only; use a separate effect protocol for external work.
 
 - [PostgreSQL 18: Serialization Failure Handling](https://www.postgresql.org/docs/18/mvcc-serialization-failure-handling.html)
 - [The same lesson on MySQL](/mysql/05-patterns/retrying-deadlocks)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-patterns) records the exact manual support and execution limits for this lesson.

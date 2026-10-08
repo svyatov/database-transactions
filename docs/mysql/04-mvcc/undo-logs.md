@@ -29,3 +29,5 @@ Undo can remain needed by a read view or for rollback. Next:
 ## Further reading
 
 - [MySQL docs: Undo Logs](https://dev.mysql.com/doc/refman/8.4/en/innodb-undo-logs.html)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-mvcc) records the exact manual support and execution limits for this lesson.

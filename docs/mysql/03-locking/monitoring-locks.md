@@ -52,3 +52,5 @@ Next: [MVCC and the undo log](/mysql/04-mvcc/undo-logs).
 ## Further reading
 
 - [The PostgreSQL counterpart](/postgres/03-locking/monitoring-locks)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-locking) records the exact manual support and execution limits for this lesson.

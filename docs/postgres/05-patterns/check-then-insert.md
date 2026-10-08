@@ -37,3 +37,5 @@ other failures still need recovery. The same mechanism gates
 
 - [PostgreSQL 18: INSERT](https://www.postgresql.org/docs/18/sql-insert.html#SQL-ON-CONFLICT)
 - [The same lesson on MySQL](/mysql/05-patterns/check-then-insert)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-patterns) records the exact manual support and execution limits for this lesson.

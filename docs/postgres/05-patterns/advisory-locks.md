@@ -37,3 +37,5 @@ Maintain an application key registry to avoid accidental collisions.
 - [PostgreSQL 18: Advisory Locks](https://www.postgresql.org/docs/18/explicit-locking.html#ADVISORY-LOCKS)
 - [PostgreSQL 18: Advisory Lock Functions](https://www.postgresql.org/docs/18/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS)
 - [The same lesson on MySQL](/mysql/05-patterns/advisory-locks)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-patterns) records the exact manual support and execution limits for this lesson.

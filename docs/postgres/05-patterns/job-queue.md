@@ -43,3 +43,5 @@ delivery needs a separate retry and deduplication policy.
 
 - [PostgreSQL 18: The Locking Clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)
 - [The same lesson on MySQL](/mysql/05-patterns/job-queue)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-patterns) records the exact manual support and execution limits for this lesson.
