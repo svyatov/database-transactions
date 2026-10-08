@@ -1,8 +1,9 @@
-title: "Idempotency keys: charging once, no matter how many retries"
+title: "Idempotency keys: duplicate requests skip a database charge"
 claim: >-
-  An INSERT on an idempotency key reports 1 affected row exactly once: the
-  first request charges, every retry — even one racing the original in flight
-  — gets 0 affected rows and charges nothing.
+  With retained primary keys and CLIENT_FOUND_ROWS absent, a committed
+  duplicate and an in-flight duplicate each affect 0 rows after the original
+  commits. The asserted balances show one database charge for each of the
+  two keys; network response loss and remote charges are not executed.
 setup: |
   CREATE TABLE payments (idempotency_key varchar(20) PRIMARY KEY, amount int NOT NULL);
   CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
@@ -19,13 +20,13 @@ steps:
   - A: UPDATE accounts SET balance = balance - 30 WHERE id = 1
   - A: COMMIT
 
-  - note: The response is lost in the network. The client retries the same request; server B picks it up.
+  - note: Model a same-key retry after commit. No network failure or application response is executed; B reads the stored amount.
   - B: BEGIN
   - B: |-
       INSERT INTO payments VALUES ('req-42', 30)
       ON DUPLICATE KEY UPDATE amount = amount
     affected: 0
-    comment: "0 rows: already processed — skip the charge, return the stored result"
+    comment: "0 rows: existing key, skip the balance update; the next SELECT reads the stored amount"
   - B: SELECT amount FROM payments WHERE idempotency_key = 'req-42'
     expect: [{ amount: 30 }]
   - B: COMMIT
@@ -51,7 +52,7 @@ steps:
   - A: COMMIT
   - success: p1
     affected: 0
-  - note: Even the in-flight duplicate cannot double-charge.
+  - note: This in-flight duplicate affects 0 rows after A commits. No additional balance update is issued.
 
   - A: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 45 }]

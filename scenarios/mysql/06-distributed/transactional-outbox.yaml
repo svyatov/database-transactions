@@ -1,8 +1,9 @@
 title: The transactional outbox
 claim: >-
-  Writing the order and its event in one transaction makes them atomic, and a
-  SKIP LOCKED relay gives at-least-once delivery: a crashed relay redelivers
-  the event instead of losing it.
+  The committed attempt retains both order and outbox row; the rolled-back
+  attempt retains neither. Rolling back the relay's DELETE makes the event
+  selectable again, then a committed DELETE empties the outbox. No external
+  publication, receiver effect, or process crash is executed.
 setup: |
   CREATE TABLE orders (id int PRIMARY KEY, customer varchar(20) NOT NULL, amount int NOT NULL);
   CREATE TABLE outbox (id int AUTO_INCREMENT PRIMARY KEY, event varchar(50) NOT NULL);
@@ -13,12 +14,16 @@ steps:
   - App: INSERT INTO orders VALUES (1, 'alice', 90)
   - App: "INSERT INTO outbox (event) VALUES ('order_placed: order 1')"
   - App: COMMIT
+  - App: SELECT id FROM orders ORDER BY id
+    expect: [{ id: 1 }]
 
-  - note: "Atomicity covers the failure path too: no committed order, no event."
+  - note: "The second attempt explicitly rolls back. The next SELECTs assert that only order 1 and its outbox row remain."
   - App: BEGIN
   - App: INSERT INTO orders VALUES (2, 'bob', 75)
   - App: "INSERT INTO outbox (event) VALUES ('order_placed: order 2')"
   - App: ROLLBACK
+  - App: SELECT id FROM orders ORDER BY id
+    expect: [{ id: 1 }]
   - App: SELECT id, event FROM outbox ORDER BY id
     expect: [{ id: 1, event: "order_placed: order 1" }]
 
@@ -27,14 +32,14 @@ steps:
   - Relay: SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1, event: "order_placed: order 1" }]
 
-  - note: …publishes it to the broker (an HTTP call — outside any transaction), deletes it, and crashes before COMMIT.
+  - note: The relay deletes the row and explicitly rolls back. Publication is omitted; no HTTP call or crash is executed.
   - Relay: DELETE FROM outbox WHERE id = 1
   - Relay: ROLLBACK
 
   - note: >-
-      The delete evaporated with the crash — the event is still in the outbox.
-      The restarted relay publishes it AGAIN: at-least-once delivery, so
-      consumers must be idempotent.
+      The rolled-back DELETE leaves the event available for reselection.
+      A later relay transaction selects and deletes it again. This establishes
+      database reselection, not redelivery to a recipient.
   - Relay: BEGIN
   - Relay: SELECT id, event FROM outbox ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1, event: "order_placed: order 1" }]

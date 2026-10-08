@@ -1,51 +1,20 @@
-# Idempotency keys: exactly-once, built from at-least-once
+# Idempotency keys: one database charge per retained key
 
-Networks deliver requests *at least* once: a response lost between the server and the
-client means the client retries, and the server does the work again. For "send email"
-that's an annoyance. For "charge $30" it's an incident.
+A client can retry a request when it does not receive a response. This lesson demonstrates duplicate requests with the same key, not a network failure or delivery to a payment service. The protected effect is an InnoDB account update.
 
-The fix is the idempotency key: the client names each *intent* (`req-42`), and the server
-records the name in a table whose primary key makes the second attempt visibly a
-duplicate. On MySQL, `INSERT … ON DUPLICATE KEY UPDATE amount = amount` gives the perfect
-probe. The
-[affected-rows value](https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html)
-is `1` for a new key ("do the work") and `0` for "an existing row is set to its current
-values" ("skip; return the stored result"):
+The client names its intent (`req-42`). The handler inserts that key and changes the balance in the same transaction. The demonstrated connection does not set `CLIENT_FOUND_ROWS`. The [MySQL 8.4 manual](https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html) describes a no-op upsert as "an existing row is set to its current values": it reports 0 affected rows, or 1 with `CLIENT_FOUND_ROWS`. A new insert reports 1 and a changed existing row reports 2. That connection setting is part of this recipe.
 
 <!--@include: ./parts/idempotency-key.md-->
 
-## Why this survives every race
+<a id="why-this-survives-every-race"></a>
 
-The ordinary case is a retry that arrives after the original already committed. The second
-INSERT affects 0 rows, so the handler skips the charge and replays the recorded response.
+## What the two schedules establish
 
-The case that kills naive check-then-act code is the retry that races the original while
-it's still in flight. The duplicate-key check parks the retry on the original's
-uncommitted row, the same wait you saw in
-[check-then-insert](/mysql/05-patterns/check-then-insert); when the original commits, the
-retry resolves to 0 affected rows and declines to charge. Had the original *rolled back*
-instead, the retry would have seen 1 affected row and correctly done the work itself.
+After `req-42` commits, B's duplicate affects 0 rows and reads the stored amount. The balance remains 70. For `req-99`, B's duplicate waits while A holds the uncommitted key. After A commits, B affects 0 rows; the final balance is 45. The scenario does not execute the branch where A rolls back, or assert an application response.
 
-What holds both cases together is that the key and the work commit as a unit. The INSERT
-and the balance UPDATE share one transaction, so there's no window where the charge
-happened but the key is missing, or the reverse: the same discipline as the
-[transactional outbox](/mysql/06-distributed/transactional-outbox), state and its evidence
-in one atomic write.
+**Entailed guarantee†:** for this database-local recipe, a retained unique key and its protected balance change commit together. If every handler performs the balance change only after inserting a new key, competing uses of that key cannot commit another such change. This follows from the [unique-index conflict handling](https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html) and [transaction boundary](/mysql/01-basics/what-is-a-transaction). † The two schedules above demonstrate particular executions, not all executions of that rule.
 
-One design note: store the *result* (or enough to reconstruct the response) in the
-idempotency row, as the `amount` column sketches here. A retry has to answer the client,
-not only decline to charge.
-
-The 0-versus-1 probe leans on one driver assumption. The affected-rows count reports 0 for
-a no-op upsert only when the connection was opened *without* `CLIENT_FOUND_ROWS`; set that
-flag and an unchanged row reports 1 instead, which leaves the probe unable to tell a first
-charge from a replay. Check your driver before you trust the count.
-
-The shape stays small: a client-named key, a PRIMARY KEY that turns the second attempt
-into a visible duplicate, and an INSERT whose affected-rows count decides whether to do the
-work or replay the stored answer. Commit the key and the side effect in the same
-transaction, and the unique index's own locking handles the in-flight duplicate for you:
-no advisory locks, no pre-flight SELECT, no isolation-level tricks required.
+Keep keys for the required retry period, bind each key to one intent, and reject a changed payload. Store enough result data to answer a retry; `amount` here is only a sketch of that record. Payload validation, key expiry, and full response recovery are not executed here. Errors still need transaction cleanup and appropriate recovery. An email, broker publish, or remote charge is outside this transaction and is not made exactly-once by this key table. See the [outbox boundary](/mysql/06-distributed/transactional-outbox).
 
 ## Further reading
 

@@ -25,7 +25,7 @@ A> COMMIT;
 Query OK
 ```
 
-*B's locked read waited out A's transaction — and returns the fresh 110, not the 100 it would have seen.*
+*B's locking read waited for A's commit and returns 110. No prior plain-read snapshot is established for B here.*
 
 ```transcript
 ⏵ B resumes:

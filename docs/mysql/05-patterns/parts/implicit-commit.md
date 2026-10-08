@@ -25,7 +25,7 @@ B> SELECT count(*) AS visible FROM orders; -- A never said COMMIT. The CREATE IN
 (1 row)
 ```
 
-*The script now hits an error and rolls back, trusting the transaction to clean up:*
+*A now explicitly rolls back. No migration exception is injected.*
 
 ```transcript
 A> ROLLBACK;
@@ -38,6 +38,6 @@ B> SELECT count(*) AS visible FROM orders; -- rolled back nothing — the INSERT
 (1 row)
 ```
 
-*There is no transactional DDL in MySQL. A migration that mixes data and schema changes has commit points at every DDL statement — design for re-runnability instead of atomicity.*
+*CREATE INDEX has already committed the INSERT. Check the manual's implicit-commit list and exceptions before relying on a migration wrapper; this schedule does not execute every DDL statement.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/05-patterns/implicit-commit.yaml)</small>

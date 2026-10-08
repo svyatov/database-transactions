@@ -1,8 +1,9 @@
 title: XA PREPARE survives its session
 claim: >-
-  XA PREPARE detaches a transaction from its session: it survives the
-  session's death, keeps holding its locks, and any later session can finish
-  it by name with XA COMMIT.
+  With xa_detach_on_prepare=ON, this prepared InnoDB branch remains in
+  XA RECOVER and blocks B's NOWAIT read before and after A's session is
+  killed. B commits it by XID and reads balance 200. No server restart or
+  multi-resource coordinator is executed.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 100);
@@ -18,6 +19,9 @@ setup: |
   END;
 sessions: [A, B, M]
 steps:
+  - A: SET SESSION xa_detach_on_prepare = ON
+  - A: SELECT @@session.xa_detach_on_prepare AS detached
+    expect: [{ detached: 1 }]
   - note: A is one participant in a distributed transfer. It does its work, then PREPARES — phase one.
   - A: XA START 'transfer-42'
   - A: UPDATE accounts SET balance = 200 WHERE id = 1
@@ -36,7 +40,7 @@ steps:
     error: "3572"
     comment: ER_LOCK_NOWAIT
 
-  - note: "Now the coordinator crashes: A's connection is killed outright."
+  - note: "M kills participant session A. No Transaction Manager process is modeled."
   - M: CALL kill_session('A')
 
   - sleep: 300 # let the client side notice the dead socket
@@ -45,15 +49,14 @@ steps:
     error: ["2013", "ERR_MYSQL_CONNECTION_CLOSED"] # PyMySQL reports the lost connection; Bun.sql only notices the closed socket
 
   - note: >-
-      The session is gone. The prepared transaction is not — it survives
-      anything short of XA COMMIT/XA ROLLBACK, including a full server
-      restart. And it still holds its locks:
+      A's session is gone. XA RECOVER still lists the prepared branch and
+      B's NOWAIT read still fails. Server restart is not tested here.
   - M: XA RECOVER
     expect: [{ data: "transfer-42" }]
   - B.fails: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE NOWAIT
     error: "3572"
 
-  - note: Phase two — any session can finish the job by name. B commits the orphan.
+  - note: "Phase two: B, another permitted connection, commits this detached branch by XID."
   - B: XA COMMIT 'transfer-42'
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 200 }]

@@ -1,8 +1,8 @@
 title: "UNIQUE + ON DUPLICATE KEY: closing the race at the source"
 claim: >-
-  A UNIQUE constraint makes the concurrent duplicate wait for the first
-  insert's fate and then fail with errno 1062 — and ON DUPLICATE KEY UPDATE
-  turns that error into a clean upsert (INSERT IGNORE absorbs it, at a price).
+  In this InnoDB schedule, B's duplicate INSERT waits for A's commit, then
+  fails with 1062. A subsequent upsert increments attempts to 2 and reports
+  2 affected rows; INSERT IGNORE skips the duplicate and reports 0.
 setup: |
   CREATE TABLE signups (
     id int AUTO_INCREMENT PRIMARY KEY,
@@ -37,8 +37,8 @@ steps:
     comment: one row, and it counted the duplicate attempt
 
   - note: >-
-      INSERT IGNORE also absorbs the duplicate (0 rows affected) — but it
-      downgrades EVERY error on the statement to a warning, not just 1062.
-      Prefer ON DUPLICATE KEY UPDATE: it targets exactly the race you mean.
+      INSERT IGNORE skips this duplicate with 0 affected rows. The manual
+      documents other ignorable errors too, not every error. An upsert reacts
+      to any conflicting primary or unique key, not a named conflict target.
   - B: INSERT IGNORE INTO signups (email) VALUES ('bob@example.com')
     affected: 0

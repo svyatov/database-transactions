@@ -1,9 +1,8 @@
 title: "Advisory locks: locking ideas, not rows"
 claim: >-
-  GET_LOCK serializes application-defined work with no table involved:
-  timeout 0 gives an instant yes/no, a positive timeout gives a bounded wait,
-  and the lock ignores transactions entirely — only RELEASE_LOCK (or
-  disconnecting) lets go.
+  In this cooperative named-lock schedule, B gets 0 with timeouts 0 and 1
+  while A holds the name, still gets 0 after A commits, then gets 1 after A
+  releases it. B acquires two names and RELEASE_ALL_LOCKS reports 2.
 setup: |
   -- No tables. Advisory locks guard whatever the application says 'migration' means.
 sessions: [A, B]
@@ -47,9 +46,8 @@ steps:
     tl: GET_LOCK → held
 
   - note: >-
-      One session can hold many named locks; RELEASE_ALL_LOCKS drops the lot.
-      Disconnecting releases them too — a crashed runner can't jam the queue
-      forever.
+      B acquires a second name, then RELEASE_ALL_LOCKS releases both.
+      Session termination is a documented release path, not executed here.
   - B: SELECT GET_LOCK('cache-rebuild', 0) AS got_it
     expect: [{ got_it: 1 }]
   - B: SELECT RELEASE_ALL_LOCKS() AS released
