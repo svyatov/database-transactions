@@ -1,14 +1,16 @@
 title: Finding long and idle transactions
 claim: >-
-  Two joins on information_schema.innodb_trx find the forgotten transaction:
-  the oldest open transaction by trx_started, and the session that holds one
-  open while doing nothing — including the read-only kind that never shows up
-  in write metrics but still pins purge.
+  On MySQL 8.4 InnoDB, the tagged session A appears in innodb_trx after
+  reading orders: it is older than one second, its processlist command is
+  Sleep, and trx_rows_modified is zero. Transaction age does not establish
+  read-view age or prove that this session is the cause of a production backlog.
 setup: |
   CREATE TABLE orders (id int PRIMARY KEY, total int NOT NULL);
   INSERT INTO orders VALUES (1, 90), (2, 75);
 sessions: [A, M]
 steps:
+  - A: SELECT @@session.transaction_isolation AS isolation_level
+    expect: [{ isolation_level: REPEATABLE-READ }]
   - note: A starts a 'quick report'… and never gets around to committing.
   - A: BEGIN
   - A: SELECT count(*) AS orders FROM orders
@@ -16,7 +18,7 @@ steps:
 
   - sleep: 1200 # let the forgotten transaction age past the detector's threshold
 
-  - note: "Detector 1 — the oldest open transaction, its owner, and how long it's been open:"
+  - note: "Detector 1: the oldest tagged transaction, its owner, and a lower bound on its age."
   - M: |
       SELECT CAST(sn.variable_value AS CHAR) AS session_name, t.trx_state,
              timestampdiff(SECOND, t.trx_started, now()) >= 1 AS older_than_1s
@@ -38,14 +40,15 @@ steps:
     expect: [{ session_name: "A", command: "Sleep" }]
 
   - note: >-
-      Detector 3 — why it matters even for a read-only report: A never wrote a
-      row (it doesn't even have a real transaction ID), yet its read view is
-      exactly what purge must wait for.
+      Detector 3: A has modified no rows. This observation does not identify
+      a purge blocker or rely on an implementation-specific transaction ID.
   - M: |
-      SELECT t.trx_rows_modified AS rows_modified,
-             CAST(t.trx_id AS UNSIGNED) > 281474976710656 AS never_wrote
+      SELECT t.trx_rows_modified AS rows_modified
       FROM information_schema.innodb_trx t
-    expect: [{ rows_modified: 0, never_wrote: 1 }]
-    comment: read-only — and still the oldest read view on the server
+      JOIN performance_schema.threads th ON th.processlist_id = t.trx_mysql_thread_id
+      JOIN performance_schema.user_variables_by_thread sn ON sn.thread_id = th.thread_id
+      WHERE sn.variable_name = 'session_name' AND sn.variable_value = 'A'
+    expect: [{ rows_modified: 0 }]
+    comment: no modified rows in the observed transaction
 
   - A: COMMIT

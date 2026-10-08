@@ -8,6 +8,20 @@ B: credit id=1 ← 1213 Deadlock found when trying to get lock
 A: ⏵ credit id=2 → completes
 ```
 
+```transcript
+M> SELECT @@innodb_deadlock_detect AS detection;
+ detection 
+-----------
+         1 
+(1 row)
+
+M> SELECT status FROM information_schema.INNODB_METRICS WHERE name = 'lock_deadlocks';
+ status  
+---------
+ enabled 
+(1 row)
+```
+
 *The same two opposite-order transfers as chapter 3 — one will be the victim.*
 
 ```transcript
@@ -36,19 +50,19 @@ A> COMMIT;
 Query OK
 ```
 
-*The error flashed by in one client's logs. The server remembers it forever:*
+*The detected deadlock is also visible as a counter delta in this run:*
 
 ```transcript
 M> SELECT im.count - b.n >= 1 AS deadlocks_since_snapshot
    FROM information_schema.INNODB_METRICS im, deadlocks_before b
    WHERE im.name = 'lock_deadlocks'
-    -- a monotonic counter — graph its rate and alert on spikes
+    -- sample rates within one enabled interval; account for restart and reset
  deadlocks_since_snapshot 
 --------------------------
                         1 
 (1 row)
 ```
 
-*For the full story of the LAST deadlock (both statements, both lock chains), read the LATEST DETECTED DEADLOCK section of SHOW ENGINE INNODB STATUS — or set innodb_print_all_deadlocks=ON to log every one.*
+*Documented separately: SHOW ENGINE INNODB STATUS reports the latest detected deadlock; innodb_print_all_deadlocks enables error-log reports. This scenario does not inspect either log output or retention.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/08-production/deadlock-counter.yaml)</small>

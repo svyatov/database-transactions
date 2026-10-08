@@ -1,18 +1,21 @@
 title: Timeout guardrails
 claim: >-
-  max_execution_time cuts a runaway SELECT short without touching the session,
-  and wait_timeout kills a connection that goes idle — rolling back whatever
-  transaction it silently held open.
+  On MySQL 8.4, SELECT SLEEP(2) returns interrupted=1 with
+  max_execution_time=100 and the session remains usable. With wait_timeout=1,
+  A's next query fails after an idle wait and B sees the original InnoDB balance.
+  This run does not measure exact elapsed time or test general SELECT error handling.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 100);
 sessions: [A, B]
 steps:
-  - note: "Guardrail 1 — max_execution_time: a per-session (or per-query) ceiling for SELECTs."
+  - note: "Guardrail 1: max_execution_time applies to eligible read-only SELECTs, not all statements."
   - A: SET SESSION max_execution_time = 100
   - A: SELECT SLEEP(2) AS interrupted
     expect: [{ interrupted: 1 }]
-    comment: cut short at 100ms — SLEEP reports 1 when its wait is interrupted
+    comment: SLEEP reports interruption; no exact duration is asserted
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
   - A: SET SESSION max_execution_time = 0
 
   - note: >-
@@ -34,4 +37,5 @@ steps:
 
   - note: >-
       The third guardrail, innodb_lock_wait_timeout, was proven in chapter 3 —
-      remember it rolls back the STATEMENT, not the transaction.
+      with innodb_rollback_on_timeout=OFF it rolls back the waiting statement;
+      ON requests transaction rollback. See the chapter 3 evidence and manual.
