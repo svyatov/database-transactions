@@ -105,7 +105,7 @@ Predict both reads. Does one BEGIN make them a single view? Choose a repair if t
 
 </details>
 
-## A pending change
+## A conditional change
 
 Reset to committed InnoDB items `(id, value)` of `(1, 10)` and `(2, 30)`. A begins at the default REPEATABLE READ and runs `UPDATE items SET value = value * 2 WHERE id = 1`, without committing. B sets READ COMMITTED before BEGIN and sends:
 
@@ -113,10 +113,10 @@ Reset to committed InnoDB items `(id, value)` of `(1, 10)` and `(2, 30)`. A begi
 UPDATE items SET value = 99 WHERE value = 10;
 ```
 
-B's statement is still pending when A commits. Predict whether B waits, its affected-row count after that commit, and the rows from B's `SELECT id, value FROM items ORDER BY id` after B commits. Explain which target version supplies the decisive predicate check. What must B inspect if its intended change was required for success?
+Next, A commits. Predict whether B's UPDATE must wait for that commit, its affected-row count, and the rows from B's `SELECT id, value FROM items ORDER BY id` after B commits. Explain which target version supplies the decisive predicate check. What must B inspect if its intended change was required for success?
 
 <details>
-<summary>Check the pending change</summary>
+<summary>Check the conditional change</summary>
 
 **Result:** B waits for A's row lock, then affects zero rows. After B commits, its SELECT returns `(1, 20), (2, 30)`.
 

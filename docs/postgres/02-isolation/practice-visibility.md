@@ -97,7 +97,7 @@ Predict both reads. Does one BEGIN make them a single view? Choose a repair if t
 
 </details>
 
-## A pending change
+## A conditional change
 
 Reset to committed items `(id, value)` of `(1, 10)` and `(2, 30)`. A begins at READ COMMITTED and runs `UPDATE items SET value = value * 2 WHERE id = 1`, without committing. B, in autocommit at READ COMMITTED, sends:
 
@@ -105,10 +105,10 @@ Reset to committed items `(id, value)` of `(1, 10)` and `(2, 30)`. A begins at R
 UPDATE items SET value = 99 WHERE value = 10;
 ```
 
-B's statement is still pending when A commits. Predict whether B waits, its affected-row count after that commit, and the rows from B's subsequent `SELECT id, value FROM items ORDER BY id`. Explain which target version supplies the decisive predicate check. What must B inspect if its intended change was required for success?
+Next, A commits. Predict whether B's UPDATE must wait for that commit, its affected-row count, and the rows from B's subsequent `SELECT id, value FROM items ORDER BY id`. Explain which target version supplies the decisive predicate check. What must B inspect if its intended change was required for success?
 
 <details>
-<summary>Check the pending change</summary>
+<summary>Check the conditional change</summary>
 
 **Result:** B waits for A's row lock, then affects zero rows. Its final SELECT returns `(1, 20), (2, 30)`.
 
