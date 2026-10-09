@@ -16,6 +16,7 @@ steps:
   - M: |
       SELECT object_name, index_name, lock_type, lock_mode, lock_status, lock_data
       FROM performance_schema.data_locks
+      WHERE object_schema = DATABASE() AND object_name = 'accounts'
       ORDER BY lock_type DESC
     expect:
       - { object_name: "accounts", index_name: null, lock_type: "TABLE", lock_mode: "IX", lock_status: "GRANTED", lock_data: null }
@@ -28,12 +29,14 @@ steps:
   - M: |
       SELECT object_name, lock_mode, lock_status, lock_data
       FROM performance_schema.data_locks
-      WHERE lock_status = 'WAITING'
+      WHERE object_schema = DATABASE() AND object_name = 'accounts' AND lock_status = 'WAITING'
     expect:
       - { object_name: "accounts", lock_mode: "X,REC_NOT_GAP", lock_status: "WAITING", lock_data: "1" }
 
   - note: You rarely need to decode data_locks by hand — sys.innodb_lock_waits names the culprit.
-  - M: SELECT waiting_pid, blocking_pid FROM sys.innodb_lock_waits
+  - M: |
+      SELECT waiting_pid, blocking_pid FROM sys.innodb_lock_waits
+      WHERE locked_table_schema = DATABASE() AND locked_table_name = 'accounts'
     expect: [{ waiting_pid: "$pid(B)", blocking_pid: "$pid(A)" }]
 
   - A: COMMIT
