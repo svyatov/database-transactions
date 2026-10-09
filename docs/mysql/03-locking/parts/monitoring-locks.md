@@ -13,6 +13,7 @@ Query OK, 1 row affected
 ```transcript
 M> SELECT object_name, index_name, lock_type, lock_mode, lock_status, lock_data
    FROM performance_schema.data_locks
+   WHERE object_schema = DATABASE() AND object_name = 'accounts'
    ORDER BY lock_type DESC;
  object_name | index_name | lock_type |   lock_mode   | lock_status | lock_data 
 -------------+------------+-----------+---------------+-------------+-----------
@@ -29,7 +30,7 @@ B> UPDATE accounts SET balance = 300 WHERE id = 1;
 ```transcript
 M> SELECT object_name, lock_mode, lock_status, lock_data
    FROM performance_schema.data_locks
-   WHERE lock_status = 'WAITING';
+   WHERE object_schema = DATABASE() AND object_name = 'accounts' AND lock_status = 'WAITING';
  object_name |   lock_mode   | lock_status | lock_data 
 -------------+---------------+-------------+-----------
  accounts    | X,REC_NOT_GAP | WAITING     |         1 
@@ -39,7 +40,8 @@ M> SELECT object_name, lock_mode, lock_status, lock_data
 *You rarely need to decode data_locks by hand — sys.innodb_lock_waits names the culprit.*
 
 ```transcript
-M> SELECT waiting_pid, blocking_pid FROM sys.innodb_lock_waits;
+M> SELECT waiting_pid, blocking_pid FROM sys.innodb_lock_waits
+   WHERE locked_table_schema = DATABASE() AND locked_table_name = 'accounts';
  waiting_pid | blocking_pid 
 -------------+--------------
  pid(B)      | pid(A)       
