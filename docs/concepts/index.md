@@ -35,7 +35,7 @@ practice get their own pages:
 
 ## Patterns
 
-- **[Choose a protection](/concepts/protection-choices)**: start from the business rule, with worked stock and stale-edit decisions and paths to three other cases.
+- **[Choose a protection](/concepts/protection-choices)**: start from the business rule, with worked stock, stale-edit, and on-call staffing decisions and paths to request identity and external effects.
 
 - **[Dual writes & the transactional outbox](/concepts/transactional-outbox)**: why you
   separately committed effects are outside local rollback, and what the database-local pattern does establish.
