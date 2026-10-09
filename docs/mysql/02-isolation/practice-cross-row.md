@@ -44,9 +44,9 @@ Predict both counts, whether either UPDATE waits for the other, both commit resp
 
 ## A different transaction boundary
 
-Reset both doctors to on call. Set **both** sessions to SERIALIZABLE before their explicit BEGINs. Both run the count SELECT before either tries an UPDATE. Send A's UPDATE first. If it has not completed, leave it pending and send B's UPDATE. After the responses, commit the attempt that can continue. Handle the other attempt's response, then start its fresh SERIALIZABLE transaction and repeat the count and greater-than-one decision before commit.
+Reset both doctors to on call. Set **both** sessions to SERIALIZABLE before their explicit BEGINs. Both run the count SELECT before either tries an UPDATE. Send A's UPDATE first. If it has not completed, leave it pending and send B's UPDATE. After handling both UPDATE responses, attempt COMMIT for each transaction that is still active. Any request whose first transaction did not commit starts a fresh SERIALIZABLE transaction and repeats the count and greater-than-one decision before commit.
 
-Predict the count results, which statement first waits, what happens when B sends its UPDATE, the remaining count after the first committed attempt, and the fresh request's decision. Explain what each session holds and requests. Would setting SERIALIZABLE while leaving the count and UPDATE as separate autocommit statements provide the same boundary?
+Predict the count results, whether either UPDATE waits or fails, each transaction's outcome, and the committed on-call count after handling both attempts. If any request needs a fresh transaction, predict its count and decision. Explain what each session holds and requests. Would setting SERIALIZABLE while leaving the count and UPDATE as separate autocommit statements provide the same boundary?
 
 <details>
 <summary>Check the different boundary</summary>

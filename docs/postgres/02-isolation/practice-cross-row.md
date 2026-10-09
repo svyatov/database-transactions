@@ -44,9 +44,9 @@ Predict both counts, whether either UPDATE waits for the other, both commit resp
 
 ## A different transaction boundary
 
-Reset both doctors to on call. Use the same first six steps, but begin **both** transactions at SERIALIZABLE. A attempts COMMIT first, then B attempts COMMIT. After handling its response, B begins a fresh SERIALIZABLE transaction, repeats the count, applies the same greater-than-one decision, and attempts COMMIT.
+Reset both doctors to on call. Use the same first six steps, but begin **both** transactions at SERIALIZABLE. A attempts COMMIT first, then B attempts COMMIT. If B's first attempt does not commit, discard that attempt and begin a fresh SERIALIZABLE transaction, repeat the count, apply the same greater-than-one decision, and attempt COMMIT.
 
-Predict the first two commit responses for this exact schedule, the fresh count, B's decision, and the final named doctors' status. Explain the logical ordering required by each old read. Does the isolation contract always select the same rejected session or the same failure statement?
+Predict the first two commit responses for this exact schedule and the final named doctors' status. If B needs a fresh attempt, predict its count and decision. Explain the logical ordering required by each old read. Which responses are specific to this schedule, and what does the isolation contract require across schedules?
 
 <details>
 <summary>Check the different boundary</summary>
