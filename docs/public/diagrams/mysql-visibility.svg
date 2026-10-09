@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="580" height="700" viewBox="0 0 580 700" role="img" aria-labelledby="title desc">
+  <title id="title">InnoDB undo reconstruction and A's visibility</title>
+  <desc id="desc">Teaching model for the visibility-operations schedule. A's Repeatable Read view is established at its first consistent read of 100. After B commits 150, the clustered record is current at 150; undo information reconstructs 100 for A's consistent read. A's locking read returns 150 but the next consistent read still returns 100. A updates the current 150 to 200 and sees its own write before commit. B reads 150 before that commit and 200 afterward.</desc>
+  <rect width="580" height="700" rx="12" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" font-size="18" fill="#172033">
+    <text x="24" y="34" font-size="22" font-weight="700">MySQL 8.4 InnoDB: record and undo</text>
+    <text x="24" y="64">A's RR view: first consistent table read sees 100</text>
+    <text x="24" y="92">Decisive state: after B commits 150</text>
+    <rect x="24" y="110" width="532" height="82" rx="8" fill="#ffedd5" stroke="#995b19" stroke-width="2"/>
+    <text x="40" y="140" font-weight="700">Current clustered record: balance 150</text>
+    <text x="40" y="170">DB_TRX_ID identifies writer; DB_ROLL_PTR links undo</text>
+    <path d="M80 196 V246 M72 238 L80 246 L88 238" fill="none" stroke="#172033" stroke-width="2"/>
+    <text x="104" y="226">Undo information reconstructs an earlier version</text>
+    <rect x="24" y="256" width="532" height="76" rx="8" fill="#dbeafe" stroke="#245c9e" stroke-width="2"/>
+    <text x="40" y="286" font-weight="700">Reconstructed balance: 100</text>
+    <text x="40" y="314">Visible to A's retained consistent-read view</text>
+    <rect x="24" y="352" width="532" height="104" rx="8" fill="#e2e8f0"/>
+    <text x="40" y="382">A consistent SELECT: 100</text>
+    <text x="40" y="410">A SELECT FOR UPDATE: 150 (current row)</text>
+    <text x="40" y="438">A's next consistent SELECT: still 100</text>
+    <path d="M290 460 V488 M282 480 L290 488 L298 480" fill="none" stroke="#172033" stroke-width="2"/>
+    <text x="24" y="518" font-weight="700">A UPDATE adds 50 to current 150</text>
+    <rect x="24" y="538" width="532" height="80" rx="8" fill="#d1fae5" stroke="#216247" stroke-width="2"/>
+    <text x="40" y="568" font-weight="700">Current balance 200: A's uncommitted own write</text>
+    <text x="40" y="598">A consistent read: 200; B consistent read: 150</text>
+    <text x="24" y="650">After A commits: B's fresh read returns 200</text>
+    <text x="24" y="682" font-size="16">Simplified visibility model, not the complete algorithm</text>
+  </g>
+</svg>

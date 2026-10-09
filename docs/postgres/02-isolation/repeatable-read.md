@@ -37,6 +37,25 @@ The manual calls this implementation snapshot isolation and notes that its stabl
 view can still be inconsistent with every serial ordering. The
 [write-skew and read-only schedules](/postgres/02-isolation/serializable) demonstrate that limit.
 
+## Reading and locking one row
+
+Try the [reading practice](/postgres/02-isolation/practice-visibility) before reading this section if you want to predict the result.
+
+In this PostgreSQL 18.6 schedule A retains 100 after B commits 150. A's SELECT FOR UPDATE fails with 40001. After rollback, A's fresh attempt locks 150 and writes 200. A sees its own uncommitted 200, while B's plain read sees 150 until A commits.
+
+<!--@include: ./parts/visibility-operations.md-->
+
+<figure class="mechanism">
+<div class="mechanism-view" tabindex="0" role="region" aria-label="PostgreSQL visibility diagram, horizontally scrollable">
+<img src="/diagrams/postgres-visibility.svg" alt="Two PostgreSQL tuple versions: A reads older 100, cannot lock later 150 in that attempt, and reads its own 200 in a fresh attempt." width="580" height="610">
+</div>
+<figcaption>PostgreSQL tuple history versus the version visible to A. The upper view is after B's commit; the lower view is A's fresh attempt before its commit. This is a simplified teaching model, not the complete tuple-visibility algorithm or a measured heap layout. Focus the image region and use arrow keys to read any overflow.</figcaption>
+</figure>
+
+**Text equivalent:** after B commits, the older tuple containing 100 can remain alongside B's tuple containing 150. A's retained snapshot admits 100, not the later committed version. Locking that changed target fails at REPEATABLE READ. A rolls back; a fresh snapshot admits 150. A's next UPDATE creates its own version containing 200, visible to A before commit but not to B's plain read. After commit, B's fresh read sees 200.
+
+**Evidence boundary:** the transcript asserts these SQL values and the locking error. [The row-version lesson](/postgres/04-mvcc/row-versions#watching-an-update-make-a-copy) separately inspects two heap tuples in its own schedule. PostgreSQL 18's [system-column contract](https://www.postgresql.org/docs/18/ddl-system-columns.html#DDL-SYSTEM-COLUMNS-XMIN) states: “each update of a row creates a new row version for the same logical row”. That storage contract explains the drawing; this new schedule does not inspect its physical tuples. Commit/abort status, command order, tuple flags, and other cases also affect visibility, as the [snapshot lesson](/postgres/04-mvcc/snapshots-under-the-hood) explains. Do not treat this picture as an xid-only algorithm. Compare [InnoDB's undo reconstruction](/mysql/02-isolation/repeatable-read#reading-and-locking-one-row).
+
 ## Further reading
 
 - [PostgreSQL 18: isolation table](https://www.postgresql.org/docs/18/transaction-iso.html#MVCC-ISOLEVEL-TABLE)
