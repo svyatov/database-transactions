@@ -51,6 +51,25 @@ concurrent writers. See [lost updates](/mysql/02-isolation/lost-update) and
 [write skew](/mysql/02-isolation/serializable). A repair must protect the reads and
 decisions before writing, with participation by all relevant writers.
 
+## Reading and locking one row
+
+Try the [reading practice](/mysql/02-isolation/practice-visibility) before reading this section if you want to predict the result.
+
+In this MySQL 8.4.11 InnoDB schedule A's retained consistent read returns 100 after B commits 150. A's SELECT FOR UPDATE returns 150, but its next consistent read still returns 100. A's UPDATE uses current 150 to produce 200, visible to A before commit. B's plain read sees 150 before A commits and 200 afterward.
+
+<!--@include: ./parts/visibility-operations.md-->
+
+<figure class="mechanism">
+<div class="mechanism-view" tabindex="0" role="region" aria-label="InnoDB visibility diagram, horizontally scrollable">
+<img src="/diagrams/mysql-visibility.svg" alt="InnoDB current record 150 and undo reconstruction of 100: A's consistent read sees 100, locking read sees 150, and own UPDATE becomes visible as 200." width="580" height="700">
+</div>
+<figcaption>InnoDB current record versus the version reconstructed for A. The upper view is after B's commit; the lower view is after A's UPDATE before its commit. This is a simplified teaching model, not the complete read-view algorithm or an inspected undo chain. Focus the image region and use arrow keys to read any overflow.</figcaption>
+</figure>
+
+**Text equivalent:** the clustered record now contains B's committed 150. Undo information can reconstruct the earlier 100 that fits A's retained consistent-read view. A's locking read uses current 150 without refreshing that view. Its next consistent read still returns 100. A's UPDATE adds 50 to current 150, and its own 200 is visible to its later consistent read. Before A commits, B's consistent read still sees committed 150. After commit, B's fresh read sees 200.
+
+**Evidence boundary:** the transcript asserts the returned values and affected rows, not hidden storage fields. The MySQL 8.4 [multi-versioning contract](https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html) states: “The roll pointer points to an undo log record written to the rollback segment.” It documents `DB_TRX_ID`, `DB_ROLL_PTR`, and reconstruction for clustered records; secondary indexes have separate behavior. The [undo lesson](/mysql/04-mvcc/undo-logs) distinguishes that contract from executed SQL visibility, and [read views](/mysql/04-mvcc/read-views) gives timing and algorithm limits. The drawing omits rollback, purge, secondary-index lookup, and full visibility checks. Compare [PostgreSQL's heap tuple history](/postgres/02-isolation/repeatable-read#reading-and-locking-one-row); storing history does not give both engines the same locking-read rule.
+
 ## Further reading
 
 - [MySQL 8.4: Locking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)

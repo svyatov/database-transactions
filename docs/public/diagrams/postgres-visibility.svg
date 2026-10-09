@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="580" height="610" viewBox="0 0 580 610" role="img" aria-labelledby="title desc">
+  <title id="title">PostgreSQL tuple history and A's visibility</title>
+  <desc id="desc">Teaching model for the visibility-operations schedule. A's Repeatable Read snapshot includes balance 100. After B commits 150, both tuple versions can remain, but A's plain read returns 100 and its locking read fails with 40001. In a fresh attempt, A locks 150 and writes 200. A sees its own 200 before commit, while B reads 150.</desc>
+  <rect width="580" height="610" rx="12" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" font-size="18" fill="#172033">
+    <text x="24" y="34" font-size="22" font-weight="700">PostgreSQL 18: heap tuple versions</text>
+    <text x="24" y="64">A's RR snapshot: taken while 100 is committed</text>
+    <text x="24" y="92">Decisive state: after B commits 150</text>
+    <rect x="24" y="110" width="248" height="94" rx="8" fill="#dbeafe" stroke="#245c9e" stroke-width="2"/>
+    <text x="40" y="140" font-weight="700">Older tuple: balance 100</text>
+    <text x="40" y="168">Visible to A's plain read</text>
+    <text x="40" y="192">Retained history</text>
+    <rect x="300" y="110" width="256" height="94" rx="8" fill="#ffedd5" stroke="#995b19" stroke-width="2"/>
+    <text x="316" y="140" font-weight="700">B's tuple: balance 150</text>
+    <text x="316" y="168">Committed after snapshot</text>
+    <text x="316" y="192">Excluded from A's read</text>
+    <path d="M272 154 H298" stroke="#172033" stroke-width="2"/>
+    <text x="24" y="240">History present does not mean every version is visible.</text>
+    <rect x="24" y="260" width="532" height="78" rx="8" fill="#e2e8f0"/>
+    <text x="40" y="290">A plain SELECT: 100</text>
+    <text x="40" y="318">A SELECT FOR UPDATE: 40001, then ROLLBACK</text>
+    <path d="M290 342 V370 M282 362 L290 370 L298 362" fill="none" stroke="#172033" stroke-width="2"/>
+    <text x="24" y="400" font-weight="700">Fresh attempt: new snapshot includes 150</text>
+    <text x="24" y="430">A locks 150, then UPDATE adds 50</text>
+    <rect x="24" y="448" width="532" height="80" rx="8" fill="#d1fae5" stroke="#216247" stroke-width="2"/>
+    <text x="40" y="478" font-weight="700">A's new tuple: balance 200, not yet committed</text>
+    <text x="40" y="508">A plain read: 200 (own write); B plain read: 150</text>
+    <text x="24" y="558">After A commits: B's fresh read returns 200</text>
+    <text x="24" y="590" font-size="16">Simplified visibility model, not the complete algorithm</text>
+  </g>
+</svg>

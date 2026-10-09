@@ -394,6 +394,7 @@ export const sidebarPostgres: DefaultTheme.SidebarItem[] = [
       { text: "Serializable", link: "/postgres/02-isolation/serializable" },
       { text: "Lost updates", link: "/postgres/02-isolation/lost-update" },
       { text: "Practice: two writers", link: "/postgres/02-isolation/practice-two-writers" },
+      { text: "Practice: reading rows", link: "/postgres/02-isolation/practice-visibility" },
       {
         text: "The anomaly catalog",
         link: "/postgres/02-isolation/anomaly-catalog",
@@ -558,6 +559,7 @@ export const sidebarMysql: DefaultTheme.SidebarItem[] = [
       { text: "Serializable", link: "/mysql/02-isolation/serializable" },
       { text: "Lost updates", link: "/mysql/02-isolation/lost-update" },
       { text: "Practice: two writers", link: "/mysql/02-isolation/practice-two-writers" },
+      { text: "Practice: reading rows", link: "/mysql/02-isolation/practice-visibility" },
       {
         text: "The anomaly catalog",
         link: "/mysql/02-isolation/anomaly-catalog",
