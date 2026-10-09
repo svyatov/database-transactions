@@ -48,7 +48,7 @@ Reset to accounts 1 and 2, each with balance 100. Each transfer must debit one a
 | 3 | Send UPDATE accounts SET balance = balance + 10 WHERE id = 2 | |
 | 4 | | Send UPDATE accounts SET balance = balance + 25 WHERE id = 1 |
 
-Predict the relationship after each of the last two steps. Can both transfers finish just by waiting? Predict the controlled replay's error and balances after the surviving transfer commits. What must a failed transfer repeat, and how can acquisition order change the relationship?
+Predict whether each request completes, waits, or fails after each of the last two steps, and explain the relationship between the sessions. Can both transfers finish just by waiting? If you predict a failure, identify the error and required recovery. For the outcome you predict, state which transfers can commit and calculate the resulting balances. Explain what must be repeated, if anything, and how acquisition order could change the relationship.
 
 <details>
 <summary>Check the transfer requests</summary>

@@ -53,7 +53,7 @@ Reset to accounts 1 and 2, each with balance 100. Both transactions use READ COM
 | 3 | Send UPDATE accounts SET balance = balance + 10 WHERE id = 2 | |
 | 4 | | Send UPDATE accounts SET balance = balance + 25 WHERE id = 1 |
 
-Predict the relationship after step 3 and after step 4. Can both transfers finish by waiting? Predict the controlled replay's error and final balances when the surviving transfer commits and the other session rolls back. Explain what must be repeated and how changing acquisition order could help.
+Predict whether each request completes, waits, or fails after step 3 and after step 4, and explain the relationship between the sessions. Can both transfers finish by waiting? If you predict a failure, identify the error and required recovery. For the outcome you predict, state which transfers can commit and calculate the resulting balances. Explain what must be repeated, if anything, and how changing acquisition order could help.
 
 <details>
 <summary>Check the transfer requests</summary>
