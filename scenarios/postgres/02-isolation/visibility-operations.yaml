@@ -1,0 +1,40 @@
+title: Reading one row with two operations
+claim: >-
+  In this PostgreSQL REPEATABLE READ schedule, A's plain SELECT retains 100
+  after B commits 150, but SELECT FOR UPDATE fails with 40001. After rollback,
+  a fresh attempt locks 150, writes 200, and reads its own 200 while B still
+  reads 150; after A commits, B reads 200.
+isolation: REPEATABLE READ
+setup: |
+  CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
+  INSERT INTO accounts VALUES (1, 100);
+sessions: [A, B]
+steps:
+  - A: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+    tl: Plain SELECT
+  - B: UPDATE accounts SET balance = 150 WHERE id = 1
+    affected: 1
+    tl: UPDATE; autocommit
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 100 }]
+    tl: Plain SELECT
+  - A.fails: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE
+    error: "40001"
+    tl: Locking SELECT
+  - A: ROLLBACK
+  - A: BEGIN ISOLATION LEVEL REPEATABLE READ
+  - A: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE
+    expect: [{ balance: 150 }]
+    tl: Locking SELECT in fresh attempt
+  - A: UPDATE accounts SET balance = balance + 50 WHERE id = 1
+    affected: 1
+  - A: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 200 }]
+    tl: Plain SELECT after own UPDATE
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 150 }]
+  - A: COMMIT
+  - B: SELECT balance FROM accounts WHERE id = 1
+    expect: [{ balance: 200 }]
