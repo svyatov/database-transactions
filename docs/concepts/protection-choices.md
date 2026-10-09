@@ -1,17 +1,17 @@
 ---
-description: Choose a protection from the business rule, participating writers, and conflict response, with worked stock and stale-edit decisions.
+description: Choose a protection from the business rule, participating writers, and conflict response, with worked stock, stale-edit, and staffing decisions.
 ---
 
 # Choose a protection
 
-Start with the rule and the operations that can break it. An isolation-level name alone does not choose an application protocol. These five cases form a reading guide; stock and stale edits are worked below, while the other cases lead to their existing lessons.
+Start with the rule and the operations that can break it. An isolation-level name alone does not choose an application protocol. These five cases form a reading guide; stock, stale edits, and staffing are worked below, while request identity and external effects lead to their existing lessons.
 
 | Business rule | Start with | Evidence and next decision |
 | --- | --- | --- |
 | Stock must not become negative | A checked single-row change | [Nonnegative stock](#nonnegative-stock) |
 | One request identity must not create two database-local operations | A unique key and a transaction | [PostgreSQL](/postgres/05-patterns/idempotency), [MySQL](/mysql/05-patterns/idempotency) |
 | A newer edit must not be silently replaced | A checked revision | [Stale edits](#stale-edits) |
-| At least one doctor must remain on call | Coordinate all writers of the cross-row rule | [PostgreSQL](/postgres/02-isolation/serializable), [MySQL](/mysql/02-isolation/serializable) |
+| At least one doctor must remain on call | Coordinate all writers of the cross-row rule | [On-call staffing](#at-least-one-doctor-on-call) |
 | An order and its effect intent must commit together | A database-local outbox transaction, with separate delivery responsibilities | [PostgreSQL](/postgres/06-distributed/transactional-outbox), [MySQL](/mysql/06-distributed/transactional-outbox) |
 
 ## Nonnegative stock
@@ -59,3 +59,21 @@ WHERE id = 1 AND version = 1;
 **Tempting failed repair:** fetch the latest version and automatically resend the old replacement. The failed-repair branches write B's old draft against version 2 and assert `B edit`, version 3: A's text has been replaced. Raising isolation only around the save does not establish protection for an earlier standalone read. Compare the [PostgreSQL practice](/postgres/02-isolation/practice-two-writers) and [MySQL practice](/mysql/02-isolation/practice-two-writers).
 
 **Limits:** a nonparticipating writer defeats the revision protocol. The predicate detects an unmatched revision or missing row, not whether two texts can be safely merged. [The additive-deposit retry](/postgres/05-patterns/fixing-lost-updates#fix-3-a-version-column-optimistic) deliberately rereads and recomputes an increment; it is not a general instruction to retry human edits blindly. External publication and cross-row rules need their own boundary.
+
+## At least one doctor on call
+
+**Rule:** at least one doctor in the staffing set must remain on call. A request can remove its doctor only if the count is greater than one. Initially the set satisfies the rule. Try the [PostgreSQL staffing practice](/postgres/02-isolation/practice-cross-row) or [MySQL staffing practice](/mysql/02-isolation/practice-cross-row) before reading the worked outcome.
+
+**Assumptions and participating writers:** the evidence uses PostgreSQL 18.6 and MySQL 8.4.11 InnoDB, with two named doctors and one removal per request. Every operation that can reduce the set's on-call count must preserve the same rule, including administration, deletion, bulk changes, and changes of set membership. A count for one set cannot justify a change to another. These Scenarios execute two removals, not those administrative paths. All writers must coordinate on the shared staffing decision, not merely on the different row each writes.
+
+**Protection and transaction boundary:** use one explicit SERIALIZABLE transaction containing the count, application decision, permitted removal, and commit. At a count of one, decline the removal. PostgreSQL uses snapshot reads with SSI dependency monitoring. InnoDB's count SELECT in this explicit transaction takes shared locks; its query/index determines the coverage. Do not split the count and change into separate autocommit transactions. The choice fits this cross-row decision because a correct serial execution of these participating requests preserves the rule; it is not a claim that SERIALIZABLE is always the cheapest protection.
+
+**Demonstrated behavior:** the [PostgreSQL REPEATABLE READ schedule](/postgres/02-isolation/serializable#why-repeatable-read-isn-t-enough-write-skew) and [MySQL counterpart](/mysql/02-isolation/serializable#write-skew-at-repeatable-read) each commit both separate-row removals and assert zero on call. Under SERIALIZABLE, [PostgreSQL rejects B's COMMIT with 40001](/postgres/02-isolation/serializable#the-same-interleaving-serializable); [InnoDB with deadlock detection enabled rejects B's UPDATE with 1213](/mysql/02-isolation/serializable#serializable-stops-it-with-locks). A commits, then a fresh B attempt counts one and keeps Bob on call. These fixed schedules do not establish a universal victim or failure point.
+
+**Conflict response:** on PostgreSQL `40001`, discard the aborted attempt and retry the whole transaction with fresh reads and decisions, with a bound, or return controlled failure. An InnoDB deadlock rolls back the whole transaction; apply the same fresh-decision policy for `1213`. Handle [timeouts and other errors](/errors/) according to their own rollback scope. Do not resend only the saved removal or report an aborted attempt as success. The fresh count of one is a business refusal, not a retryable instruction to remove the last doctor. Keep external effects outside a blindly repeated body.
+
+**Tempting failed repair:** rely on REPEATABLE READ plus each UPDATE's lock on its own doctor. That is already the failed separate-row schedule: stable reads and different write targets do not coordinate the aggregate rule. Acquiring only one's own row lock after making the count decision supplies no shared decision boundary.
+
+**Documented contracts:** the [PostgreSQL 18 manual](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE) states that SSI monitoring “does not introduce any blocking” beyond REPEATABLE READ. Ordinary write and explicit-lock conflicts can still wait. The [MySQL 8.4 manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html#isolevel_serializable) says InnoDB “implicitly converts all plain SELECT statements to SELECT ... FOR SHARE” if autocommit is disabled. The [engine lesson](/mysql/02-isolation/serializable#serializable-stops-it-with-locks) executes the explicit-transaction behavior and the standalone autocommit exception. The [InnoDB error contract](https://dev.mysql.com/doc/refman/8.4/en/innodb-error-handling.html) states: “A transaction deadlock causes InnoDB to roll back the entire transaction.”
+
+**Entailed guarantee† and limits:** if the initial set satisfies the rule, every participating transaction preserves it in serial execution, and all relevant changes obey this boundary, serial-equivalent committed execution preserves at least one doctor. † This is a derivation from those assumptions and the linked SERIALIZABLE contracts; no Transcript proves every schedule. Serializable execution cannot correct a transaction that removes the last doctor even when it runs alone. Alternative explicit coordination needs a shared resource and a correct read/check/change protocol for every writer; no additional locking recipe or cost comparison is demonstrated here. The [logical dependency model](/postgres/02-isolation/serializable#logical-dependencies) and [lock-wait model](/mysql/02-isolation/serializable#lock-wait-relationships) describe different relationships, not interchangeable arrows.

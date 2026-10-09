@@ -395,6 +395,7 @@ export const sidebarPostgres: DefaultTheme.SidebarItem[] = [
       { text: "Lost updates", link: "/postgres/02-isolation/lost-update" },
       { text: "Practice: two writers", link: "/postgres/02-isolation/practice-two-writers" },
       { text: "Practice: reading rows", link: "/postgres/02-isolation/practice-visibility" },
+      { text: "Practice: a staffing decision", link: "/postgres/02-isolation/practice-cross-row" },
       {
         text: "The anomaly catalog",
         link: "/postgres/02-isolation/anomaly-catalog",
@@ -561,6 +562,7 @@ export const sidebarMysql: DefaultTheme.SidebarItem[] = [
       { text: "Lost updates", link: "/mysql/02-isolation/lost-update" },
       { text: "Practice: two writers", link: "/mysql/02-isolation/practice-two-writers" },
       { text: "Practice: reading rows", link: "/mysql/02-isolation/practice-visibility" },
+      { text: "Practice: a staffing decision", link: "/mysql/02-isolation/practice-cross-row" },
       {
         text: "The anomaly catalog",
         link: "/mysql/02-isolation/anomaly-catalog",

@@ -1,5 +1,7 @@
 # Serializable
 
+For a prediction task, open [the staffing practice](/mysql/02-isolation/practice-cross-row) before reading the explanations below.
+
 A cross-row business rule can fail even when concurrent transactions write
 different rows. These MySQL 8.4.11 InnoDB Scenarios use the rule that at least
 one doctor stays on call. Each request counts two doctors and removes a different
@@ -57,6 +59,21 @@ This derivation uses the manual's locking-read and SERIALIZABLE contracts, not
 just the observed count of one. Other writers that bypass the check can still
 break the rule. Suitable explicit coordination can also protect it; SERIALIZABLE
 is not the only possible repair, and no cost comparison is measured here.
+
+## Lock-wait relationships
+
+<figure class="mechanism">
+<div class="mechanism-view" tabindex="0" role="region" aria-label="Scrollable InnoDB on-call lock-wait model">
+<img src="/diagrams/mysql-on-call-lock-waits.svg" alt="Solid waiter-to-holder arrows: A requests exclusive access to Alice held shared by B; B requests exclusive access to Bob held shared by A." />
+</div>
+<figcaption>Relevant lock conflicts after both explicit SERIALIZABLE count reads. Solid filled arrows show waiter-to-holder relationships. With deadlock detection enabled the demonstrated schedule rejects B; the picture is not a complete index-lock inventory.</figcaption>
+</figure>
+
+**Text equivalent:** both count reads hold shared locks covering Alice and Bob. A's UPDATE requests exclusive access to Alice and waits for B's shared lock. B's UPDATE requests exclusive access to Bob, conflicting with A's shared lock. That request closes the cycle; B is rejected with 1213 in [this asserted schedule](#serializable-stops-it-with-locks). Its rollback releases the conflict, A completes, and the fresh B attempt checks the rule again. The SELECT-to-lock explanation uses the [MySQL 8.4 SERIALIZABLE contract](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html#isolevel_serializable), not an assertion that this diagram decodes every acquired lock.
+
+The [PostgreSQL dependency picture](/postgres/02-isolation/serializable#logical-dependencies) uses dashed reader-to-writer edges for logical ordering requirements. Those dependencies need not block a statement. The REPEATABLE READ separate-row schedules on both engines have that logical cycle without this lock-wait cycle; InnoDB does not implement PostgreSQL SSI. Preserve that distinction when reading either generated timeline.
+
+For the participating writers and conflict policy, use the [on-call worked decision](/concepts/protection-choices#at-least-one-doctor-on-call).
 
 ## Further reading
 
