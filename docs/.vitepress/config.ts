@@ -415,6 +415,7 @@ export const sidebarPostgres: DefaultTheme.SidebarItem[] = [
         link: "/postgres/03-locking/table-locks-and-ddl",
       },
       { text: "Deadlocks", link: "/postgres/03-locking/deadlocks" },
+      { text: "Practice: concurrent requests", link: "/postgres/03-locking/practice-concurrent-requests" },
       {
         text: "Monitoring locks",
         link: "/postgres/03-locking/monitoring-locks",
@@ -581,6 +582,7 @@ export const sidebarMysql: DefaultTheme.SidebarItem[] = [
         link: "/mysql/03-locking/table-locks-and-ddl",
       },
       { text: "Deadlocks", link: "/mysql/03-locking/deadlocks" },
+      { text: "Practice: concurrent requests", link: "/mysql/03-locking/practice-concurrent-requests" },
       { text: "Monitoring locks", link: "/mysql/03-locking/monitoring-locks" },
     ],
   },
