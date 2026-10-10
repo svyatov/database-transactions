@@ -1,9 +1,9 @@
-title: "The read view: taken at first read, not at BEGIN"
+title: "REPEATABLE READ: the view starts at the first consistent read"
 claim: >-
-  BEGIN does not take the snapshot — the transaction's first read does. START
-  TRANSACTION WITH CONSISTENT SNAPSHOT takes it immediately. And until it
-  writes, a transaction doesn't even get a real transaction ID — readers are
-  cheap by design.
+  At MySQL 8.4 InnoDB REPEATABLE READ, R sees a commit after BEGIN but
+  before its first consistent read. WITH CONSISTENT SNAPSHOT instead retains
+  the start-time balance. This build shows a trx_id above 2^48 before R writes
+  and below it afterward; that threshold is an observation, not an ID-format contract.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -31,18 +31,18 @@ steps:
     tl: read → 999 (snapshot predates it)
 
   - note: >-
-      One more thing R hasn't needed so far: a transaction ID. InnoDB hands
-      read-only transactions a placeholder above 2^48 instead of consuming a
-      real, persistent ID.
+      The documented nonlocking read-only optimization avoids a persistent
+      transaction ID. This build exposes a placeholder above 2^48 for R;
+      that numeric representation is not a public format guarantee.
   - sleep: 300
   - A: SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx
     expect: [{ placeholder_id: 1 }]
-    comment: R is the only open transaction — and its ID is fake
+    comment: R is the only open transaction; this build reports an ID above 2^48
 
   - R: UPDATE accounts SET balance = balance + 1 WHERE id = 1
     comment: R's first write…
   - sleep: 300
   - A: SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx
     expect: [{ placeholder_id: 0 }]
-    comment: …and only now does it get a real transaction ID
+    comment: after the write, this build reports an ID below 2^48
   - R: COMMIT

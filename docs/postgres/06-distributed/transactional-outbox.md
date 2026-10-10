@@ -1,54 +1,59 @@
 # The dual-write problem & the transactional outbox
 
-Every problem so far lived inside one database, where `BEGIN` … `COMMIT` could always
-save you. This chapter is about the moment that stops being true: there is no `BEGIN`
-that spans PostgreSQL and Kafka. The theory (why two writes to two systems can't be
-made atomic, and how an outbox shrinks the damage) is
-[Concepts: dual writes & the outbox](/concepts/transactional-outbox); this page proves
-it on PostgreSQL, crashes included.
+A local PostgreSQL transaction covers its database changes. A separately
+committed publication is outside that boundary. These examples use database
+tables and explicit statement ordering, not Kafka, HTTP, or a live broker.
+The [shared explanation](/concepts/transactional-outbox) describes the design;
+the observations and limits of the PostgreSQL examples are given here.
 
 ## The dual-write problem
 
-Write to the database and publish to the broker, two writes, two systems, and a process
-that can die between them:
+The `broker` table is a Receiver model: its records commit separately from the
+order operation under study. Both tables are in one PostgreSQL database.
+The first schedule deliberately omits publication after committing order 1.
+The second commits a broker record, then the order insert fails its CHECK.
 
 <!--@include: ./parts/dual-write-problem.md-->
 
-Write-first loses events; publish-first invents them.
-[Retries only change the odds](/concepts/transactional-outbox#the-dual-write-problem).
+The assertions show one order without an event and one event without its order.
+No process is killed and no downstream consumer runs. These are modeled
+boundary observations, not proof of permanent disagreement in every system.
+If both writes used the same database transaction, this split would disappear.
 
-## The fix: only ever write to one system
+## The fix: write order and event intent together {#the-fix-only-ever-write-to-one-system}
 
-The application never talks to the broker at all. The event is written to the same
-database, in the same transaction as the order, and
-[atomicity](/postgres/01-basics/what-is-a-transaction), which PostgreSQL has guaranteed
-since chapter 1, does the rest:
+Write the order and the outbox row in the same transaction:
 
 <!--@include: ./parts/transactional-outbox.md-->
 
-A separate *relay* process moves events from the outbox to the broker. It is exactly
-the [SKIP LOCKED job-queue worker](/postgres/05-patterns/job-queue) from chapter 5, pointed at
-the `outbox` table.
+The assertions check committed order 1 and its event, and the absence of rolled-back
+order 2 and its event. The relay locks the available row, deletes it, and rolls
+back explicitly. The row is selectable again; the next delete commits and the
+pending count becomes zero. This is Demonstrated behavior of outbox state.
 
-## At-least-once, by construction
+## Delivery requires a separate protocol {#at-least-once-by-construction}
 
-Look closely at what the crash proved. The relay published the event, then died before
-committing the `DELETE`, so the event is delivered *twice*. That is
-[the deal you signed](/concepts/transactional-outbox#at-least-once-by-construction):
-at-least-once delivery, and repeats are exactly what chapter 5's
-[idempotency keys](/postgres/05-patterns/idempotency) already handle on the consumer side.
+The relay's publication step is explanatory narration only: this scenario
+records no receiver effect. It proves neither delivery nor a repeated effect.
+Its [SKIP LOCKED selection](/postgres/05-patterns/job-queue) protects database
+row selection under the stated worker protocol, not external execution.
 
-The shape to remember: the order and its event commit or vanish together, with no window
-where one exists without the other, and a relay that is nothing more than a SKIP LOCKED
-worker (crash-safe, parallelizable, five lines of SQL) carries them onward. The price
-of that simplicity is at-least-once delivery, so consumers have to be idempotent. Polling
-the outbox also adds latency, which the
-[next lesson](/postgres/06-distributed/listen-notify) trades away with a transactional
-wake-up call.
+† If a relay publishes successfully before committing removal of the outbox
+row, a failure in between leaves the row eligible for another publication.
+That duplicate window follows from the two separate commit boundaries.
+This is an Entailed guarantee, not an observed receiver count here.
+An at-least-once delivery design also requires durable event retention,
+continued retries, and an available receiver; this SQL alone cannot ensure them.
+Consumers must handle repeats under their own effect boundary.
+
+[LISTEN/NOTIFY](/postgres/06-distributed/listen-notify) can signal committed
+work to a connected listener. Retain polling or another recovery path for
+missed notifications; no relay latency is measured here.
 
 ## Further reading
 
-- [microservices.io: Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html)
-- [microservices.io: Polling publisher](https://microservices.io/patterns/data/polling-publisher.html):
-  the relay variant shown here
+- [PostgreSQL 18: Transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html)
+- [Transactional outbox design](https://microservices.io/patterns/data/transactional-outbox.html)
 - [The same lesson on MySQL](/mysql/06-distributed/transactional-outbox)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-distributed) records the exact manual support and execution limits for this lesson.

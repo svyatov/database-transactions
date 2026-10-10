@@ -1,56 +1,43 @@
 # Purge: the VACUUM you never run
 
-PostgreSQL's [VACUUM](/postgres/04-mvcc/vacuum) needs a whole lesson about when to run it,
-what it can and can't reclaim, and how to tell whether autovacuum is keeping up. InnoDB's
-equivalent is *purge*, and the headline is how little of that lesson transfers: purge is
-a set of background threads, always on, with no command to invoke and no per-table
-scheduling to tune.
-
-What it does, per the
-[manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html): "A row
-and its index records are only physically removed when `InnoDB` discards the undo log
-record written for the deletion. This removal operation, which only occurs after the row is
-no longer required for multi-version concurrency control (MVCC) or rollback, is called a
-purge." It's the second half of the delete-marking story from
-[undo logs](/mysql/04-mvcc/undo-logs): DELETE marks, purge removes.
+MySQL 8.4 InnoDB uses background purge to discard eligible update undo and physically remove
+delete-marked rows and index records. Eligibility depends on MVCC and rollback requirements.
+The [MySQL 8.4 purge manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html)
+limits removal to "after the row is no longer required for multi-version concurrency control (MVCC) or rollback".
+This Documented contract supplies no demonstrated completion deadline.
 
 ::: info Where's the transcript?
-This page has no scenario of its own, deliberately. Purge's *inputs* are proven elsewhere:
-[history piles up behind a read view](/mysql/04-mvcc/history-list-length), and
-[delete-marked rows stay readable](/mysql/04-mvcc/undo-logs). But purge's *timing* is a
-background heuristic: in our probing it sometimes drained hundreds of history entries in a
-couple of seconds and sometimes sat on them for half a minute, depending on write activity.
-"The history list drains eventually" is true and everything below is quoted from the
-manual, but a deterministic, CI-stable transcript of *when* would be a lie, so we don't
-print one. (The same honesty rule as
-[PostgreSQL's wraparound lesson](/postgres/04-mvcc/wraparound).)
+This page has no scenario of its own. [History-list growth](/mysql/04-mvcc/history-list-length)
+and [old-row visibility](/mysql/04-mvcc/undo-logs) demonstrate retention and visibility.
+They do not measure when purge finishes, guarantee eventual drainage under sustained load,
+or prove that undo tablespace files shrink after a reader ends.
 :::
 
 ## What there is to tune
 
-Almost nothing, usually. The knobs exist for extreme cases:
+The [MySQL 8.4 variable reference](https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_purge_threads)
+describes `innodb_purge_threads` as "The number of background threads devoted to the InnoDB purge operation."
+The purge system can use fewer threads than this maximum. The same reference defines
+[`innodb_purge_batch_size`](https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_purge_batch_size)
+in undo-log pages and [`innodb_max_purge_lag`](https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_max_purge_lag)
+as a threshold for delaying INSERT, UPDATE and DELETE while purge catches up. For a zero
+threshold it specifies "no maximum purge lag and no delay". These are tuning controls,
+not measurements from this site. The [support assessment](/audits/40-reconstructed-support#purge)
+retains the exact parameter passages and their conditions.
 
-- `innodb_purge_threads`: parallelism of the purge subsystem.
-- `innodb_purge_batch_size`: undo log pages processed per batch.
-- `innodb_max_purge_lag`: the emergency brake. When the history list exceeds this, InnoDB
-  delays writes to let purge catch up. Off (0) by default.
+Inspect old read views, write load, and the [history-list trend](/mysql/04-mvcc/history-list-length)
+before choosing settings. Releasing a blocking read view permits more cleanup; it does not
+force immediate completion. Discarding undo and truncating an undo tablespace are different
+operations, as the [undo-tablespace manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-undo-tablespaces.html)
+explains. Purge also changes table/index storage by removing eligible delete-marked records;
+undo retention is not the only source of storage growth or read cost.
 
-If you find yourself reaching for these, the root cause is almost always upstream: a
-long-running transaction holding the oldest read view, or a write burst purge will absorb
-on its own. Check
-[`trx_rseg_history_len`](/mysql/04-mvcc/history-list-length) before tuning anything.
-
-Purge is automatic, background, always-on garbage collection of undo history and delete-marked
-rows; there's no `VACUUM` command to run, schedule, or forget. It can only reclaim history
-older than the oldest open read view, so the lever you actually control is transaction length,
-not purge settings. And because undo lives in undo tablespaces rather than in the tables, its
-bloat inflates those files instead of slowing table scans the way PostgreSQL's dead tuples do,
-which closes the loop on how InnoDB keeps concurrent readers and writers out of each other's
-way, ready to put to work in the [real-world patterns](/mysql/05-patterns/fixing-lost-updates)
-that follow.
+There is no PostgreSQL-style per-table `VACUUM` command for purge, but its configuration and
+workload still affect cleanup. Compare [VACUUM](/postgres/04-mvcc/vacuum), then continue to
+[application patterns](/mysql/05-patterns/fixing-lost-updates).
 
 ## Further reading
 
-- [MySQL docs: Purge Configuration](https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html)
 - [MySQL docs: Undo Logs](https://dev.mysql.com/doc/refman/8.4/en/innodb-undo-logs.html)
-- [The PostgreSQL counterpart: VACUUM](/postgres/04-mvcc/vacuum)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-mvcc) records the exact manual support and execution limits for this lesson.

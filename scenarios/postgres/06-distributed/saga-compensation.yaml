@@ -1,8 +1,8 @@
 title: A saga and its compensating transaction
 claim: >-
-  A saga replaces one distributed transaction with a chain of local ones:
-  every step commits immediately and is visible to everyone, and a failed
-  step is undone by a new compensating transaction — not by ROLLBACK.
+  In this two-table saga model, a READ COMMITTED Reader sees four flight
+  seats after the first commit. A hotel update affects zero rows, then
+  a new compensating transaction restores five seats. No remote service runs.
 setup: |
   CREATE TABLE flights (id int PRIMARY KEY, seats int NOT NULL CHECK (seats >= 0));
   CREATE TABLE hotels  (id int PRIMARY KEY, rooms int NOT NULL CHECK (rooms >= 0));
@@ -16,7 +16,7 @@ steps:
     expect: [{ seats: 4 }]
   - Saga: COMMIT
 
-  - note: "A saga has no isolation: between steps, the whole world sees the half-done trip."
+  - note: "There is no enclosing transaction across steps. This standalone READ COMMITTED Reader sees the committed intermediate seat count."
   - Reader: SELECT seats FROM flights WHERE id = 1
     expect: [{ seats: 4 }]
 

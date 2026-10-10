@@ -177,3 +177,28 @@
   font-weight: 600;
   color: var(--vp-c-danger-1);
 }
+
+/* Static mechanism diagrams retain readable labels on narrow screens. */
+.mechanism {
+  margin: 24px 0;
+}
+
+.mechanism-view {
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.mechanism-view:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 3px;
+}
+
+.mechanism-view img {
+  width: 580px;
+  max-width: none;
+}
+
+.mechanism figcaption {
+  margin-top: 12px;
+  color: var(--vp-c-text-2);
+}

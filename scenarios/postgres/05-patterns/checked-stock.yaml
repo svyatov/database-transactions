@@ -1,0 +1,30 @@
+title: Checked stock decrement with two buyers
+claim: >-
+  Two buyers each request four of five units. B waits for A; after A commits,
+  B's checked decrement affects zero rows and B rolls back. One unit remains.
+  A subsequent unguarded decrement leaves minus three.
+setup: |
+  CREATE TABLE stock (id int PRIMARY KEY, quantity int NOT NULL);
+  INSERT INTO stock VALUES (1, 5);
+sessions: [A, B]
+steps:
+
+  - A: BEGIN ISOLATION LEVEL READ COMMITTED
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
+  - A: UPDATE stock SET quantity = quantity - 4 WHERE id = 1 AND quantity >= 4
+    affected: 1
+  - B: UPDATE stock SET quantity = quantity - 4 WHERE id = 1 AND quantity >= 4
+    blocks: buy
+  - A: COMMIT
+  - success: buy
+    affected: 0
+  - B: ROLLBACK
+  - A: SELECT quantity FROM stock WHERE id = 1
+    expect: [{ quantity: 1 }]
+  - note: Contrast an unconditional decrement after the checked rejection. This deliberately breaks the stock rule.
+  - B: BEGIN ISOLATION LEVEL READ COMMITTED
+  - B: UPDATE stock SET quantity = quantity - 4 WHERE id = 1
+    affected: 1
+  - B: COMMIT
+  - A: SELECT quantity FROM stock WHERE id = 1
+    expect: [{ quantity: -3 }]

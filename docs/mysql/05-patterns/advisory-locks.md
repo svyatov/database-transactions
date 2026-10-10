@@ -1,43 +1,18 @@
 # Advisory locks: locking ideas, not rows
 
-Sometimes the thing you need to serialize isn't a row. "Only one migration at a time",
-"one cache rebuild at a time", "one cron instance per task". There's no table to lock,
-because the resource is an *idea*. MySQL's tool for this is the user-level lock:
-`GET_LOCK(name, timeout)`.
-
-The [manual](https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html): GET_LOCK
-"tries to obtain a lock with a name given by the string `str`, using a timeout of
-`timeout` seconds. … The lock is exclusive. While held by one session, other sessions
-cannot obtain a lock of the same name." It "returns `1` if the lock was obtained
-successfully, `0` if the attempt timed out".
+MySQL's `GET_LOCK(name, timeout)` lets cooperating clients serialize work under an agreed name without locking a table row. In this schedule, the name is `migration`. The [MySQL 8.4 manual](https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html#function_get-lock) states: "The lock is exclusive." Code that does not acquire that name is not protected by it.
 
 <!--@include: ./parts/advisory-locks.md-->
 
 ## Session-level only, and that's the sharp edge
 
-The transcript's middle section is the part that bites people: transactions are
-irrelevant to these locks. The manual, verbatim: "Locks obtained with `GET_LOCK()` are
-not released when transactions commit or roll back." There is no transaction-scoped
-variant. PostgreSQL has both
-([`pg_advisory_lock` and `pg_advisory_xact_lock`](/postgres/05-patterns/advisory-locks));
-MySQL gives you session-scoped or nothing. Release paths, per the manual: "released
-explicitly by executing `RELEASE_LOCK()` or implicitly when your session terminates
-(either normally or abnormally)."
+A acquires the name. B's attempts with timeouts 0 and 1 return 0 while A holds it; the scenario asserts those results, not elapsed time. A's COMMIT does not release the name. After A calls `RELEASE_LOCK`, B obtains it, acquires a second name, and releases both with `RELEASE_ALL_LOCKS`.
 
-The implicit release is the crash-safety story: a deploy runner that dies takes its
-session (and its `migration` lock) with it. But it's also the connection-pool trap: a
-*pooled connection doesn't terminate* when your request ends. Forget to release, return
-the connection to the pool, and the lock lives on in a healthy idle session that no code
-remembers owning. With a pool, always release in a `finally`, or pin the lock to a
-dedicated connection.
+The [manual's release contract](https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html#function_get-lock) says: "Locks obtained with `GET_LOCK()` are not released when transactions commit or roll back." It also documents release when the session terminates and infinite waiting for a negative timeout. These are Documented contracts; this scenario does not terminate a session, roll back, or exercise a negative timeout. A lock acquisition can return NULL on error, and a user-lock deadlock raises `ER_USER_LOCK_DEADLOCK` without rolling back the transaction. Do not treat every result as a successful acquisition or apply the InnoDB `1213` rule to that separate error.
 
-A few operational notes worth keeping. `GET_LOCK(name, 0)` is a try-lock, a positive
-timeout is a bounded wait that returns `0` rather than erroring when it expires, and `-1`
-waits forever. The locks are session-scoped, so COMMIT and ROLLBACK never touch them and
-only a disconnect or crash releases them. With pooled connections that means nothing
-auto-releases, so reach for `finally`. `IS_FREE_LOCK` peeks without taking,
-`RELEASE_ALL_LOCKS()` returns how many locks it dropped, and because names are
-server-global you'll want to prefix them (`myapp:migration`) on a shared server.
+**Entailed guarantee†:** returning a still-open connection to a pool does not end its session, so it does not release that session's named locks. † This follows from the documented release boundary, not a pool execution here. Keep acquisition and release on the same physical connection, check acquisition, and release in `finally`. Handle cleanup failure before returning the connection for reuse. A dedicated connection still needs a release or termination path; a dead client is not a measured prompt-release guarantee.
+
+Names are server-wide, so prefix them for the application on a shared server. `IS_FREE_LOCK` reports availability at the time of the query; it does not reserve a lock. A session can acquire the same name more than once, and all acquisitions must be released before another session can obtain it, as documented in the same manual section.
 
 ## Further reading
 

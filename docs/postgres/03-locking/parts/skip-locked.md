@@ -9,7 +9,7 @@ A: ROLLBACK → job 1 back on the queue
 D: SKIP LOCKED → job 1
 ```
 
-*Four workers run the exact same query at the same time.*
+*Four sessions run the same query in the listed order with overlapping transactions.*
 
 ```transcript
 A> BEGIN;
@@ -40,14 +40,14 @@ C> SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (1 row)
 ```
 
-*Worker D finds the queue empty — an instant answer, not a wait.*
+*D finds no lockable row in this query; three rows still exist.*
 
 ```transcript
 D> SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
 (0 rows)
 ```
 
-*A worker crash (rollback) puts its job straight back on the queue.*
+*Explicit ROLLBACK releases A's row lock; a process crash is not injected.*
 
 ```transcript
 A> ROLLBACK;

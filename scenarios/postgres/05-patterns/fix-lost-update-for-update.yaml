@@ -1,8 +1,8 @@
 title: "Fixing lost updates #2: SELECT ... FOR UPDATE"
 claim: >-
-  When the new value must be computed in application code, SELECT ... FOR
-  UPDATE serializes the read-modify-write: the second reader waits and then
-  reads the committed 110, so both deposits land.
+  At READ COMMITTED, both writers lock before reading and update within the
+  same transaction. B waits and reads A's committed 110; the final balance
+  is 120. Other writer protocols and external effects are not tested.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -21,7 +21,7 @@ steps:
   - A: UPDATE accounts SET balance = ${a.balance} + 10 WHERE id = 1
   - A: COMMIT
 
-  - note: B's locked read waited out A's transaction — and returns the fresh 110, not the 100 it would have seen.
+  - note: B's locking read waited for A's transaction. The next assertion checks that it returns 110.
   - success: p1
     expect: [{ balance: 110 }]
     capture: b

@@ -18,9 +18,9 @@ Session A: SELECT balance → 200 ← same query, different answer
 Session A: COMMIT
 ```
 
-Formally Adya's *P2*. It is the flagship anomaly of READ COMMITTED, where every statement
-gets a fresh snapshot: each statement is internally consistent, but two statements may
-disagree with each other.
+The timeline is illustrative; linked Scenarios provide the actual setup and assertions.
+
+Formally P2. At READ COMMITTED, plain consistent SELECTs use new statement snapshots, plus own prior writes. Updating and locking commands have separate rules; a complex updating command is not promised one globally consistent view. See [operation scope](/concepts/isolation-levels).
 
 ## Read skew
 
@@ -35,8 +35,7 @@ Session B: COMMIT
 Session A: SELECT balance WHERE id = 2 → 500 ← total reads 1000; it was never 1000
 ```
 
-A backup taken this way is corrupt; a report computed this way is wrong, even though no
-single read misbehaved.
+An application that combines these reads as one simultaneous total can compute an incorrect result. No backup program or report publication runs here.
 
 ## Who prevents it
 
@@ -46,10 +45,7 @@ single read misbehaved.
 | REPEATABLE READ | prevented | prevented ([proof](/postgres/02-isolation/repeatable-read#one-snapshot-no-phantoms)) | prevented for plain SELECTs ([proof](/mysql/02-isolation/repeatable-read#one-snapshot-no-phantoms)); UPDATE/DELETE are [current reads](/mysql/02-isolation/repeatable-read#current-reads-punch-holes-in-the-snapshot) that bypass the snapshot |
 | SERIALIZABLE | prevented | prevented | prevented |
 
-The cure is a per-transaction snapshot: at REPEATABLE READ, both engines give your SELECTs
-one frozen view for the whole transaction. MySQL's asterisk matters, though: its writes and
-locking reads see the *current* data regardless of the snapshot, which is exactly how
-[lost updates](/concepts/lost-update) survive there.
+The stable-read contract excludes later concurrent commits in one REPEATABLE READ transaction. PostgreSQL establishes its snapshot at the first non-control statement; InnoDB at the first consistent read. Own writes remain visible in both. SERIALIZABLE exclusions in the table are documented/derived support, not extra executions; InnoDB's explicit-transaction and autocommit distinction matters. See the [level contracts](/concepts/isolation-levels) and [marked catalog derivations](/concepts/anomalies-by-engine).
 
 ## Related anomalies
 

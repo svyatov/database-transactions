@@ -9,7 +9,7 @@ A: ⏵ needs bob (id=2) → completes
 ```
 
 ```transcript
-A> SET deadlock_timeout = '10s'; -- In production the victim is effectively arbitrary — whichever waiter's deadlock_timeout (default 1s) fires first runs the check and aborts itself. We pin it here so the transcript is reproducible: B checks first.
+A> SET deadlock_timeout = '10s'; -- General victim choice must not be relied on. These unequal detection timeouts make B the observed victim in this controlled schedule; no universal minimum cycle duration is asserted.
 SET
 
 B> SET deadlock_timeout = '50ms';
@@ -58,7 +58,7 @@ COMMIT
 B> ROLLBACK;
 ROLLBACK
 
-A> SELECT owner, balance FROM accounts ORDER BY id; -- A's transfer survived; B's evaporated — retry it
+A> SELECT owner, balance FROM accounts ORDER BY id; -- A's transfer committed; B's database changes did not commit
  owner | balance 
 -------+---------
  alice |      90 

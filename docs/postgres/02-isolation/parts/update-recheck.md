@@ -9,7 +9,7 @@ B: SELECT → 20, 30 ← B re-checked WHERE, matched 0 rows
 ```
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE items SET value = value * 2 WHERE id = 1; -- row 1: 10 → 20, uncommitted

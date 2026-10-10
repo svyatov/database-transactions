@@ -10,7 +10,7 @@ A> SELECT pg_sleep(2); -- query_canceled
 ERROR:  57014: canceling statement due to statement timeout
 ```
 
-*Only the statement died — the session and its transaction state are fine.*
+*The canceled standalone statement's implicit transaction ended; the session remains usable.*
 
 ```transcript
 A> SELECT 'still here' AS session;
@@ -20,7 +20,32 @@ A> SELECT 'still here' AS session;
 (1 row)
 ```
 
-*transaction_timeout (PostgreSQL 17+): a hard ceiling on the whole transaction — idle or busy.*
+*In an explicit transaction, statement cancellation leaves the transaction failed.*
+
+```transcript
+A> BEGIN;
+BEGIN
+
+A> UPDATE accounts SET balance = 999 WHERE id = 1;
+UPDATE 1
+
+A> SELECT pg_sleep(2);
+ERROR:  57014: canceling statement due to statement timeout
+
+A> SELECT balance FROM accounts WHERE id = 1;
+ERROR:  25P02: current transaction is aborted, commands ignored until end of transaction block
+
+A> ROLLBACK;
+ROLLBACK
+
+M> SELECT balance FROM accounts WHERE id = 1;
+ balance 
+---------
+     100 
+(1 row)
+```
+
+*transaction_timeout (PostgreSQL 17+) terminates the session when its transaction exceeds the limit. This run exercises the idle case; prepared transactions are exempt by the manual contract.*
 
 ```transcript
 A> RESET statement_timeout;
@@ -36,7 +61,7 @@ A> UPDATE accounts SET balance = 999 WHERE id = 1;
 UPDATE 1
 ```
 
-*This timeout doesn't cancel a statement — it terminates the backend:*
+*After the transaction timeout interval, A's backend is absent:*
 
 ```transcript
 M> SELECT count(*)::int AS backends FROM pg_stat_activity WHERE application_name = 'A';
@@ -45,11 +70,11 @@ M> SELECT count(*)::int AS backends FROM pg_stat_activity WHERE application_name
         0 
 (1 row)
 
-A> COMMIT; -- the server logged FATAL; Bun sees a dead socket
+A> COMMIT; -- psycopg can receive 25P04; Bun reports the closed connection
 ERROR:  ERR_POSTGRES_CONNECTION_CLOSED: Connection closed
 ```
 
-*The killed transaction's work rolled back, as always:*
+*The update from the terminated transaction is absent:*
 
 ```transcript
 M> SELECT balance FROM accounts WHERE id = 1;

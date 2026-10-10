@@ -17,6 +17,9 @@ BEGIN
 A> UPDATE accounts SET balance = 200 WHERE id = 1;
 UPDATE 1
 
+B> BEGIN;
+BEGIN
+
 B> UPDATE accounts SET balance = 300 WHERE id = 1;
 ⏳ B is waiting for a lock…
 ```
@@ -31,14 +34,15 @@ M> SELECT waiter.application_name AS waiter,
           blocker.query             AS blocker_last_query
    FROM pg_stat_activity waiter
    JOIN pg_stat_activity blocker ON blocker.pid = ANY (pg_blocking_pids(waiter.pid))
-   WHERE waiter.wait_event_type = 'Lock';
+   WHERE waiter.wait_event_type = 'Lock'
+   ORDER BY waiter.application_name, blocker.application_name;
  waiter |                 waiting_query                  | blocker |    blocker_state    |               blocker_last_query               
 --------+------------------------------------------------+---------+---------------------+------------------------------------------------
  B      | UPDATE accounts SET balance = 300 WHERE id = 1 | A       | idle in transaction | UPDATE accounts SET balance = 200 WHERE id = 1 
 (1 row)
 ```
 
-*The culprit isn't running anything — it's IDLE, holding locks. The fix is blunt:*
+*M has permission to signal A. A true return means the signal was sent, not that termination has finished:*
 
 ```transcript
 M> SELECT pg_terminate_backend(pid) AS terminated
@@ -55,7 +59,22 @@ M> SELECT pg_terminate_backend(pid) AS terminated
 ⏵ B resumes:
 UPDATE 1
 
-B> SELECT balance FROM accounts WHERE id = 1; -- A's 200 rolled back with its termination; B's 300 committed
+M> SELECT balance FROM accounts WHERE id = 1; -- A's uncommitted 200 is absent; B's 300 is not yet committed
+ balance 
+---------
+     100 
+(1 row)
+
+B> SELECT balance FROM accounts WHERE id = 1; -- B sees its own uncommitted update
+ balance 
+---------
+     300 
+(1 row)
+
+B> COMMIT;
+COMMIT
+
+M> SELECT balance FROM accounts WHERE id = 1;
  balance 
 ---------
      300 

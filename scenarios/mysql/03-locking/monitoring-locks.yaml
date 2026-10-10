@@ -1,8 +1,9 @@
 title: "Reading performance_schema.data_locks: what one UPDATE really holds"
 claim: >-
-  data_locks shows every lock a transaction holds — a single-row UPDATE takes an
-  intention lock on the table plus a record lock on the row — and a waiter shows
-  up as WAITING, findable via sys.innodb_lock_waits.
+  For this MySQL 8.4 InnoDB existing-primary-key UPDATE, data_locks shows
+  a granted table IX lock and X,REC_NOT_GAP record lock, then B's WAITING
+  record request. sys.innodb_lock_waits identifies A as B's blocker.
+  This is not a count of every lock type or every UPDATE access path.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -11,10 +12,11 @@ steps:
   - A: BEGIN
   - A: UPDATE accounts SET balance = 200 WHERE id = 1
 
-  - note: "One innocent UPDATE = two locks: an intention-exclusive on the table, an exclusive on the row."
+  - note: "This existing PRIMARY-key UPDATE shows a table IX lock and an exclusive record lock."
   - M: |
       SELECT object_name, index_name, lock_type, lock_mode, lock_status, lock_data
       FROM performance_schema.data_locks
+      WHERE object_schema = DATABASE() AND object_name = 'accounts'
       ORDER BY lock_type DESC
     expect:
       - { object_name: "accounts", index_name: null, lock_type: "TABLE", lock_mode: "IX", lock_status: "GRANTED", lock_data: null }
@@ -27,12 +29,14 @@ steps:
   - M: |
       SELECT object_name, lock_mode, lock_status, lock_data
       FROM performance_schema.data_locks
-      WHERE lock_status = 'WAITING'
+      WHERE object_schema = DATABASE() AND object_name = 'accounts' AND lock_status = 'WAITING'
     expect:
       - { object_name: "accounts", lock_mode: "X,REC_NOT_GAP", lock_status: "WAITING", lock_data: "1" }
 
   - note: You rarely need to decode data_locks by hand — sys.innodb_lock_waits names the culprit.
-  - M: SELECT waiting_pid, blocking_pid FROM sys.innodb_lock_waits
+  - M: |
+      SELECT waiting_pid, blocking_pid FROM sys.innodb_lock_waits
+      WHERE locked_table_schema = DATABASE() AND locked_table_name = 'accounts'
     expect: [{ waiting_pid: "$pid(B)", blocking_pid: "$pid(A)" }]
 
   - A: COMMIT

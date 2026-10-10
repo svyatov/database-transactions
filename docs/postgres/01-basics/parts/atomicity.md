@@ -11,7 +11,7 @@ B: SELECT → alice 100, bob 50 ← nothing changed
 *A transfers 150 from alice to bob. Crediting bob works fine…*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = balance + 150 WHERE owner = 'bob';
@@ -31,7 +31,7 @@ A> UPDATE accounts SET balance = balance - 150 WHERE owner = 'alice'; -- check_v
 ERROR:  23514: new row for relation "accounts" violates check constraint "accounts_balance_check"
 ```
 
-*The failed transaction can only be rolled back. Bob's credit — which had succeeded — evaporates with it.*
+*This run uses full ROLLBACK after the CHECK violation. Bob's earlier credit is undone along with the failed transfer.*
 
 ```transcript
 A> ROLLBACK;

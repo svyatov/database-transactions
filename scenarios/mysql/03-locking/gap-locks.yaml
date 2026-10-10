@@ -1,9 +1,9 @@
 title: "Gap locks: REPEATABLE READ locks the spaces between rows"
 claim: >-
-  Under REPEATABLE READ a locking read on a range takes next-key locks — the
-  matching rows AND the gaps between them — so INSERTs into the range block
-  until the reader finishes. Under READ COMMITTED only the found rows are
-  locked and the same INSERT sails through.
+  On MySQL 8.4 InnoDB, the demonstrated PRIMARY-index range read at
+  REPEATABLE READ makes insertion of slot 15 wait with X,GAP,INSERT_INTENTION.
+  At READ COMMITTED the later insertion of 17 completes before A commits.
+  Other queries, indexes, and constraint checks can have different coverage.
 setup: |
   CREATE TABLE bookings (slot int PRIMARY KEY, guest varchar(20) NOT NULL);
   INSERT INTO bookings VALUES (10, 'alice'), (20, 'bob'), (30, 'carol');

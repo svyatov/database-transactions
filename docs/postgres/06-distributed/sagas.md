@@ -1,49 +1,44 @@
-# Sagas: transactions that can't ROLLBACK
+# Sagas: compensation after a committed step
 
-Book a flight with one provider, a hotel with another, charge a card with a third.
-Three services, three databases, and no transaction that spans them. A *saga* is
-the honest answer: a chain of *local* transactions, where every completed step has a
-prepared apology, a *compensating transaction* that semantically undoes it if a
-later step fails.
+A saga coordinates separate local transactions and application-defined
+compensations. This demonstration represents a flight and a hotel with two
+tables in one PostgreSQL database. It runs no remote services or messaging
+protocol. The [original saga paper](https://www.cs.princeton.edu/techreports/1987/070.pdf)
+describes the design, rather than an engine guarantee.
 
-## Watch a saga fail forward
-
-The demo compresses the idea into one database so every claim stays assertable: the
-two tables play the two services. The mechanics are the point: step 1 *commits for
-real*, so when step 2 fails, the only way back is a new forward transaction:
+## Watch a saga compensate {#watch-a-saga-fail-forward}
 
 <!--@include: ./parts/saga-compensation.md-->
 
 ## What the transcript just proved
 
-Three things in that transcript are worth naming. Each step commits immediately, so
-there's no long-lived transaction holding [locks](/postgres/03-locking/row-locks) or
-[pinning VACUUM](/postgres/04-mvcc/long-transactions) across service calls, which is the
-whole reason sagas exist. A saga also has no isolation: `Reader` saw the booked seat
-*between* steps, a state the saga later revoked, so every anomaly chapter 2 catalogued
-between statements can now happen between *steps*, and no isolation level can help,
-because there's no enclosing transaction to reach for. If another traveler grabs a seat
-based on what they saw mid-saga, that's yours to design for.
+The flight booking commits with four seats left. A standalone READ COMMITTED
+Reader sees that intermediate value. The guarded hotel update affects zero
+rows because no room is available; this is a business outcome, not a SQL error.
+Its transaction rolls back. A new transaction adds the seat back and asserts
+five seats before committing.
 
-And compensation is not ROLLBACK. `seats = seats + 1` is ordinary committed history: the
-anomaly window really happened and stays visible in the log. Compensations have to be
-written per step and have to tolerate being retried, so make them
-[idempotent](/postgres/05-patterns/idempotency); some steps, an email sent or cash
-dispensed, have none at all, which is why you order the saga to put irreversible steps
-last.
+Compensation is a new database change, not a rollback of the committed flight
+transaction. The saga has no enclosing transaction isolating all steps. This
+reader sees an intermediate commit; a reader using an older REPEATABLE READ
+snapshot need not see it. The schedule does not establish every anomaly or
+the behavior of every concurrent observer.
 
-Underneath it all, a saga trades one impossible distributed transaction for N possible
-local ones plus N compensations you write and test yourself. Isolation is gone between
-the steps, so name the intermediate states, decide who is allowed to see them, and push
-irreversible steps to the end. And because steps and their compensations travel between
-services as messages, the [outbox](/postgres/06-distributed/transactional-outbox) is the
-saga's transport: each step's "done" event commits atomically with the step that produced
-it.
+The demonstrated increment is not idempotent: repeating it would add another
+seat. An application must define compensation identity, retry handling, and
+intermediate-state rules. They are design responsibilities, not mechanisms
+implemented by this example. Short local transactions reduce the duration of
+their own locks; they do not ensure every transaction avoids all waits or
+reclamation delays.
+
+If a step sends an irreversible external effect, SQL compensation cannot
+erase it. An [outbox](/postgres/06-distributed/transactional-outbox) can store
+a step's event intent atomically with local work, but no saga transport,
+receiver deduplication, or recovery coordinator is exercised here.
 
 ## Further reading
 
-- [Garcia-Molina & Salem, *Sagas* (1987)](https://dl.acm.org/doi/10.1145/38713.38742):
-  the original paper; the word predates microservices by three decades
-- [microservices.io: Saga](https://microservices.io/patterns/data/saga.html):
-  orchestration vs. choreography, in detail
+- [Garcia-Molina & Salem, Sagas (1987)](https://www.cs.princeton.edu/techreports/1987/070.pdf)
 - [The same lesson on MySQL](/mysql/06-distributed/sagas)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-distributed) records the exact manual support and execution limits for this lesson.

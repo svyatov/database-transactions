@@ -1,52 +1,21 @@
 # Sagas: transactions that can't ROLLBACK
 
-Book a flight with one provider, a hotel with another, charge a card with a third.
-Three services, three databases, and no transaction spans them. A *saga* is the honest
-answer: a chain of *local* transactions, where every completed step has a prepared
-apology, a *compensating transaction* that semantically undoes it if a later step
-fails.
+This lesson models a workflow whose steps commit separately. If a later step cannot complete, a new local transaction compensates for an earlier committed step. It does not demonstrate a multi-service saga coordinator.
 
 ## Watch a saga fail forward
 
-The demo compresses the idea into one database so every claim stays assertable. The
-two tables play the two services. The mechanics are the point: step 1 *commits for
-real*, so when step 2 fails, the only way back is a new forward transaction:
+The scenario uses two InnoDB tables in one database as stand-ins for flight and hotel services. It commits a flight reservation, cannot reserve a hotel room, then restores the flight seat in a new transaction:
 
 <!--@include: ./parts/saga-compensation.md-->
 
-The transcript proves three things. First, there's no isolation between steps: the
-`Reader` saw the booked seat while the saga was still mid-flight. A saga's intermediate
-states are public, because real transactions are
-[invisible until COMMIT](/mysql/01-basics/what-is-a-transaction) but a saga commits at
-every step. Design those in-between states to be presentable (`PENDING` statuses,
-reserved quantities), because everyone will see them.
+The autocommit `Reader` sees 4 seats after the first commit and before compensation. The hotel's guarded UPDATE affects 0 rows, a business outcome rather than a database exception. Its local ROLLBACK does not undo the committed flight reservation. The compensation increments seats and commits; the final reader observes 5 seats.
 
-Second, compensation isn't rollback. The failed hotel booking rolled back locally, but the
-flight seat came back only because the saga *booked it back*. A compensating transaction is
-forward motion: it can fail on its own, race a customer grabbing the last seat, or need a
-retry, and `seats = seats + 1` is business logic, not magic.
+Local transactions still have their own isolation. This workflow has no single transaction hiding all intermediate commits, but that does not mean every reader immediately sees every step: visibility depends on each reader's isolation and read view. The transcript demonstrates this Reader's observation, not global visibility across services or isolation from other workflows.
 
-Third, failure is a business outcome, not an exception. Step 2 "failed" as
-`0 rows affected` on a guarded UPDATE,
-[the same affected-rows discipline](/mysql/05-patterns/fixing-lost-updates) as the
-version-column pattern.
+**Entailed boundary†:** a later ROLLBACK cannot undo a previously committed step. Returning a reserved seat therefore requires a new business operation, not rollback of the earlier transaction. † This follows from the [local commit boundary](/mysql/01-basics/begin-commit-rollback). Compensation is not general reversal of history; its own concurrency, failures, and repeat attempts need an application protocol. Only a successful compensation is executed here.
 
-Each saga step should also write its progress to a saga-state table *in the same local
-transaction* as the step itself, the [outbox discipline](/mysql/06-distributed/transactional-outbox)
-again, so a crashed orchestrator can resume or compensate after restart instead of
-leaving the trip half-booked forever.
-
-A saga is local transactions plus compensating transactions, and every step needs an undo
-*action* rather than an undo *button*: ROLLBACK is gone the moment the step commits.
-There's zero isolation between steps, so the intermediate states are visible and have to be
-designed rather than hidden, and each step's progress has to be persisted transactionally
-or a crash strands the workflow. Compensations run against a world that kept moving while
-you weren't looking, so write them with the same care as the forward path.
+For a real workflow, define recoverable intermediate states, progress recording, and repeat-safe compensation. Recording a step's progress with its database-local effect uses the [same transaction boundary as an outbox](/mysql/06-distributed/transactional-outbox), but this scenario contains no progress table or crash-recovery coordinator and proves neither.
 
 ## Further reading
 
-- Garcia-Molina & Salem, [*Sagas*](https://dl.acm.org/doi/10.1145/38713.38742) (SIGMOD 1987),
-  the original paper
-- [microservices.io: Saga](https://microservices.io/patterns/data/saga.html),
-  orchestration vs. choreography, modern vocabulary
 - [The same lesson on PostgreSQL](/postgres/06-distributed/sagas)

@@ -13,7 +13,7 @@ App> COMMIT;
 Query OK
 ```
 
-*…and the process crashes before the publish step ever runs. The broker never hears about order 1.*
+*The stand-in publish is omitted after commit. This models a failure window without killing a process.*
 
 ```transcript
 App> SELECT (SELECT count(*) FROM orders) AS orders,
@@ -24,21 +24,21 @@ App> SELECT (SELECT count(*) FROM orders) AS orders,
 (1 row)
 ```
 
-*Attempt 2 — publish first, then write. The event goes out…*
+*Attempt 2 writes a stand-in event in autocommit before attempting the order.*
 
 ```transcript
 App> INSERT INTO broker VALUES ('order_placed: order 2');
 Query OK, 1 row affected
 ```
 
-*…and then the order INSERT fails — a constraint, a crash, a timeout, anything.*
+*The order INSERT fails its CHECK constraint with 3819. No timeout or crash is injected.*
 
 ```transcript
 App> INSERT INTO orders VALUES (2, 'mallory', -5); -- ER_CHECK_CONSTRAINT_VIOLATED
 ERROR 3819 (HY000): Check constraint 'orders_chk_1' is violated.
 ```
 
-*Downstream services now process an order that never existed.*
+*The stand-in event exists without order 2. No downstream processing is observed.*
 
 ```transcript
 App> SELECT (SELECT count(*) FROM orders WHERE id = 2) AS orders,

@@ -1,12 +1,12 @@
 # Database Transactions
 
 > Transaction behavior on PostgreSQL and MySQL, taught from transcripts of real database
-> runs. Every claim on this site is proven by a scenario that CI replays against pinned
-> engine versions on every push, and fails on any drift.
+> runs, versioned manual contracts, and explicitly marked derivations. Scenarios assert
+> particular schedules. Database-relevant CI changes replay pinned engines and reject drift.
 
 ## Proofs
 
-- [Every proven transcript](https://database-transactions.svyatov.com/llms-full.txt): all scenarios, with the SQL, the interleaving, and the database's own output.
+- [Generated Scenario transcripts](https://database-transactions.svyatov.com/llms-full.txt): all scenarios, with SQL, interleaving, and database output. Narration and model boundaries are not additional assertions.
 - [Ledger](https://database-transactions.svyatov.com/ledger.jsonl): one JSON Lines record per scenario — path, engine, pinned version, claim, sessions, observed error codes. No schema-stability guarantee; the shape grows as the site does.
-- [Error codes, reproduced](https://database-transactions.svyatov.com/errors/): the seven concurrency-control codes (PostgreSQL and MySQL), each with a one-sentence answer and the minimal reproduction that emits it.
-- [FAQ](https://database-transactions.svyatov.com/faq): the questions people actually ask — dirty reads, lost updates, deadlocks, isolation levels — each answered in a sentence or two and linked to the transcript that proves it.
+- [Error codes, reproduced](https://database-transactions.svyatov.com/errors/): seven reproduced codes, with scoped recovery advice and links to complete runnable Scenarios.
+- [FAQ](https://database-transactions.svyatov.com/faq): dirty reads, lost updates, deadlocks, and isolation levels, with scoped answers and evidence links.

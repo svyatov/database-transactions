@@ -2,8 +2,8 @@ import { eq, scenario } from "../../../harness/scenario";
 
 // #region listener
 /**
- * Bun.sql has no async-notification API, so the listener is a psql subprocess —
- * the same client you'd use to eavesdrop on a channel in production.
+ * This example uses a psql subprocess as its visible notification listener.
+ * Its output exposes the channel, payload, and sending backend.
  * ponytail: assumes the docker-compose stack from this repo (run from its root).
  */
 class Listener {
@@ -72,7 +72,7 @@ class Listener {
 export default scenario({
   title: "NOTIFY is transactional",
   claim:
-    "NOTIFY delivers nothing until COMMIT, a rolled-back NOTIFY is never delivered, and identical notifications within one transaction are folded into one.",
+    "With a psql listener already registered, this run observes silence before COMMIT and after ROLLBACK, a payload after COMMIT, and one payload for two identical same-transaction notifications within the observation windows.",
   setup: `
     CREATE TABLE orders (id int PRIMARY KEY, customer text NOT NULL);
   `,

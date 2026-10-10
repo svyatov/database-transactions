@@ -43,7 +43,7 @@ A> INSERT INTO counters VALUES (2, 0) RETURNING ctid, id;
 (1 row)
 ```
 
-*Same story at file level — 1000 rows in 5 pages, doubled to 9 by an UPDATE of every row.*
+*At file level this 1000-row heap grows from 5 to 9 pages after UPDATE.*
 
 ```transcript
 A> SELECT (pg_relation_size('bloat') / 8192)::int AS pages;
@@ -65,7 +65,7 @@ A> VACUUM bloat;
 VACUUM
 ```
 
-*VACUUM cleaned 1000 dead tuples — and the file is still 9 pages. The space is free *inside* the file.*
+*Standard VACUUM completes and the asserted file size remains 9 pages. This size observation does not count reclaimed tuples or reusable bytes.*
 
 ```transcript
 A> SELECT (pg_relation_size('bloat') / 8192)::int AS pages;

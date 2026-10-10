@@ -1,49 +1,38 @@
 # Read views: when your snapshot is taken
 
-InnoDB calls a snapshot a *read view*: the set of transactions whose changes you're
-allowed to see. [Chapter 2](/mysql/02-isolation/repeatable-read) used snapshots to explain
-isolation; this lesson pins down the mechanics: when the view is created, and what it
-costs (almost nothing).
-
-The timing rule, per the
-[manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html): "all
-consistent reads within the same transaction read the snapshot established by the first
-such read in that transaction." Not by `BEGIN`, but by the first read. A transaction that
-has begun but not yet read has no opinions about the world at all:
+At MySQL 8.4 InnoDB REPEATABLE READ, consistent reads use a read view and can also see the
+transaction's own earlier changes. The
+[consistent-read contract](https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html)
+places the persistent view at the first consistent read, not BEGIN. READ COMMITTED instead
+uses a fresh snapshot for each consistent read; locking reads use different rules.
 
 ## BEGIN takes no snapshot: the first read does
+
+R first sees A's update committed after BEGIN. With `START TRANSACTION WITH CONSISTENT SNAPSHOT`,
+R instead retains the earlier balance. The
+[START TRANSACTION manual](https://dev.mysql.com/doc/refman/8.4/en/commit.html)
+limits that snapshot modifier to REPEATABLE READ; it does not change the isolation level.
 
 <!--@include: ./parts/read-views.md-->
 
 ## Readers are free
 
-The last part of the transcript shows something PostgreSQL users don't expect: the idle
-reader's `trx_id` is fake. The
-[manual](https://dev.mysql.com/doc/refman/8.4/en/information-schema-innodb-trx-table.html)
-on `INNODB_TRX.TRX_ID`: "A unique transaction ID number, internal to `InnoDB`. These IDs
-are not created for transactions that are read only and nonlocking." And
-[why](https://dev.mysql.com/doc/refman/8.4/en/innodb-performance-ro-txn.html): "A
-transaction ID is only needed for a transaction that might perform write operations or
-locking reads such as SELECT ... FOR UPDATE", so "`InnoDB` can avoid the overhead
-associated with setting up the transaction ID (TRX_ID field) for transactions that are
-known to be read-only."
+The [read-only optimization contract](https://dev.mysql.com/doc/refman/8.4/en/innodb-performance-ro-txn.html)
+allows InnoDB to avoid a persistent transaction ID for nonlocking read-only work. This is
+an allocation optimization, not proof that reads cost nothing or that every declared
+read-only transaction avoids an ID.
 
-What `information_schema.innodb_trx` shows for such a transaction is a placeholder above
-2⁴⁸, where real IDs never reach. The boolean in the transcript is exactly that check. The
-moment the transaction writes, a real ID is allocated and stamped into every row it
-touches (`DB_TRX_ID`, [previous lesson](/mysql/04-mvcc/undo-logs)).
+The transcript observes `INNODB_TRX.trx_id` above 2^48 for R before its first write, then
+below that threshold after it writes. That numeric placeholder is an observation on the
+verified build, not a public ID-format contract or a guarantee that real IDs never reach it.
+The [TRX_ID documentation](https://dev.mysql.com/doc/refman/8.4/en/information-schema-innodb-trx-table.html)
+is the contract to use when interpreting transaction information.
 
-The rule to carry away is that the read view is created by the transaction's first consistent
-read, not by `BEGIN`, so the gap between the two is a window where the world can still move,
-the same trap as PostgreSQL's snapshot-at-first-statement rule
-([compare](/postgres/04-mvcc/snapshots-under-the-hood)). Reach for `START TRANSACTION WITH
-CONSISTENT SNAPSHOT` when you need the snapshot pinned at the start instead. And because a
-read-only transaction never even allocates a transaction ID, reading is cheap by construction;
-the expensive thing a reader does is stay open, which is
-[where the history list comes in](/mysql/04-mvcc/history-list-length).
+An idle read view can still retain undo. A cheap allocation does not make an indefinitely
+open transaction harmless. Next: [history-list growth](/mysql/04-mvcc/history-list-length).
 
 ## Further reading
 
-- [MySQL docs: Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html)
-- [MySQL docs: Optimizing InnoDB Read-Only Transactions](https://dev.mysql.com/doc/refman/8.4/en/innodb-performance-ro-txn.html)
-- [The PostgreSQL counterpart: snapshots under the hood](/postgres/04-mvcc/snapshots-under-the-hood)
+- [The PostgreSQL counterpart](/postgres/04-mvcc/snapshots-under-the-hood)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#mysql-mvcc) records the exact manual support and execution limits for this lesson.

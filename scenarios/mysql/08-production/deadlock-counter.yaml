@@ -1,8 +1,8 @@
-title: Deadlocks leave a permanent trace
+title: Counting an observed deadlock
 claim: >-
-  Every deadlock increments the server-wide lock_deadlocks counter in
-  INNODB_METRICS — deadlocks are countable and alertable even if nobody saw
-  the error, because the counter only ever goes up.
+  On MySQL 8.4 InnoDB with deadlock detection and the lock_deadlocks metric
+  enabled, this opposite-order schedule raises 1213 and the server-wide
+  counter increases by at least one. This is not a permanent incident record.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
@@ -11,6 +11,10 @@ setup: |
     SELECT count AS n FROM information_schema.INNODB_METRICS WHERE name = 'lock_deadlocks';
 sessions: [A, B, M]
 steps:
+  - M: SELECT @@innodb_deadlock_detect AS detection
+    expect: [{ detection: 1 }]
+  - M: SELECT status FROM information_schema.INNODB_METRICS WHERE name = 'lock_deadlocks'
+    expect: [{ status: enabled }]
   - note: The same two opposite-order transfers as chapter 3 — one will be the victim.
   - A: BEGIN
   - A: UPDATE accounts SET balance = balance - 10 WHERE id = 1
@@ -28,15 +32,15 @@ steps:
   - success: p1
   - A: COMMIT
 
-  - note: "The error flashed by in one client's logs. The server remembers it forever:"
+  - note: "The detected deadlock is also visible as a counter delta in this run:"
   - M: |
       SELECT im.count - b.n >= 1 AS deadlocks_since_snapshot
       FROM information_schema.INNODB_METRICS im, deadlocks_before b
       WHERE im.name = 'lock_deadlocks'
     expect: [{ deadlocks_since_snapshot: 1 }]
-    comment: a monotonic counter — graph its rate and alert on spikes
+    comment: sample rates within one enabled interval; account for restart and reset
 
   - note: >-
-      For the full story of the LAST deadlock (both statements, both lock
-      chains), read the LATEST DETECTED DEADLOCK section of SHOW ENGINE INNODB
-      STATUS — or set innodb_print_all_deadlocks=ON to log every one.
+      Documented separately: SHOW ENGINE INNODB STATUS reports the latest
+      detected deadlock; innodb_print_all_deadlocks enables error-log reports.
+      This scenario does not inspect either log output or retention.

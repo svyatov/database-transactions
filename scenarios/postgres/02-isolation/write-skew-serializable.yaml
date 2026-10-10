@@ -1,9 +1,7 @@
-title: SERIALIZABLE catches write skew
+title: SERIALIZABLE rejects this write-skew schedule
 claim: >-
-  The exact interleaving that breaks the invariant under REPEATABLE READ fails
-  with SQLSTATE 40001 under SERIALIZABLE — one transaction commits, the other
-  must retry.
-anomaly: G2
+  With both transactions SERIALIZABLE, A commits and B's COMMIT fails with 40001 in this schedule; one doctor remains on call. B's fresh transaction observes one and leaves that doctor on call.
+anomaly: G2-item
 isolation: SERIALIZABLE
 setup: |
   CREATE TABLE doctors (name text PRIMARY KEY, on_call boolean NOT NULL);
@@ -25,9 +23,9 @@ steps:
   - B: UPDATE doctors SET on_call = false WHERE name = 'bob'
     tl: bob off call
 
-  - note: The first committer wins. The second cannot be serialized against it and is aborted.
+  - note: In this schedule A commits and B is rejected. Other schedules can fail at a statement or select a different victim.
   - A: COMMIT
-    tl: COMMIT — first committer wins
+    tl: COMMIT succeeds in this schedule
   - B.fails: COMMIT
     error: "40001"
     comment: serialization_failure
@@ -38,5 +36,12 @@ steps:
     comment: the invariant survived
 
   - note: >-
-      B's job is to retry. On retry it would see only one doctor on call — and
-      refuse the night off.
+      B now starts a fresh transaction, checks the count again, and keeps
+      the remaining doctor on call.
+
+  - B: BEGIN ISOLATION LEVEL SERIALIZABLE
+  - B: SELECT count(*)::int AS on_call FROM doctors WHERE on_call
+    expect: [{ on_call: 1 }]
+  - B: COMMIT
+  - A: SELECT name, on_call FROM doctors ORDER BY name
+    expect: [{ name: alice, on_call: false }, { name: bob, on_call: true }]

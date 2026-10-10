@@ -9,7 +9,7 @@ B: ⏵ UPDATE id1 = 12 → completes
 C: C reads → 12, 19 (A's 11 already gone)
 ```
 
-*A rewrites both balances and commits. B overwrites one of them. C watches — dirtily.*
+*A rewrites both balances and commits. B overwrites one of them. C reads at READ UNCOMMITTED.*
 
 ```transcript
 C> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -33,13 +33,13 @@ Query OK
 B> UPDATE accounts SET balance = 12 WHERE id = 1;
 ⏳ B is waiting for a lock…
 
-A> COMMIT; -- A is committed — its writes are 11 and 19
+A> COMMIT; -- A is committed; its writes are 11 and 19
 Query OK
 
 ⏵ B resumes:
 Query OK, 1 row affected
 
-C> SELECT id, balance FROM accounts ORDER BY id; -- 12 is B's uncommitted draft, 19 is A's commit — A's 11 already vanished
+C> SELECT id, balance FROM accounts ORDER BY id; -- 12 is B's uncommitted draft, 19 is A's commit; A's 11 already vanished
  id | balance 
 ----+---------
   1 |      12 
@@ -47,7 +47,7 @@ C> SELECT id, balance FROM accounts ORDER BY id; -- 12 is B's uncommitted draft,
 (2 rows)
 ```
 
-*C never saw the committed state {11, 19}. Half of A was overwritten before C ever observed it — as far as C can tell, A only ever wrote one row. B now finishes:*
+*C never saw the committed state {11, 19}. Half of A was overwritten before C observed it. C's returned rows combine B's draft with A's committed second row. B now finishes:*
 
 ```transcript
 B> UPDATE accounts SET balance = 18 WHERE id = 2;
@@ -67,7 +67,7 @@ C> COMMIT;
 Query OK
 ```
 
-*READ COMMITTED never shows a committed transaction in pieces:*
+*These READ COMMITTED SELECTs exclude A's uncommitted changes, then include its commit:*
 
 ```transcript
 C> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -85,7 +85,7 @@ Query OK, 1 row affected
 A> UPDATE accounts SET balance = 59 WHERE id = 2;
 Query OK, 1 row affected
 
-C> SELECT id, balance FROM accounts ORDER BY id; -- all of the last committed state — nothing of A's draft
+C> SELECT id, balance FROM accounts ORDER BY id; -- all of the last committed state; nothing of A's draft
  id | balance 
 ----+---------
   1 |      12 

@@ -47,7 +47,7 @@ B> ROLLBACK;
 ROLLBACK
 ```
 
-*The app retried, the users never noticed. But the database remembers:*
+*No retry is executed here. After B rolls back, flush its statistics and read the counter delta:*
 
 ```transcript
 B> SELECT pg_stat_force_next_flush();

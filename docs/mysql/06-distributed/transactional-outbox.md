@@ -1,66 +1,38 @@
 # The dual-write problem & the transactional outbox
 
-Every problem so far lived inside one database, where `BEGIN` … `COMMIT` could always
-save you. This chapter is about the moment that stops being true: there is no `BEGIN`
-that spans MySQL and Kafka. The theory (why two writes to two systems can't be made
-atomic, and how an outbox shrinks the damage) is
-[Concepts: dual writes & the outbox](/concepts/transactional-outbox); this page proves
-it on MySQL, crashes included.
+This chapter separates database-local changes from a publish to another system. The scenarios run on MySQL 8.4 InnoDB. They demonstrate database states and rollback boundaries, not real broker delivery or process crashes.
 
 ## The dual-write problem
 
-Write to the database and publish to the broker. Two writes, two systems, and a process
-that can die between them:
+The `broker` table below is a database-local stand-in, written separately from the order. In the first schedule, the order commits and the publish is omitted. In the second, the stand-in event is inserted in autocommit, then the order fails its CHECK constraint with `3819`. The scenario asserts the mismatched counts:
 
 <!--@include: ./parts/dual-write-problem.md-->
 
-Write-first loses events; publish-first invents them.
-[Retries only change the odds](/concepts/transactional-outbox#the-dual-write-problem).
+These are two modeled failure windows, not proof of permanent disagreement or of every failure ordering. No broker or downstream consumer is observed. See the [conceptual dual-write discussion](/concepts/transactional-outbox) for the boundary being modeled.
 
 ## The fix: only ever write to one system
 
-The application never talks to the broker at all. The event is written *to the same
-database, in the same transaction* as the order, and
-[atomicity](/mysql/01-basics/what-is-a-transaction), which InnoDB has guaranteed since
-chapter 1, does the rest:
+The application inserts the order and outbox row in the same transaction. The scenario asserts both committed records and the absence of both records from the rolled-back attempt:
 
 <!--@include: ./parts/transactional-outbox.md-->
 
-A separate *relay* process moves events from the outbox to the broker. It is exactly
-the [SKIP LOCKED job-queue worker](/mysql/05-patterns/job-queue) from chapter 5, pointed at
-the `outbox` table.
+**Entailed guarantee†:** these InnoDB order and outbox changes share a commit boundary, provided they remain in the same transaction and no implicit commit separates them. † This follows from [transaction atomicity](/mysql/01-basics/what-is-a-transaction), not from testing every failure. It does not include an external publish.
 
-## At-least-once, by construction
+<a id="at-least-once-by-construction"></a>
 
-Look closely at what the crash proved. The relay published the event, then died before
-committing the `DELETE`, so the event is delivered *twice*. That is
-[the deal you signed](/concepts/transactional-outbox#at-least-once-by-construction):
-at-least-once delivery, and repeats are exactly what chapter 5's
-[idempotency keys](/mysql/05-patterns/idempotency) already handle on the consumer side.
+## What the relay rollback proves
 
-## No LISTEN/NOTIFY: the relay polls
+The relay claims event 1 with `FOR UPDATE SKIP LOCKED`, deletes it, and rolls back. A later transaction selects that event again, deletes it, and commits. The asserted final pending count is 0. Publication is intentionally omitted: the transcript proves reselection after rollback, not two deliveries.
 
-PostgreSQL pairs its outbox with
-[LISTEN/NOTIFY](/postgres/06-distributed/listen-notify), a transactional wake-up call that
-removes the polling latency. MySQL has no equivalent: there's no server-push channel a
-commit can signal, so the MySQL relay polls. And that's fine. A `SELECT … FOR UPDATE SKIP
-LOCKED` against an indexed, near-empty outbox every 100 to 500 ms is cheap, and the polling
-interval is your worst-case delivery latency.
+**Entailed delivery risk†:** if a relay publishes externally before committing its deletion, a failure after successful publication can leave the outbox row available for another attempt. † This follows from the external effect being outside the database rollback boundary. No receiver effect is recorded here. At-least-once delivery additionally requires continued successful relay attempts and a delivery service; neither is established by this SQL schedule. Consumers need a separate deduplication protocol for repeated effects. The [idempotency lesson](/mysql/05-patterns/idempotency) protects database-local work under a retained key, not arbitrary remote effects.
 
-If that latency matters, the usual escalation is reading the binlog (Debezium-style change
-data capture), which turns the database's own replication stream into the wake-up call:
-same outbox table, no polling, considerably more moving parts.
+<a id="no-listen-notify-the-relay-polls"></a>
 
-The order and its event commit or vanish together, with no window where one exists without
-the other. The relay is a SKIP LOCKED worker (crash-safe, parallelizable, five lines of
-SQL), so its consumers have to be idempotent, because delivery is at-least-once by
-construction. And with no LISTEN/NOTIFY on MySQL, you either poll for bounded latency or
-tail the binlog with CDC for speed at the cost of more moving parts.
+## Relay scheduling is outside this scenario
+
+This SQL-only recipe selects pending rows; it does not implement a scheduler, wake-up channel, or binlog consumer. [PostgreSQL's LISTEN/NOTIFY lesson](/postgres/06-distributed/listen-notify) demonstrates a separate wake-up mechanism. For a polling relay, select an interval from measured workload and latency requirements. The interval alone is not an upper bound on delivery time: locks, backlog, transaction duration, retries, and the recipient also matter. Query cost and delivery latency are not measured here.
 
 ## Further reading
 
-- [microservices.io: Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html)
-- [microservices.io: Polling publisher](https://microservices.io/patterns/data/polling-publisher.html),
-  the relay variant shown here
-- [The same lesson on PostgreSQL](/postgres/06-distributed/transactional-outbox), plus its
-  LISTEN/NOTIFY sequel
+- [MySQL docs: Locking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+- [The same lesson on PostgreSQL](/postgres/06-distributed/transactional-outbox)

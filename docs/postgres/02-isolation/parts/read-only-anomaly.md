@@ -12,6 +12,8 @@ Cashier: COMMIT ← receipt 3 lands in the closed batch 1
 Report: re-read batch 1 → 3 receipts ← the published report was wrong
 ```
 
+*The report is modeled by SELECT results; no printing, external publication, or cashier retry is executed.*
+
 *A bank tracks receipts per deposit batch. The cashier files a receipt into the current batch (1) — slowly.*
 
 ```transcript
@@ -135,7 +137,7 @@ COMMIT
 Cashier> COMMIT;
 ERROR:  40001: could not serialize access due to read/write dependencies among transactions
 
-Report> SELECT receipt_no, amount FROM receipts WHERE deposit_no = 1 ORDER BY receipt_no; -- batch 1 still matches the published report; the cashier retries into batch 2
+Report> SELECT receipt_no, amount FROM receipts WHERE deposit_no = 1 ORDER BY receipt_no; -- batch 1 still has two receipts; no cashier retry is executed here
  receipt_no | amount 
 ------------+--------
           1 |    100 

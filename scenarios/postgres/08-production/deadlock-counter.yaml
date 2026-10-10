@@ -1,7 +1,9 @@
-title: Deadlocks leave a permanent trace
+title: A deadlock increments the database counter
 claim: >-
-  Every deadlock increments pg_stat_database.deadlocks — a counter you can
-  alert on even when nobody was watching the error logs.
+  This two-row deadlock emits 40P01 and increments pg_stat_database.deadlocks
+  by one after a statistics flush. By the PostgreSQL 18 statistics contract,
+  resets and unclean server restarts can clear this cumulative counter;
+  neither is executed here.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 100), (2, 100);
@@ -34,7 +36,7 @@ steps:
   - A: COMMIT
   - B: ROLLBACK
 
-  - note: "The app retried, the users never noticed. But the database remembers:"
+  - note: "No retry is executed here. After B rolls back, flush its statistics and read the counter delta:"
   - B: SELECT pg_stat_force_next_flush()
   - M: |
       SELECT (d.deadlocks - s.deadlocks)::int AS new_deadlocks

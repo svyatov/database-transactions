@@ -1,30 +1,38 @@
 # Savepoints
 
-A savepoint is a named bookmark inside a transaction: `ROLLBACK TO SAVEPOINT` rewinds the
-transaction's work back to it without giving up the transaction itself.
-
-In PostgreSQL, savepoints are how you *recover from errors* mid-transaction. MySQL
-[doesn't abort transactions on error](/mysql/01-basics/begin-commit-rollback), so you rarely
-need them for that. Their job here is to discard a multi-statement branch in one go.
+The [MySQL 8.4 savepoint contract](https://dev.mysql.com/doc/refman/8.4/en/savepoint.html)
+defines a named point inside a transaction. ROLLBACK TO SAVEPOINT undoes subsequent
+InnoDB row changes without ending that transaction. It does not commit earlier work.
+The examples run on MySQL 8.4.11, InnoDB, with explicit BEGIN.
 
 ## Discard a risky branch
 
-The risky part of the transaction made real progress before failing. A single
-`ROLLBACK TO SAVEPOINT` undoes all of it, including the statements that succeeded:
+The duplicate-key error rolls back one INSERT, but the preceding branch INSERT
+survives until A rolls back to the savepoint. The intermediate SELECT asserts that
+the branch row is gone and the earlier INSERT remains. A then commits a replacement.
 
 <!--@include: ./parts/savepoint-recovery.md-->
 
 ## Nesting and RELEASE
 
+The second Scenario asserts that rolling back to the outer savepoint destroys the
+inner one (1305). RELEASE removes the outer bookmark without undoing row 4, and an
+attempt to reuse it also fails with 1305. The final committed rows are 1 and 4.
+
 <!--@include: ./parts/savepoint-nesting.md-->
 
-`ROLLBACK TO SAVEPOINT` undoes the data changes made after the savepoint but keeps the
-transaction (and the locks it took before the savepoint) alive. Roll back to an outer
-savepoint and the inner ones vanish with it, so reaching for one afterward fails with errno
-`1305`. `RELEASE SAVEPOINT` forgets a bookmark without undoing anything, and every savepoint
-disappears on `COMMIT` or a full `ROLLBACK`.
+The manual additionally documents that COMMIT and full ROLLBACK delete savepoints,
+and reusing a savepoint name replaces the old point. Savepoint rollback does **not**
+generally release row locks stored in memory after the savepoint. An inserted row's
+lock carried in its transaction ID is released when that insertion is undone.
+Those lock and same-name rules are Documented contracts, not asserted by these
+INSERT-only schedules. Do not infer that a discarded branch releases every lock.
+
+Statement recovery is error-specific. A deadlock rolls back the whole transaction,
+including its savepoints; see [error handling](/mysql/01-basics/begin-commit-rollback).
+Nontransactional writes and implicit-commit DDL are outside this rollback promise.
 
 ## Further reading
 
-- [MySQL docs: SAVEPOINT, ROLLBACK TO SAVEPOINT, and RELEASE SAVEPOINT](https://dev.mysql.com/doc/refman/8.4/en/savepoint.html)
+- [MySQL 8.4: SAVEPOINT, ROLLBACK TO SAVEPOINT, and RELEASE SAVEPOINT](https://dev.mysql.com/doc/refman/8.4/en/savepoint.html)
 - [The same lesson on PostgreSQL](/postgres/01-basics/savepoints)

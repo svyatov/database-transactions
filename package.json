@@ -1,7 +1,7 @@
 {
   "name": "database-transactions",
   "version": "0.1.0",
-  "description": "Learn database transactions from verified, runnable examples — every claim proven against a real database",
+  "description": "Learn database transactions from asserted runs, documented contracts, and marked derivations",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.4.2",
@@ -17,6 +17,7 @@
     "gen": "bun scripts/gen-transcripts.ts",
     "lesson": "bun scripts/lesson.ts",
     "docs:anchors": "bun scripts/check-anchors.ts",
+    "docs:references": "bun scripts/check-audit-references.ts",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"

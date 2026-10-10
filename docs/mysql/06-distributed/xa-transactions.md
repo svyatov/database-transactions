@@ -1,34 +1,20 @@
 # XA transactions: two-phase commit
 
-The [outbox](/mysql/06-distributed/transactional-outbox) and [sagas](/mysql/06-distributed/sagas)
-sidestep distributed transactions. XA is the machinery for doing them *for real*: the
-[manual](https://dev.mysql.com/doc/refman/8.4/en/xa.html), "XA supports distributed
-transactions, that is, the ability to permit multiple separate transactional resources to
-participate in a global transaction," coordinated by two-phase commit: "The process for
-executing a global transaction uses two-phase commit (2PC)."
-
-The division of labor, per the same page: "The MySQL implementation of XA enables a MySQL
-server to act as a Resource Manager". The *Transaction Manager* that coordinates the
-branches is someone else's job (your application server or middleware). Phase one is
-`XA PREPARE`: the database promises it *can* commit, survives anything, and waits for the
-verdict. The scenario proves how literal that promise is:
+XA provides a resource-manager interface for externally coordinated transactions. The [MySQL 8.4 manual](https://dev.mysql.com/doc/refman/8.4/en/xa.html) states: "The MySQL implementation of XA enables a MySQL server to act as a Resource Manager". A Transaction Manager must own the global decision and recovery. This lesson executes one MySQL branch, not a complete distributed commit.
 
 ## A prepared transaction outlives its session
 
-"No longer belongs to its session" is not a figure of speech, and three sessions carry the
-demo. Session A is the participant that prepares, Session M is a monitor watching the
-server's state, and Session B is the unrelated session that finishes the job at the end.
-Here is the whole path before the transcript walks it step by step:
+The scenario explicitly enables `xa_detach_on_prepare`. The [XA-state manual](https://dev.mysql.com/doc/refman/8.4/en/xa-states.html) states: "MySQL 8.4 supports detached XA transactions". With that setting ON, PREPARE detaches the branch, and another connection can resolve it. With it OFF, the branch remains associated with the original connection. The setting is part of this demonstration.
 
 ```timeline
-Session A: XA PREPARE 'transfer-42' → detaches from the session
-Session A: SELECT balance → 100 ← can't see its own prepared change
+Session A: XA PREPARE 'transfer-42' → detaches with xa_detach_on_prepare=ON
+Session A: SELECT balance → 100 ← separate read cannot see the prepared change
 Session M: XA RECOVER → transfer-42
-Session B: SELECT … FOR UPDATE NOWAIT → 3572 ← the prepared txn still holds the row lock
-Session M: KILL A → the coordinator crashes
+Session B: SELECT … FOR UPDATE NOWAIT → 3572 ← prepared branch holds the row lock
+Session M: KILL A → participant session terminates
 Session A: SELECT 1 → connection closed
-Session M: XA RECOVER → transfer-42 ← survived the kill
-Session B: XA COMMIT 'transfer-42' → ok ← phase two, from a different session
+Session M: XA RECOVER → transfer-42 ← still prepared
+Session B: XA COMMIT 'transfer-42' → completes the branch
 Session B: SELECT balance → 200
 ```
 
@@ -36,40 +22,18 @@ Session B: SELECT balance → 200
 
 ## What PREPARE actually buys, and costs
 
-Three moments in the transcript deserve a second look. The first is detachment: after
-`XA PREPARE`, A itself read the *old* balance, because the transaction no longer belongs to
-its session. It lives server-side now, findable only through `XA RECOVER`.
+After PREPARE, A reads the old balance 100; the prepared change has not committed. `XA RECOVER` lists the branch. B's `NOWAIT` read fails with `3572` before and after M kills A's connection. B then commits the prepared branch and reads 200. The scenario does not kill a coordinator process or restart the server.
 
-The second is survival. `KILL`-ing A's connection (the "coordinator crash") changed
-nothing. Since MySQL 8.0 a prepared XA transaction survives client disconnect and even a
-full server restart, which is the entire point of phase one: once every participant has
-prepared, the global commit decision can be carried out no matter who dies.
-
-The third is that the locks stay too. B's `NOWAIT` probe failed identically before and
-after the kill, because nothing expires a prepared transaction: an orphan holds its
-[row locks](/mysql/03-locking/row-locks) and pins
-[undo history](/mysql/04-mvcc/history-list-length) until a transaction manager (or a human
-running `XA RECOVER` then `XA COMMIT`/`XA ROLLBACK` by name) resolves it. If locks seem
-stuck and [no session admits to holding them](/mysql/03-locking/monitoring-locks), check
-`XA RECOVER`.
+The [XA-state contract](https://dev.mysql.com/doc/refman/8.4/en/xa-states.html) documents resolution of a PREPARED branch by XA COMMIT or XA ROLLBACK. The demonstrated branch retains its conflicting row lock until resolution. This does not establish a database-wide lock, retention of every lock type, undo-history growth, or survival of every possible failure.
 
 ## Should you use it?
 
-The same answer as [PostgreSQL's](/postgres/06-distributed/two-phase-commit): XA is a
-building block for external transaction managers (JTA servers, MSDTC-era middleware),
-not an application-level tool. Unless a real TM owns both phases *including recovery of
-orphans*, the outbox and sagas give you the guarantees you actually need with failure
-modes you can sleep through: a stuck saga is a business problem; a stuck prepared
-transaction is a database-wide lock leak.
+Use XA only with a recovery design that can reconcile prepared branches with the Transaction Manager's decision. A stranded branch can block conflicting work, as the `NOWAIT` probes show. `XA RECOVER` lists prepared branches, not only orphans. Seeing an XID is not sufficient reason to choose COMMIT or ROLLBACK; that choice must follow the coordinated outcome.
 
-So XA earns its keep strictly as a primitive: `XA START … XA END … XA PREPARE` detaches a
-crash-proof transaction, `XA COMMIT` or `XA ROLLBACK` finishes it from any session by name,
-and `XA RECOVER` lists the orphans. Between the two phases it holds every lock with no
-timeout and no automatic cleanup, so a coordinator that dies mid-flight leaks a
-database-wide lock. MySQL is only the Resource Manager here; coordination and orphan
-recovery belong to a Transaction Manager, and if you don't have one, you don't want XA.
+The [outbox](/mysql/06-distributed/transactional-outbox) and [saga](/mysql/06-distributed/sagas) lessons describe different failure boundaries. They are not equivalent guarantees or evidence of simpler production recovery. This transcript establishes session termination and cross-session branch completion only, with detachment enabled.
 
 ## Further reading
 
 - [MySQL docs: XA Transactions](https://dev.mysql.com/doc/refman/8.4/en/xa.html)
+- [MySQL docs: XA Transaction States](https://dev.mysql.com/doc/refman/8.4/en/xa-states.html)
 - [The same lesson on PostgreSQL: PREPARE TRANSACTION](/postgres/06-distributed/two-phase-commit)

@@ -1,9 +1,9 @@
-title: Foreign keys take row locks for you — big ones
+title: A foreign-key check makes a parent UPDATE wait
 claim: >-
-  INSERTing a child row locks the referenced parent row with a plain shared
-  lock: even a non-key UPDATE of the parent blocks until the child commits
-  (PostgreSQL's FOR KEY SHARE would allow it), and deleting a referenced parent
-  fails outright.
+  For this MySQL 8.4 InnoDB table-level foreign key with the default RESTRICT
+  action, a child INSERT makes a parent non-key UPDATE wait until commit.
+  The later parent DELETE fails with errno 1451. The shared parent-record lock
+  mechanism is documented in the MySQL manual, not inspected here.
 setup: |
   CREATE TABLE customers (id int PRIMARY KEY, name varchar(20) NOT NULL, balance int NOT NULL);
   -- Beware: MySQL silently IGNORES inline "REFERENCES" on a column — the constraint
@@ -30,7 +30,7 @@ steps:
     tl: COMMIT — releases S lock
   - success: p1
 
-  - note: With the order committed, deleting the parent doesn't block — it fails on the spot.
+  - note: With this RESTRICT foreign key and committed child, the parent DELETE fails with 1451.
   - B.fails: DELETE FROM customers WHERE id = 1
     error: "1451"
     comment: ER_ROW_IS_REFERENCED_2

@@ -1,10 +1,10 @@
-title: An error does NOT abort the transaction
+title: A duplicate-key error leaves the InnoDB transaction open
 claim: >-
-  After an error inside a transaction, MySQL keeps the transaction alive —
-  only the failed statement is rolled back, and everything else commits
-  normally.
+  The demonstrated duplicate-key INSERT error (1062, without IGNORE) rolls
+  back that statement; the earlier and later INSERTs commit in the same
+  InnoDB transaction. This does not describe deadlock or connection errors.
 setup: |
-  CREATE TABLE items (id int PRIMARY KEY, name varchar(50) NOT NULL UNIQUE);
+  CREATE TABLE items (id int PRIMARY KEY, name varchar(50) NOT NULL UNIQUE) ENGINE=InnoDB;
   INSERT INTO items VALUES (1, 'widget');
 sessions: [A]
 steps:
@@ -15,7 +15,7 @@ steps:
     error: "1062"
     comment: ER_DUP_ENTRY
 
-  - note: PostgreSQL would now refuse every statement until ROLLBACK. MySQL just carries on.
+  - note: This 1062 error leaves the earlier INSERT intact. A chooses to continue and COMMIT.
   - A: INSERT INTO items VALUES (3, 'doohickey')
   - A: COMMIT
 

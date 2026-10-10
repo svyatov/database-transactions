@@ -14,39 +14,39 @@ A> SELECT pg_stat_force_next_flush(); -- stats reach the views lazily; force it 
 (1 row)
 ```
 
-*Chapter 4 proved updates leave dead tuples behind; pg_stat_user_tables is where you SEE them:*
+*These are statistics estimates, not an exact heap scan. The small run reports five live and three dead rows:*
 
 ```transcript
-M> SELECT relname, n_live_tup::int, n_dead_tup::int, last_vacuum IS NULL AS never_vacuumed
+M> SELECT relname, n_live_tup::int, n_dead_tup::int, last_vacuum IS NULL AS no_vacuum_timestamp
    FROM pg_stat_user_tables WHERE relname = 'inventory';
-  relname  | n_live_tup | n_dead_tup | never_vacuumed 
------------+------------+------------+----------------
- inventory |          5 |          3 | t              
+  relname  | n_live_tup | n_dead_tup | no_vacuum_timestamp 
+-----------+------------+------------+---------------------
+ inventory |          5 |          3 | t                   
 (1 row)
 ```
 
-*VACUUM cleans up — and the same view proves it happened:*
+*After manual VACUUM, the estimate is zero dead rows and last_vacuum is present:*
 
 ```transcript
 A> VACUUM inventory;
 VACUUM
 
-M> SELECT relname, n_live_tup::int, n_dead_tup::int, last_vacuum IS NOT NULL AS vacuumed
+M> SELECT relname, n_live_tup::int, n_dead_tup::int, last_vacuum IS NOT NULL AS has_vacuum_timestamp
    FROM pg_stat_user_tables WHERE relname = 'inventory';
-  relname  | n_live_tup | n_dead_tup | vacuumed 
------------+------------+------------+----------
- inventory |          5 |          0 | t        
+  relname  | n_live_tup | n_dead_tup | has_vacuum_timestamp 
+-----------+------------+------------+----------------------
+ inventory |          5 |          0 | t                    
 (1 row)
 ```
 
-*The one number that must never reach its limit: the database's xid age vs the emergency threshold.*
+*Compare database xid age with the configured autovacuum freeze-launch threshold. Below it is not proof that freezing will finish in time:*
 
 ```transcript
-M> SELECT age(datfrozenxid) < current_setting('autovacuum_freeze_max_age')::int AS wraparound_ok
+M> SELECT age(datfrozenxid) < current_setting('autovacuum_freeze_max_age')::int AS below_freeze_threshold
    FROM pg_database WHERE datname = current_database();
- wraparound_ok 
----------------
- t             
+ below_freeze_threshold 
+------------------------
+ t                      
 (1 row)
 ```
 

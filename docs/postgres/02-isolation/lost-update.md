@@ -1,36 +1,42 @@
 # Lost updates
 
-Read a value, modify it in application code, write it back. Run two of these concurrently
-and one deposit vanishes outright: no error, no log line, nothing. Why the innocent
-read-modify-write pattern loses data is
-[Concepts: the lost update problem](/concepts/lost-update); this page proves the loss on
-PostgreSQL, then shows the isolation level that refuses to play along.
+Try [two-writer practice](/postgres/02-isolation/practice-two-writers) before reading the results below.
+
+Two transactions can read the same balance, compute a new value in application code,
+and write that stale value back. The [concept lesson](/concepts/lost-update) defines
+the lost-update problem. These PostgreSQL 18.6 Scenarios compare that specific
+read-modify-write operation at READ COMMITTED and REPEATABLE READ.
 
 ## Watch a deposit disappear
 
+Both transactions read 100 and write 110. Both commit, and the asserted final balance
+is 110 rather than the intended 120.
+
 <!--@include: ./parts/lost-update-read-committed.md-->
 
-::: warning No error to catch
-There is nothing to handle, retry, or alert on: at the default level the loss is invisible
-to your code, your logs, and your monitoring. You find it in the books, weeks later.
+::: warning No SQL error for this overwrite
+The database accepts both writes in this schedule. The Scenario does not inspect
+application logs or monitoring, and does not show that every application must miss the loss.
 :::
 
 ## REPEATABLE READ turns it into an error
 
-The same interleaving, one isolation level up. PostgreSQL detects that B's write would
-overwrite a row modified after B's snapshot, and refuses:
+With REPEATABLE READ snapshots established before A commits, B's stale UPDATE
+returns 40001. The balance is then 110: B's deposit has not committed. The Scenario
+executes B again in a fresh transaction, rereads 110, and asserts a final balance of 120.
 
 <!--@include: ./parts/lost-update-repeatable-read.md-->
 
-If you remember one thing from this chapter, make it this: read-modify-write through application
-code at READ COMMITTED loses updates silently. Move one level up and REPEATABLE READ (or
-SERIALIZABLE) turns that silent loss into SQLSTATE `40001`: the data is safe and the losing
-transaction retries. Raising the isolation level is only one of
-[the fixes](/concepts/lost-update#the-fixes), and often not the best one:
-[fixing lost updates](/postgres/05-patterns/fixing-lost-updates) walks through atomic updates,
-`FOR UPDATE`, and version columns, each with its own transcript.
+This retry succeeds under the displayed schedule. The
+[PostgreSQL 18 updating-command contract](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ)
+explains the post-snapshot target-row conflict. Raising isolation does not protect a
+stale value read outside the transaction whose UPDATE uses it. Recovery must rerun
+the reads and decision, and other schedules can require more retries.
+
+[Fixing lost updates](/postgres/05-patterns/fixing-lost-updates) demonstrates atomic
+SQL updates, FOR UPDATE, and version checks with their writer-participation requirements.
 
 ## Further reading
 
-- [PostgreSQL docs: Repeatable Read Isolation Level](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-REPEATABLE-READ)
+- [PostgreSQL 18: Repeatable Read](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ)
 - [The same lesson on MySQL](/mysql/02-isolation/lost-update)

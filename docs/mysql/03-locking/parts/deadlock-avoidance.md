@@ -27,7 +27,7 @@ B> SELECT id FROM accounts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;
 ⏳ B is waiting for a lock…
 ```
 
-*No cycle is possible: B parks at the first row and holds nothing A needs.*
+*In this schedule B waits before holding any record lock A needs.*
 
 ```transcript
 A> UPDATE accounts SET balance = balance - 10 WHERE id = 1;

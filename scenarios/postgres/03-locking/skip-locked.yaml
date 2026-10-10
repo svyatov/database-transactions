@@ -1,14 +1,15 @@
 title: "SKIP LOCKED: take what's free, skip what's taken"
 claim: >-
-  SELECT ... FOR UPDATE SKIP LOCKED silently skips locked rows, so concurrent
-  workers each grab a different row without ever waiting — the backbone of
-  Postgres job queues.
+  In overlapping transactions, the scheduled FOR UPDATE SKIP LOCKED reads
+  return jobs 1, 2 and 3, then no available row. After A explicitly rolls
+  back, D reads job 1 again. No external execution or universal no-wait
+  guarantee is established.
 setup: |
   CREATE TABLE jobs (id int PRIMARY KEY, task text NOT NULL);
   INSERT INTO jobs VALUES (1, 'send email'), (2, 'resize image'), (3, 'build report');
 sessions: [A, B, C, D]
 steps:
-  - note: Four workers run the exact same query at the same time.
+  - note: Four sessions run the same query in the listed order with overlapping transactions.
   - A: BEGIN
   - A: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: [{ id: 1 }]
@@ -25,12 +26,12 @@ steps:
     expect: [{ id: 3 }]
     tl: SKIP LOCKED → job 3 (skips 1, 2)
 
-  - note: Worker D finds the queue empty — an instant answer, not a wait.
+  - note: D finds no lockable row in this query; three rows still exist.
   - D: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
     expect: []
     tl: SKIP LOCKED → nothing free
 
-  - note: A worker crash (rollback) puts its job straight back on the queue.
+  - note: Explicit ROLLBACK releases A's row lock; a process crash is not injected.
   - A: ROLLBACK
     tl: ROLLBACK → job 1 back on the queue
   - D: SELECT * FROM jobs ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED

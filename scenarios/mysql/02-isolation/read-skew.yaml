@@ -2,15 +2,16 @@ title: "Read skew: one transaction, two rows, an impossible total"
 claim: >-
   At READ COMMITTED, a transaction reading two rows around a concurrent
   transfer observes money that never existed (Adya's G-single, "read skew");
-  REPEATABLE READ's transaction-wide snapshot keeps plain SELECTs consistent.
+  the repeated REPEATABLE READ schedule returns 25 and 75 from one snapshot,
+  with no writes by the reader.
 anomaly: G-single
 setup: |
-  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL) ENGINE=InnoDB;
   INSERT INTO accounts VALUES (1, 'alice', 50), (2, 'bob', 50);
 sessions: [A, B]
 steps:
   - note: >-
-      The invariant: alice + bob = 100 at every moment. A is an auditor summing
+      The rule: alice + bob = 100 in each committed state. A models an auditor reading
       the accounts row by row; B transfers 25 between them mid-audit.
   - A: SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED
   - A: BEGIN
@@ -24,7 +25,7 @@ steps:
   - B: UPDATE accounts SET balance = balance + 25 WHERE owner = 'bob'
     tl: bob +25
   - B: COMMIT
-    comment: a perfectly correct transfer — atomic, invariant preserved
+    comment: a perfectly correct transfer; atomic, invariant preserved
     tl: COMMIT (transfer done)
 
   - A: SELECT balance FROM accounts WHERE owner = 'bob'
@@ -34,8 +35,9 @@ steps:
   - A: COMMIT
 
   - note: >-
-      Neither row was ever wrong — A read alice BEFORE the transfer and bob
-      AFTER it. REPEATABLE READ pins every plain SELECT to one snapshot:
+      Neither row was ever wrong; A read alice BEFORE the transfer and bob
+      AFTER it. The repeated REPEATABLE READ consistent SELECTs use one snapshot;
+      the reader makes no changes of its own:
   - A: SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ
   - A: BEGIN
   - A: SELECT balance FROM accounts WHERE owner = 'alice'
@@ -48,5 +50,5 @@ steps:
 
   - A: SELECT balance FROM accounts WHERE owner = 'bob'
     expect: [{ balance: 75 }]
-    comment: "25 + 75 = 100 — one snapshot, one moment in time"
+    comment: "25 + 75 = 100; one snapshot, one moment in time"
   - A: COMMIT

@@ -3,7 +3,7 @@
 ```timeline
 A: UPDATE row1 → 20 (uncommitted)
 B: UPDATE WHERE value = 10 → ⏳ waits
-A: COMMIT — row1 is now 20
+A: COMMIT; row1 is now 20
 B: ⏵ UPDATE WHERE value = 10 → completes
 ```
 
@@ -15,7 +15,7 @@ A> UPDATE items SET value = value * 2 WHERE id = 1; -- row 1: 10 → 20, uncommi
 Query OK, 1 row affected
 ```
 
-*B targets WHERE value = 10. The latest committed version of row 1 still qualifies — but it's locked by A, so B waits.*
+*B targets WHERE value = 10. The latest committed version of row 1 still qualifies; but it's locked by A, so B waits.*
 
 ```transcript
 B> SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -28,7 +28,7 @@ B> UPDATE items SET value = 99 WHERE value = 10;
 ⏳ B is waiting for a lock…
 ```
 
-*A commits. B wakes up and re-checks the row it waited for — against the NEW version, where value is 20.*
+*A commits. B wakes up and re-checks the row it waited for against the NEW version, where value is 20.*
 
 ```transcript
 A> COMMIT;
@@ -38,7 +38,7 @@ Query OK
 Query OK, 0 rows affected
 ```
 
-*0 rows affected — the row slipped away.*
+*0 rows affected; the row slipped away.*
 
 ```transcript
 B> COMMIT;

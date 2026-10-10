@@ -1,8 +1,8 @@
-title: Waiters form a queue — first come, first locked
+title: "Observed row-wait queue: B completes before C"
 claim: >-
-  Sessions waiting for the same row lock queue up: when the holder commits,
-  the lock goes to the first waiter, and everyone else keeps waiting behind
-  it.
+  In this single-row update schedule B completes after A commits while C
+  remains waiting; after B commits C completes, and the balance is 211.
+  This observation does not establish universal FIFO fairness.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'shared', 100);
@@ -29,7 +29,7 @@ steps:
     expect: [{ waiting: B }, { waiting: C }]
     tl: who's waiting? → B and C
 
-  - note: A commits. The lock goes to B — the head of the queue — not to C.
+  - note: A commits. B completes while C is observed waiting again.
   - A: COMMIT
     tl: COMMIT → lock passes to B
   - success: p1

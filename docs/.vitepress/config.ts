@@ -290,7 +290,7 @@ export function buildCurriculum(
 
 function crossDriver(): string {
   const ran = existsSync(new URL("../../.cross-driver-ok", import.meta.url));
-  return ran ? ", and re-proven through psycopg and PyMySQL" : "";
+  return ran ? "; shared YAML has an independent psycopg/PyMySQL check" : "";
 }
 
 // Orientation pages that otherwise fall outside every section sidebar. Listing them
@@ -334,6 +334,7 @@ const concepts = (collapsed: boolean): DefaultTheme.SidebarItem => ({
       link: "/concepts/what-is-a-transaction",
     },
     { text: "Isolation levels", link: "/concepts/isolation-levels" },
+    { text: "Choose a protection", link: "/concepts/protection-choices" },
     {
       text: "The anomaly catalog",
       link: "/concepts/isolation-anomalies",
@@ -392,6 +393,9 @@ export const sidebarPostgres: DefaultTheme.SidebarItem[] = [
       },
       { text: "Serializable", link: "/postgres/02-isolation/serializable" },
       { text: "Lost updates", link: "/postgres/02-isolation/lost-update" },
+      { text: "Practice: two writers", link: "/postgres/02-isolation/practice-two-writers" },
+      { text: "Practice: reading rows", link: "/postgres/02-isolation/practice-visibility" },
+      { text: "Practice: a staffing decision", link: "/postgres/02-isolation/practice-cross-row" },
       {
         text: "The anomaly catalog",
         link: "/postgres/02-isolation/anomaly-catalog",
@@ -412,6 +416,7 @@ export const sidebarPostgres: DefaultTheme.SidebarItem[] = [
         link: "/postgres/03-locking/table-locks-and-ddl",
       },
       { text: "Deadlocks", link: "/postgres/03-locking/deadlocks" },
+      { text: "Practice: concurrent requests", link: "/postgres/03-locking/practice-concurrent-requests" },
       {
         text: "Monitoring locks",
         link: "/postgres/03-locking/monitoring-locks",
@@ -555,6 +560,9 @@ export const sidebarMysql: DefaultTheme.SidebarItem[] = [
       { text: "Repeatable Read", link: "/mysql/02-isolation/repeatable-read" },
       { text: "Serializable", link: "/mysql/02-isolation/serializable" },
       { text: "Lost updates", link: "/mysql/02-isolation/lost-update" },
+      { text: "Practice: two writers", link: "/mysql/02-isolation/practice-two-writers" },
+      { text: "Practice: reading rows", link: "/mysql/02-isolation/practice-visibility" },
+      { text: "Practice: a staffing decision", link: "/mysql/02-isolation/practice-cross-row" },
       {
         text: "The anomaly catalog",
         link: "/mysql/02-isolation/anomaly-catalog",
@@ -576,6 +584,7 @@ export const sidebarMysql: DefaultTheme.SidebarItem[] = [
         link: "/mysql/03-locking/table-locks-and-ddl",
       },
       { text: "Deadlocks", link: "/mysql/03-locking/deadlocks" },
+      { text: "Practice: concurrent requests", link: "/mysql/03-locking/practice-concurrent-requests" },
       { text: "Monitoring locks", link: "/mysql/03-locking/monitoring-locks" },
     ],
   },
@@ -721,8 +730,7 @@ const curriculum = buildCurriculum(sidebarPostgres, sidebarMysql);
 
 export default defineConfig({
   title: "Database Transactions",
-  description:
-    "Learn database transactions from verified, runnable examples — every claim proven against a real database.",
+  description: "Learn database transactions from asserted database runs, documented contracts, and marked derivations.",
   base: BASE_PATH,
   cleanUrls: true,
   // Site-wide head tags, identical on every page. `head` hrefs are NOT auto-prefixed with `base`

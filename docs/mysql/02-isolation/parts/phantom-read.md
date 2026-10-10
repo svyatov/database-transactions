@@ -3,10 +3,10 @@
 ```timeline
 A: count(amount ≥ 100) → 2
 B: INSERT order 3 (autocommit)
-A: recount → 3, total 1500 — a phantom
+A: recount → 3, total 1500; a phantom
 ```
 
-*A computes a report twice inside one transaction: count first, then the total.*
+*A runs two SELECTs inside one transaction: a count first, then a count and total.*
 
 ```transcript
 A> SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -28,7 +28,7 @@ A> SELECT count(*) AS n FROM orders WHERE amount >= 100;
 B> INSERT INTO orders VALUES (3, 700);
 Query OK, 1 row affected
 
-A> SELECT count(*) AS n, CAST(sum(amount) AS SIGNED) AS total FROM orders WHERE amount >= 100; -- a third row appeared out of nowhere — a phantom
+A> SELECT count(*) AS n, CAST(sum(amount) AS SIGNED) AS total FROM orders WHERE amount >= 100; -- a third row appeared out of nowhere; a phantom
  n | total 
 ---+-------
  3 |  1500 
@@ -38,6 +38,6 @@ A> COMMIT;
 Query OK
 ```
 
-*A's report now says '2 orders' in one place and '3 orders, total 1500' in another.*
+*A's first SELECT returns count 2; the later SELECT returns count 3 and total 1500. No report publication is executed.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/phantom-read.yaml)</small>

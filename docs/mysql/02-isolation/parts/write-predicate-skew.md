@@ -8,6 +8,11 @@ A: DELETE balance = 20 → 0 rows
 A: SELECT balance = 20 → still sees bob
 ```
 
+```transcript
+A> SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK
+```
+
 *A opens a snapshot. B then reshuffles every balance and commits.*
 
 ```transcript
@@ -31,7 +36,7 @@ B> COMMIT; -- current data is now 15 and 25
 Query OK
 ```
 
-*A closes every account with balance 20 — its snapshot says that's bob. But the DELETE is a current read: it scans the committed 15 and 25, finds nothing, and deletes nothing.*
+*A closes every account with balance 20; its snapshot says that's bob. But the DELETE is a current read: it scans the committed 15 and 25, finds nothing, and deletes nothing.*
 
 ```transcript
 A> DELETE FROM accounts WHERE balance = 20;
@@ -47,6 +52,6 @@ A> COMMIT;
 Query OK
 ```
 
-*A's writes ran in one world, its reads in another. PostgreSQL's REPEATABLE READ aborts the DELETE with a serialization failure instead; on MySQL the cure is a locking read (FOR UPDATE) or SERIALIZABLE.*
+*A's DELETE used current rows while its consistent SELECT retained an older snapshot. A locking read must precede the decision and all relevant writers must coordinate; changing a later read alone is not a general repair. See the locking and SERIALIZABLE lessons.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/02-isolation/write-predicate-skew.yaml)</small>

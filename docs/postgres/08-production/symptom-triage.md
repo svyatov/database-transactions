@@ -1,24 +1,19 @@
 # Symptom triage
 
-Production doesn't page you about "isolation anomalies": it pages you about latency,
-weird numbers, and full connection pools. This chapter is the site in runbook order:
-start from the symptom, run one query, land on the mechanism you already learned.
+Use these symptoms to choose a diagnostic starting point. They are hypotheses, not measured incident frequencies or a complete production runbook. The linked Scenarios demonstrate particular schedules on PostgreSQL 18.6; a matching symptom does not by itself prove the same cause.
 
-| Symptom | Usual suspect | Start here |
+| Symptom | Candidate cause | Start here |
 |---|---|---|
-| Queries hang; latency spikes in bursts | A lock queue behind one long holder, often an idle transaction or unguarded DDL | [Who is blocking whom](/postgres/08-production/who-is-blocking-whom), [Table locks & DDL](/postgres/03-locking/table-locks-and-ddl) |
-| Numbers don't add up; no errors logged | A [lost update](/postgres/02-isolation/lost-update) or [write skew](/postgres/02-isolation/serializable), the silent ones | Grep the code for read-modify-write; fix with [these patterns](/postgres/05-patterns/fixing-lost-updates) |
-| Connections pile up until the pool is empty | Sessions stuck `idle in transaction` | [Long & idle transactions](/postgres/08-production/long-and-idle-transactions), [ORM pitfalls](/postgres/05-patterns/orm-pitfalls) |
-| Table keeps growing though rows are deleted | [Dead tuples](/postgres/04-mvcc/dead-tuples-and-bloat); VACUUM starved by a [long transaction](/postgres/04-mvcc/long-transactions) | [Bloat & vacuum health](/postgres/08-production/bloat-and-vacuum-health) |
-| Sporadic `40001` / `40P01` errors under load | [Serialization failures](/postgres/02-isolation/serializable) and [deadlocks](/postgres/03-locking/deadlocks): expected, must be retried | [Logs & counters](/postgres/08-production/logs-and-counters), [the retry wrapper](/postgres/05-patterns/retrying-serialization-failures) |
-| Locks held but *no session* owns them | An orphaned [prepared transaction](/postgres/06-distributed/two-phase-commit) | `SELECT gid FROM pg_prepared_xacts;` |
+| Queries hang or latency spikes | A conflicting lock holder or an earlier incompatible waiter | [Who is blocking whom](/postgres/08-production/who-is-blocking-whom), [Table locks & DDL](/postgres/03-locking/table-locks-and-ddl) |
+| Numbers violate the intended rule without an error | A stale read-modify-write or cross-row write skew | Inspect the actual writer paths; [single-row repairs](/postgres/05-patterns/fixing-lost-updates) and [Serializable](/postgres/02-isolation/serializable) address different rules. |
+| The application pool fills | Idle transactions, long active work, or connection-use problems | [Long & idle transactions](/postgres/08-production/long-and-idle-transactions), [ORM pitfalls](/postgres/05-patterns/orm-pitfalls). No pool is executed by these Scenarios. |
+| A table stays large after deletion | Unreclaimed versions, reusable internal space, or another size contributor | [Bloat & vacuum health](/postgres/08-production/bloat-and-vacuum-health), [Long transactions](/postgres/04-mvcc/long-transactions) |
+| `40001` or `40P01` errors recur | A serialization conflict or deadlock | [Logs & counters](/postgres/08-production/logs-and-counters), [bounded full-transaction retry](/postgres/05-patterns/retrying-serialization-failures). Retrying can exhaust its budget; external effects need separate handling. |
+| Locks remain without a live owner session | Prepared work is one possibility | `SELECT gid FROM pg_prepared_xacts;`, then [coordinated recovery](/postgres/06-distributed/two-phase-commit). This lists prepared work, not only orphaned work. |
 
-Two habits make every row of this table easier. Name your sessions: every scenario on
-this site sets `application_name`, and every triage query returns it, so one line in your
-connection setup buys you readable `pg_stat_activity` forever. And alert before the page,
-because most of these symptoms have a leading indicator, and the
-[alerting checklist](/postgres/08-production/alerting-checklist) lists the handful worth
-watching.
+Set meaningful `application_name` values to help connect database activity to application work. The runner names its Sessions; that does not establish that every production query has a meaningful name or that monitoring permission is automatic. Combine state, queries, lock relationships, and transaction horizons with application context.
+
+The [alerting checklist](/postgres/08-production/alerting-checklist) suggests investigation signals and explicitly tunable policies. It does not prove that every incident has an early warning or that the listed limits prevent failures.
 
 ## Further reading
 

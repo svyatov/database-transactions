@@ -25,7 +25,7 @@ A> COMMIT;
 COMMIT
 ```
 
-*B's locked read waited out A's transaction — and returns the fresh 110, not the 100 it would have seen.*
+*B's locking read waited for A's transaction. The next assertion checks that it returns 110.*
 
 ```transcript
 ⏵ B resumes:

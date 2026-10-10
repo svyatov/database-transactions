@@ -50,7 +50,7 @@ Query OK
 Query OK, 1 row affected
 ```
 
-*And an X lock blocks even the friendliest reader: FOR SHARE has to wait for a running UPDATE.*
+*An X record lock conflicts with FOR SHARE's S request; this locking reader waits.*
 
 ```transcript
 A> BEGIN;
@@ -72,6 +72,6 @@ Query OK
 (1 row)
 ```
 
-*PostgreSQL's FOR KEY SHARE would coexist with that UPDATE — InnoDB has no lock that weak.*
+*The S/X record-lock contract is documented in the MySQL 8.4 locking manual; gap locks have different compatibility.*
 
 <small>Verified against MySQL 8.4.11 · [Run it yourself](/about/run-locally) · [Scenario source](https://github.com/svyatov/database-transactions/blob/main/scenarios/mysql/03-locking/lock-mode-matrix.yaml)</small>

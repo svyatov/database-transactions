@@ -45,10 +45,10 @@ R> SELECT balance FROM accounts WHERE id = 1; -- this time the read view predate
 (1 row)
 ```
 
-*One more thing R hasn't needed so far: a transaction ID. InnoDB hands read-only transactions a placeholder above 2^48 instead of consuming a real, persistent ID.*
+*The documented nonlocking read-only optimization avoids a persistent transaction ID. This build exposes a placeholder above 2^48 for R; that numeric representation is not a public format guarantee.*
 
 ```transcript
-A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx; -- R is the only open transaction — and its ID is fake
+A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx; -- R is the only open transaction; this build reports an ID above 2^48
  placeholder_id 
 ----------------
               1 
@@ -57,7 +57,7 @@ A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM info
 R> UPDATE accounts SET balance = balance + 1 WHERE id = 1; -- R's first write…
 Query OK, 1 row affected
 
-A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx; -- …and only now does it get a real transaction ID
+A> SELECT CAST(trx_id AS UNSIGNED) > 281474976710656 AS placeholder_id FROM information_schema.innodb_trx; -- after the write, this build reports an ID below 2^48
  placeholder_id 
 ----------------
               0 

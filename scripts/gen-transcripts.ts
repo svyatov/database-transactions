@@ -2,8 +2,8 @@
  * Runs every scenario against the real database and writes its transcript to
  * docs/<db>/<chapter>/parts/<scenario>.md, where lesson pages include it.
  *
- * CI regenerates all transcripts and fails on any diff — the docs cannot drift
- * from actual database behavior.
+ * Database-relevant CI changes regenerate transcripts and reject artifact drift.
+ * The gate checks these executed schedules, not all prose or all possible behavior.
  *
  * The same pass records what it proved: docs/public/ledger.jsonl plus llms-full.txt
  * and llms.txt — all committed, inside the drift gate, so a prose-only CI run that
@@ -116,7 +116,7 @@ function llmsFull(records: Ledger[], transcripts: string[]): string {
     );
   }
   const out = [
-    "# Database Transactions — every proven transcript",
+    "# Database Transactions: generated Scenario transcripts",
     "",
     `Each section below is one scenario, replayed against a real database by \`bun run gen\`.`,
     `The structured index of the same runs is at ${SITE}/ledger.jsonl.`,
@@ -149,15 +149,15 @@ function llmsIndex(): string {
     "# Database Transactions",
     "",
     "> Transaction behavior on PostgreSQL and MySQL, taught from transcripts of real database",
-    "> runs. Every claim on this site is proven by a scenario that CI replays against pinned",
-    "> engine versions on every push, and fails on any drift.",
+    "> runs, versioned manual contracts, and explicitly marked derivations. Scenarios assert",
+    "> particular schedules. Database-relevant CI changes replay pinned engines and reject drift.",
     "",
     "## Proofs",
     "",
-    `- [Every proven transcript](${SITE}/llms-full.txt): all scenarios, with the SQL, the interleaving, and the database's own output.`,
+    `- [Generated Scenario transcripts](${SITE}/llms-full.txt): all scenarios, with SQL, interleaving, and database output. Narration and model boundaries are not additional assertions.`,
     `- [Ledger](${SITE}/ledger.jsonl): one JSON Lines record per scenario — path, engine, pinned version, claim, sessions, observed error codes. No schema-stability guarantee; the shape grows as the site does.`,
-    `- [Error codes, reproduced](${SITE}/errors/): the seven concurrency-control codes (PostgreSQL and MySQL), each with a one-sentence answer and the minimal reproduction that emits it.`,
-    `- [FAQ](${SITE}/faq): the questions people actually ask — dirty reads, lost updates, deadlocks, isolation levels — each answered in a sentence or two and linked to the transcript that proves it.`,
+    `- [Error codes, reproduced](${SITE}/errors/): seven reproduced codes, with scoped recovery advice and links to complete runnable Scenarios.`,
+    `- [FAQ](${SITE}/faq): dirty reads, lost updates, deadlocks, and isolation levels, with scoped answers and evidence links.`,
     "",
   ].join("\n");
 }

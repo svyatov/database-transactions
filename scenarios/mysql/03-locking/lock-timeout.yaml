@@ -2,24 +2,39 @@ title: "innodb_lock_wait_timeout: wait, but not forever"
 claim: >-
   With innodb_lock_wait_timeout set, a statement waits for a row lock only that
   long, then fails with errno 1205 — only the statement is rolled back, the
-  transaction survives.
+  explicit transaction survives when innodb_rollback_on_timeout is OFF;
+  its earlier change and record lock remain until ROLLBACK.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
-  INSERT INTO accounts VALUES (1, 'alice', 100);
-sessions: [A, B]
+  INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);
+sessions: [A, B, C]
 steps:
   - A: BEGIN
   - A: UPDATE accounts SET balance = 200 WHERE id = 1
     tl: UPDATE (holds row lock)
 
   - B: SET SESSION innodb_lock_wait_timeout = 1
+  - B: SELECT @@innodb_rollback_on_timeout AS rollback_on_timeout
+    expect: [{ rollback_on_timeout: 0 }]
+  - B: BEGIN
+  - B: UPDATE accounts SET balance = 125 WHERE id = 2
   - note: B queues for the row lock like anyone else — but gives up after a second.
   - B.fails: UPDATE accounts SET balance = 300 WHERE id = 1
     error: "1205"
     comment: ER_LOCK_WAIT_TIMEOUT, raised after the timeout
     tl: UPDATE — waits 1s
 
-  - note: The failure canceled only B's statement — a retry after A commits works.
+  - note: B's earlier change survives, and C still waits for B's lock on bob.
+  - B: SELECT balance FROM accounts WHERE id = 2
+    expect: [{ balance: 125 }]
+  - C: UPDATE accounts SET balance = balance + 1 WHERE id = 2
+    blocks: p2
+  - B: ROLLBACK
+  - success: p2
+  - C: SELECT balance FROM accounts WHERE id = 2
+    expect: [{ balance: 101 }]
+
+  - note: After A commits, B can retry the failed update as a new autocommit statement.
   - A: COMMIT
     tl: COMMIT
   - B: UPDATE accounts SET balance = 300 WHERE id = 1

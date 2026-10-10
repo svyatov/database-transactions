@@ -1,20 +1,16 @@
 # LISTEN/NOTIFY: transactional wake-up calls
 
-The [outbox relay](/postgres/06-distributed/transactional-outbox) polls its table; polling
-trades latency for load. PostgreSQL ships the fix: `NOTIFY`, a pub/sub doorbell built
-into the database and, the part that matters for this chapter, wired into transactions.
-The manual:
-["if a NOTIFY is executed inside a transaction, the notify events are not delivered until and unless the transaction is committed"](https://www.postgresql.org/docs/current/sql-notify.html).
-A notification can never announce data that isn't committed yet, or data that never
-committed at all.
+PostgreSQL 18's [NOTIFY contract](https://www.postgresql.org/docs/18/sql-notify.html)
+defers delivery until the notifying transaction commits. That signal
+does not prove the payload truthfully describes data or that the data
+remains unchanged until the listener reads it.
 
 ## A listener you can see
 
-One honest wrinkle: Bun's SQL client can't receive notifications, so the listener in
-this scenario is a `psql` subprocess, the same client you'd use to eavesdrop on a
-channel in production. It also demonstrates a real property of the protocol: the
-client only *notices* notifications when it talks to the server, hence the periodic
-poke:
+The scenario uses a `psql` subprocess in the Docker Compose PostgreSQL
+container. It waits for LISTEN to complete before sending notifications.
+The periodic SELECT makes this psql listener print pending notifications;
+it is not a limitation of every PostgreSQL notification client.
 
 <<< ../../../scenarios/postgres/06-distributed/listen-notify.ts#listener{ts}
 
@@ -24,31 +20,33 @@ poke:
 
 <!--@include: ./parts/listen-notify.md-->
 
-The de-duplication is documented behavior, not an accident:
-["If the same channel name is signaled multiple times with identical payload strings within the same transaction, only one instance of the notification event is delivered to listeners"](https://www.postgresql.org/docs/current/sql-notify.html).
+The listener is silent during the configured observation before commit,
+then reports the asserted channel, payload and sender. It is silent in
+the observation window after rollback. Two identical notifications in
+one transaction produce one observed payload and no second notification
+in the window. These are Demonstrated behaviors; the manual supplies
+the general commit, rollback and same-transaction folding contracts.
 
-A few caveats before you lean on it. NOTIFY is a doorbell, not a mailbox: a notification
-goes to sessions listening *right now*, so a relay that was down while the doorbell rang
-must still find the event afterwards. That's the whole reason the combo is outbox +
-NOTIFY: the outbox row is the durable fact, and the notification only says "check the
-outbox", its payload can even be empty.
+NOTIFY is not a durable queue for disconnected listeners. The
+[LISTEN contract](https://www.postgresql.org/docs/18/sql-listen.html)
+says LISTEN takes effect at commit and describes the startup race:
+commit LISTEN, inspect database state in a new transaction, then use
+notifications for later changes. Listener transactions can also delay
+delivery. Keep transactions short and retain an outbox read/polling
+recovery path. No latency improvement is measured by this example.
 
-Two more edges are worth knowing. Delivery waits for COMMIT, so notifications from a long
-transaction arrive late; the manual's advice matches
-[chapter 4's](/postgres/04-mvcc/long-transactions), that
-["applications using NOTIFY for real-time signaling should try to keep their transactions short"](https://www.postgresql.org/docs/current/sql-notify.html).
-And LISTEN and two-phase commit don't mix, a preview of the
-[next-door lesson](/postgres/06-distributed/two-phase-commit):
-["A transaction that has executed LISTEN cannot be prepared for two-phase commit"](https://www.postgresql.org/docs/current/sql-listen.html).
+Both the LISTEN and NOTIFY manuals prohibit preparing a transaction that
+performed the respective command for two-phase commit. That is a
+Documented contract, not exercised by this listener scenario.
 
-Put together, that makes `NOTIFY` the outbox relay's wake-up call rather than its memory:
-fire it in the same transaction that writes the outbox row, `LISTEN` in the relay, and
-fall back to polling when no one is listening. The notification itself is disposable (it
-rings for whoever is home and then vanishes), so every durability guarantee stays in the
-outbox table, exactly where the previous lesson put it.
+The [outbox](/postgres/06-distributed/transactional-outbox) retains event
+intent; a notification can wake a connected relay to inspect it. No
+relay delivery, disconnect replay, or consumer deduplication is tested here.
 
 ## Further reading
 
-- [PostgreSQL docs: NOTIFY](https://www.postgresql.org/docs/current/sql-notify.html)
-- [PostgreSQL docs: LISTEN](https://www.postgresql.org/docs/current/sql-listen.html)
-- [MySQL has no LISTEN/NOTIFY](/mysql/06-distributed/transactional-outbox): its outbox lesson covers polling and binlog CDC instead
+- [PostgreSQL 18: NOTIFY](https://www.postgresql.org/docs/18/sql-notify.html)
+- [PostgreSQL 18: LISTEN](https://www.postgresql.org/docs/18/sql-listen.html)
+- [MySQL outbox polling](/mysql/06-distributed/transactional-outbox)
+
+The [reconstructed support assessment](/audits/40-reconstructed-support#postgresql-distributed) records the exact manual support and execution limits for this lesson.

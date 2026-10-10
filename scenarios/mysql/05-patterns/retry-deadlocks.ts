@@ -1,7 +1,7 @@
 import { eq, scenario } from "../../../harness/scenario";
 
 // #region helper
-/** Re-run `fn` when it fails with a transient InnoDB error: 1213 (deadlock victim). */
+/** Re-run a complete InnoDB transaction on normalized error 1213, within the attempt limit. */
 export async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
@@ -16,7 +16,7 @@ export async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<
 export default scenario({
   title: "Retrying deadlocks",
   claim:
-    "Errno 1213 is transient, not fatal: the victim's transaction rerun from the top sees the survivor's committed state and succeeds — withRetry needs exactly two attempts here.",
+    "In this forced InnoDB deadlock, B receives 1213 and its transaction rolls back. Replaying both UPDATEs in a new transaction succeeds on attempt 2; the asserted balances are 115 and 85. This does not promise eventual success for every deadlock.",
   setup: `
     CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
     INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 100);

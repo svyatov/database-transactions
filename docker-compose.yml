@@ -1,4 +1,4 @@
-# The single source of truth for the database versions every claim is verified against.
+# The single source of truth for the database versions used by Scenario checks.
 # Used identically by local dev and CI.
 #
 # Both images are pinned to the patch. A floating tag silently re-versions every transcript

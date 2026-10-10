@@ -29,7 +29,7 @@ Query OK
 Query OK, 1 row affected
 ```
 
-*With the order committed, deleting the parent doesn't block — it fails on the spot.*
+*With this RESTRICT foreign key and committed child, the parent DELETE fails with 1451.*
 
 ```transcript
 B> DELETE FROM customers WHERE id = 1; -- ER_ROW_IS_REFERENCED_2

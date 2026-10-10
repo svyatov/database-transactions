@@ -46,7 +46,7 @@ B> SELECT email, attempts FROM signups; -- one row, and it counted the duplicate
 (1 row)
 ```
 
-*INSERT IGNORE also absorbs the duplicate (0 rows affected) — but it downgrades EVERY error on the statement to a warning, not just 1062. Prefer ON DUPLICATE KEY UPDATE: it targets exactly the race you mean.*
+*INSERT IGNORE skips this duplicate with 0 affected rows. The manual documents other ignorable errors too, not every error. An upsert reacts to any conflicting primary or unique key, not a named conflict target.*
 
 ```transcript
 B> INSERT IGNORE INTO signups (email) VALUES ('bob@example.com');

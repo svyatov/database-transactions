@@ -9,7 +9,7 @@ B: ⏵ ALTER TABLE … ADD COLUMN → completes
 C: ⏵ SELECT — just a read! → completes
 ```
 
-*A is any long-lived transaction that has touched the table — a report, a stuck job…*
+*A reads accounts inside an explicit transaction and retains its table lock.*
 
 ```transcript
 A> BEGIN;
@@ -29,7 +29,7 @@ B> ALTER TABLE accounts ADD COLUMN note text;
 ⏳ B is waiting for a lock…
 ```
 
-*— every new query on the table queues behind the *waiting* ALTER. This is the outage.*
+*C's new SELECT now waits behind the queued ALTER request.*
 
 ```transcript
 C> SELECT balance FROM accounts WHERE id = 1;
@@ -47,7 +47,7 @@ M> SELECT waiter.application_name AS waiter, blocker.application_name AS blocker
 (2 rows)
 ```
 
-*Only when A ends does the pile-up drain — migration first, then the reads.*
+*A commits; B's standalone ALTER and C's read then complete.*
 
 ```transcript
 A> COMMIT;

@@ -42,7 +42,7 @@ M> SELECT application_name AS waiting, pg_blocking_pids(pid) AS blocked_by
 (2 rows)
 ```
 
-*A commits. The lock goes to B — the head of the queue — not to C.*
+*A commits. B completes while C is observed waiting again.*
 
 ```transcript
 A> COMMIT;

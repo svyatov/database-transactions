@@ -55,7 +55,7 @@ UPDATE 1
 B> COMMIT;
 COMMIT
 
-A> SELECT owner, balance FROM accounts ORDER BY id; -- both transfers landed — same workload, zero deadlocks
+A> SELECT owner, balance FROM accounts ORDER BY id; -- both transfers committed in this schedule
  owner | balance 
 -------+---------
  alice |     115 

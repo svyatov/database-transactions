@@ -1,21 +1,25 @@
 title: "REPEATABLE READ: one snapshot for the whole transaction"
 claim: >-
-  At REPEATABLE READ — MySQL's default — plain SELECTs use a single snapshot
-  for the entire transaction: no non-repeatable reads and no phantoms.
+  In this InnoDB REPEATABLE READ schedule, the first consistent SELECT
+  includes a commit after BEGIN. Later consistent SELECTs exclude B's later
+  UPDATE and INSERT, include A's own UPDATE, and refresh after A commits.
 anomaly: P2
+isolation: REPEATABLE READ
 setup: |
-  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
+  CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL) ENGINE=InnoDB;
   INSERT INTO accounts VALUES (1, 'alice', 100), (2, 'bob', 50);
 sessions: [A, B]
 steps:
+  - A: SET TRANSACTION ISOLATION LEVEL REPEATABLE READ
   - A: BEGIN
+  - B: UPDATE accounts SET balance = 120 WHERE id = 1
 
-  - note: The snapshot is taken by the FIRST query, not by BEGIN.
+  - note: The first consistent table read includes B's commit after BEGIN.
   - A: SELECT id, balance FROM accounts ORDER BY id
-    expect: [{}, {}]
-    tl: SELECT → 100, 50 (snapshot taken)
+    expect: [{ id: 1, balance: 120 }, { id: 2, balance: 50 }]
+    tl: SELECT → 120, 50 (snapshot taken)
 
-  - note: B changes an existing row AND inserts a new one — both committed instantly.
+  - note: B changes an existing row AND inserts a new one; both committed instantly.
   - B: UPDATE accounts SET balance = 999 WHERE id = 1
     tl: UPDATE id1 = 999 (committed)
   - B: INSERT INTO accounts VALUES (3, 'carol', 300)
@@ -23,15 +27,20 @@ steps:
 
   - A: SELECT id, balance FROM accounts ORDER BY id
     expect:
-      - { id: 1, balance: 100 }
+      - { id: 1, balance: 120 }
       - { id: 2, balance: 50 }
-    comment: not 999 — no non-repeatable read; and no carol — no phantom
-    tl: SELECT → 100, 50 — no 999, no carol
+    comment: not 999; no non-repeatable read; and no carol; no phantom
+    tl: SELECT → 120, 50; no 999, no carol
+
+  - A: UPDATE accounts SET balance = balance + 10 WHERE id = 2
+  - A: SELECT id, balance FROM accounts ORDER BY id
+    expect: [{ id: 1, balance: 120 }, { id: 2, balance: 60 }]
+    comment: own write is visible alongside the snapshot's old row 1
 
   - A: COMMIT
     tl: COMMIT
 
-  - note: Only a NEW transaction gets a new snapshot.
+  - note: After COMMIT, this standalone SELECT takes a fresh snapshot.
   - A: SELECT id, balance FROM accounts ORDER BY id
-    expect: [{ balance: 999 }, {}, {}]
+    expect: [{ id: 1, balance: 999 }, { id: 2, balance: 60 }, { id: 3, balance: 300 }]
     tl: SELECT → 999 + carol (new snapshot)

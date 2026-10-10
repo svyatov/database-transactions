@@ -1,7 +1,8 @@
-title: SELECT FOR UPDATE blocks writers, never readers
+title: SELECT FOR UPDATE blocks an UPDATE, not a consistent SELECT
 claim: >-
-  A row locked with SELECT FOR UPDATE can still be read by everyone, but any
-  write to it waits until the locking transaction ends.
+  At MySQL 8.4 InnoDB REPEATABLE READ, A's FOR UPDATE on an existing PRIMARY
+  key does not prevent B's consistent SELECT, but B's UPDATE waits. After A
+  commits 150, B's decrement produces 140. Locking readers have different rules.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner varchar(20) NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
@@ -11,10 +12,10 @@ steps:
   - A: SELECT * FROM accounts WHERE id = 1 FOR UPDATE
     tl: SELECT … FOR UPDATE (locks the row)
 
-  - note: Reading the locked row costs B nothing — MVCC readers don't take row locks.
+  - note: B's consistent SELECT does not request a record lock and completes while A holds its lock.
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 100 }]
-    tl: SELECT balance → 100 (readers don't block)
+    tl: consistent SELECT balance → 100
 
   - note: "Writing to it is another story: B's UPDATE must wait for A."
   - B: UPDATE accounts SET balance = balance - 10 WHERE id = 1

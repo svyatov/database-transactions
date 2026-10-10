@@ -29,7 +29,7 @@ B> ALTER TABLE accounts ADD COLUMN note varchar(50);
 ⏳ B is waiting for a lock…
 ```
 
-*— every new query on the table queues behind the *waiting* ALTER. This is the outage.*
+*C's new SELECT queues behind the waiting ALTER in this schedule.*
 
 ```transcript
 C> SELECT balance FROM accounts WHERE id = 1;

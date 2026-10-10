@@ -9,7 +9,7 @@ A: COMMIT
 B: SELECT → 999 ← now B sees it
 ```
 
-*No BEGIN — the UPDATE is its own transaction, committed the instant it finishes.*
+*No BEGIN: this successful UPDATE commits as its own transaction before the next SELECT.*
 
 ```transcript
 A> UPDATE accounts SET balance = 150 WHERE id = 1;
@@ -25,7 +25,7 @@ B> SELECT balance FROM accounts WHERE id = 1; -- B sees it immediately
 *Inside an explicit transaction, A's change is invisible to B…*
 
 ```transcript
-A> BEGIN;
+A> BEGIN ISOLATION LEVEL READ COMMITTED;
 BEGIN
 
 A> UPDATE accounts SET balance = 999 WHERE id = 1;
@@ -48,6 +48,19 @@ B> SELECT balance FROM accounts WHERE id = 1;
  balance 
 ---------
      999 
+(1 row)
+```
+
+*A failed autocommit statement does not leave the next statement in a failed transaction.*
+
+```transcript
+A> SELECT 1 / 0;
+ERROR:  22012: division by zero
+
+A> SELECT 1 AS recovered;
+ recovered 
+-----------
+         1 
 (1 row)
 ```
 

@@ -16,7 +16,7 @@ Saga> COMMIT;
 COMMIT
 ```
 
-*A saga has no isolation: between steps, the whole world sees the half-done trip.*
+*There is no enclosing transaction across steps. This standalone READ COMMITTED Reader sees the committed intermediate seat count.*
 
 ```transcript
 Reader> SELECT seats FROM flights WHERE id = 1;

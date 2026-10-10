@@ -1,71 +1,53 @@
 ---
-description: The dual-write problem (you cannot atomically write to a database and a message broker) and the transactional outbox pattern that shrinks it to at-least-once delivery. With proofs on PostgreSQL and MySQL.
+description: "The outbox's database commit boundary, the modeled dual-write failure windows, and the separate conditions and duplicate risk of external delivery."
 ---
 
 # Dual writes & the transactional outbox
 
-Inside one database, `BEGIN` … `COMMIT` can always save you. This page is about the moment
-that stops being true: your transaction needs to reach a *second* system, a message broker,
-a search index, another service's API. There is no `BEGIN` that spans your database and
-Kafka.
+A local transaction can group transactional database writes. An independently committed external effect is outside that rollback boundary. This page describes the boundary modeled by the [PostgreSQL](/postgres/06-distributed/transactional-outbox) and [MySQL](/mysql/06-distributed/transactional-outbox) Scenarios; neither runs Kafka, HTTP, or a delivery service. Coordinated distributed protocols have different prerequisites, covered in [two-phase commit](/postgres/06-distributed/two-phase-commit) and [XA](/mysql/06-distributed/xa-transactions).
 
 ## The dual-write problem
 
-Write to the database and publish to the broker: two writes, two systems, and a process
-that can die between them. It doesn't matter which write goes first; each order picks
-which lie you end up with:
+The two schedules deliberately commit an order without its event, or commit a database-local broker stand-in before the order fails. Both assert the resulting mismatched records. The separately committed stand-in models a recipient outside the application transaction even though both tables are in one database. No process is killed or downstream consumer observed. These are failure windows, not proof that every write ordering permanently loses or invents an event. Putting both local writes in one transaction would remove that modeled split.
+
+The existing illustrative timeline describes an omitted external publication, not an executed crash:
 
 ```timeline
-App: INSERT order, COMMIT ← the order exists
-App: publish "order placed" — process dies ← the event is lost
-Broker: downstream never learns about the order
+App: INSERT order, COMMIT ← database commit
+App: publication omitted ← modeled failure window
+Receiver: no publication recorded by this model
 ```
 
-Write-first loses events (downstream never learns about the order); publish-first invents
-them (downstream processes an order that was never placed). Retries don't fix this. They
-only change the odds. The two systems need to agree, and nothing makes them.
+## Write order and intent together {#the-fix-only-ever-write-to-one-system}
 
-## The fix: only ever write to one system
+Insert the order and outbox row in one database transaction. Both engine Scenarios assert the committed pair and absence of the rolled-back pair. A relay then locks and deletes an event, explicitly rolls back, selects it again, and commits its deletion. The final pending count is zero.
 
-The outbox pattern's insight is that the application never talks to the broker at all. The
-event is written to the same database, in the same transaction as the order, and
-[atomicity](/concepts/what-is-a-transaction), which the database has guaranteed all along,
-does the rest:
+† The database-local pair shares one commit boundary, provided both writes are transactional and no implicit commit separates them. This follows from [atomicity](/concepts/what-is-a-transaction), not from testing every failure. It covers no external publication. The order/outbox assertions demonstrate the stated commit and rollback schedules.
+
+The existing illustrative recipe separates the two boundaries:
 
 ```timeline
 App: BEGIN
-App: INSERT INTO orders …
-App: INSERT INTO outbox … ← same transaction
-App: COMMIT ← order and event exist together, or not at all
-Relay: SELECT … FROM outbox FOR UPDATE SKIP LOCKED
-Relay: publish to broker, DELETE FROM outbox, COMMIT
+App: INSERT INTO orders
+App: INSERT INTO outbox ← same transaction
+App: COMMIT ← database-local pair
+Relay: SELECT FROM outbox FOR UPDATE SKIP LOCKED
+Relay: publish externally ← narration, not observed here
+Relay: DELETE FROM outbox, COMMIT ← separate database completion
 ```
 
-A separate *relay* process moves events from the outbox table to the broker, typically a
-`SKIP LOCKED` job-queue worker pointed at the outbox: crash-safe, parallelizable, five lines
-of SQL.
+## Delivery remains conditional {#at-least-once-by-construction}
 
-## At-least-once, by construction
+† If an external publication succeeds before deletion commits, a failure between those operations can leave the row available for another publication. This duplicate-window inference follows from separate effect and database boundaries. No Transcript here records a repeated receiver effect, and explicit rollback is not a real crashed relay.
 
-The relay itself still performs two writes to two systems: "publish to the broker" and
-"delete from the outbox". If it dies between them, the event is delivered *twice*. That is
-not a bug to fix but the deal you signed: the dual-write problem never disappears; the outbox
-shrinks it from "events can be lost or invented" down to "events can repeat", and repeats
-are handled with *idempotent consumers*. Exactly-once is not on the menu; idempotent
-at-least-once is how grown-ups spell it.
+At-least-once delivery requires durable retention, continued retries, and an available receiver. The SQL does not establish those conditions. Consumers need their own retained identity and deduplication protocol for their effect boundary. Database-local [idempotency](/postgres/05-patterns/idempotency) is not a general exactly-once external-delivery guarantee. The source [outbox design](https://microservices.io/patterns/data/transactional-outbox.html) describes the pattern, not additional execution by this project.
 
-## See it happen
+## See the modeled boundary {#see-it-happen}
 
-Both tracks prove the failure and the fix with a real crashed relay:
-
-- [PostgreSQL: dual writes & the outbox](/postgres/06-distributed/transactional-outbox),
-  plus [LISTEN/NOTIFY](/postgres/06-distributed/listen-notify), the transactional wake-up
-  call that removes the relay's polling latency
-- [MySQL: the outbox pattern](/mysql/06-distributed/transactional-outbox), no LISTEN/NOTIFY
-  there: the relay polls, or graduates to binlog-based CDC
+- [PostgreSQL outbox](/postgres/06-distributed/transactional-outbox): database state assertions and explicit relay rollback. [LISTEN/NOTIFY](/postgres/06-distributed/listen-notify) observes notifications for a connected listener; it provides no durable replay or measured relay-latency bound.
+- [MySQL outbox](/mysql/06-distributed/transactional-outbox): the same local boundary under InnoDB's transactional conditions. Polling and binlog-based relay scheduling are design options, not implemented delivery tests here.
 
 ## Further reading
 
-- [microservices.io: Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html)
-- [microservices.io: Polling publisher](https://microservices.io/patterns/data/polling-publisher.html),
-  the relay variant both tracks demonstrate
+- [Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html)
+- [Polling publisher](https://microservices.io/patterns/data/polling-publisher.html)

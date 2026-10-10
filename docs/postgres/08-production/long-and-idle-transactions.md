@@ -1,53 +1,29 @@
 # Long & idle transactions
 
-The most damaging thing a session can do in PostgreSQL is nothing, inside an open
-transaction. It [holds locks](/postgres/03-locking/row-locks), it
-[pins VACUUM's horizon for the whole database](/postgres/04-mvcc/long-transactions), and it
-occupies a pooled connection. This lesson is about finding those sessions, then making
-sure they can't live long.
+An open transaction can retain locks or an old cleanup horizon, and it occupies its connection until it ends. Those are separate diagnostics: not every idle transaction retains a snapshot, and connection-pool exhaustion is not measured here. This PostgreSQL 18.6 Scenario finds one idle READ ONLY REPEATABLE READ report.
 
 ## Finding them
 
 <!--@include: ./parts/find-long-transactions.md-->
 
-Note what detector 3 proved: the report never wrote a thing (`backend_xid` is null,
-because no transaction id was ever [assigned](/postgres/04-mvcc/row-versions)) and *still*
-pins the vacuum horizon through its snapshot (`backend_xmin`). Read-only is not harmless,
-and age is what matters: the session with the oldest `xact_start` is almost always the
-story.
+The report reads two orders, then pauses. All three queries identify A: its transaction is older than one second, its state is `idle in transaction`, and it retains `backend_xmin` without an assigned `backend_xid`. The manual calls `backend_xmin` the "current backend's xmin horizon" in [pg_stat_activity](https://www.postgresql.org/docs/18/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW). A missing top-level xid is not a general proof that a session never wrote: xid assignment and write counts are different things.
+
+This Scenario observes the horizon but executes no VACUUM. The [REPEATABLE READ reclamation case](/postgres/04-mvcc/long-transactions) demonstrates affected tuple slots; the [READ COMMITTED queue case](/postgres/07-pitfalls/queue-bloat) asserts an assigned xid rather than a transaction-wide snapshot. Sort by age to find candidates, then inspect state, locks, `backend_xmin`, and `backend_xid`. The oldest `xact_start` alone does not identify every cause of blocked cleanup.
 
 ## Guardrails: make the database enforce it
 
-Detection finds today's incident; timeouts prevent next month's. PostgreSQL ships three,
-from narrowest to widest:
-
 <!--@include: ./parts/timeout-guardrails.md-->
 
-- [`statement_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT):
-  ["Abort any statement that takes more than the specified amount of time"](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT).
-  Error `57014`, session survives: the seatbelt for runaway queries.
-- [`idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT)
-  kills exactly the "went to lunch" pattern;
-  [chapter 5 proved it](/postgres/05-patterns/orm-pitfalls), server-side FATAL and all.
-- [`transaction_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT)
-  (PostgreSQL 17+):
-  ["Terminate any session that spans longer than the specified amount of time in a transaction"](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT):
-  the hard ceiling that catches both previous cases *and* the slow-but-busy transaction
-  neither of them can. One caveat from the manual, pointing straight back at
-  [chapter 6](/postgres/06-distributed/two-phase-commit):
-  ["Prepared transactions are not subject to this timeout"](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT).
+- `statement_timeout` emits `57014`. The standalone statement leaves the session usable. The explicit-transaction case emits `25P02` on the next query until ROLLBACK, after which M reads the original balance 100. Session survival does not mean transaction survival.
+- `idle_in_transaction_session_timeout` terminates an idle session with an open transaction. The separate [ORM-pitfalls Scenario](/postgres/05-patterns/orm-pitfalls) demonstrates termination; no ORM runs there.
+- `transaction_timeout`, available since PostgreSQL 17, terminates a session whose transaction exceeds its limit. Here A is idle after an update: M observes no A backend and balance 100. Bun reports a closed connection; psycopg can receive `25P04`. This run does not exercise a continuously busy transaction or prepared work.
 
-Three columns of `pg_stat_activity` carry the whole story: `xact_start` for age, `state`
-for the idle-in-transaction pattern, and `backend_xmin` for the vacuum horizon. The
-scenario's three detectors are copy-paste ready. Remember that a read-only transaction
-pins VACUUM just as hard as a writer, so age is what you sort on, not write activity. Set
-`statement_timeout` and `idle_in_transaction_session_timeout` on every application role,
-sized to what the app actually needs, and add `transaction_timeout` on 17+ as the
-backstop, because a kill switch beats pager duty.
+Documented scope: PostgreSQL 18's [timeout contracts](https://www.postgresql.org/docs/18/runtime-config-client.html#GUC-STATEMENT-TIMEOUT) apply to explicit and implicit transactions as specified. A shorter or equal `transaction_timeout` supersedes a longer statement or idle-in-transaction timeout. The manual states: "Prepared transactions are not subject to this timeout". Default zero disables each of these timeouts.
+
+Operational advice: size role-specific limits for the application's work and recovery policy. Termination loses the session and rolls back its open database work; it does not undo external effects or resolve [prepared transactions](/postgres/06-distributed/two-phase-commit). Check connection-pool handling of server-closed connections before rollout. These settings bound work or waits; they do not guarantee that incidents cannot occur.
 
 ## Further reading
 
-- [PostgreSQL docs: client connection defaults](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT),
-  all three timeouts
-- [PostgreSQL docs: pg_stat_activity](https://www.postgresql.org/docs/current/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW)
+- [PostgreSQL 18: Client Connection Defaults](https://www.postgresql.org/docs/18/runtime-config-client.html#GUC-STATEMENT-TIMEOUT)
+- [PostgreSQL 18: pg_stat_activity](https://www.postgresql.org/docs/18/monitoring-stats.html#MONITORING-PG-STAT-ACTIVITY-VIEW)
 - [The same lesson on MySQL](/mysql/08-production/long-and-idle-transactions)

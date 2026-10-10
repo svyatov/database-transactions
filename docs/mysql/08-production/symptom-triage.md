@@ -1,28 +1,20 @@
 # Symptom triage
 
-Production transaction bugs announce themselves as one of five symptoms. Each row maps a
-symptom to the lesson that proves the mechanism and the lesson that fixes it. This page
-is the index you paste into the incident channel.
+For MySQL 8.4 InnoDB, these symptoms suggest investigations, not unique diagnoses. The linked schedules reproduce selected mechanisms under their stated configuration. Confirm the cause before changing isolation, ending a connection, or retrying work.
 
-| Symptom | First check | Mechanism | Fix |
+| Symptom | First check | Possible mechanism | Scoped response |
 |---|---|---|---|
-| Updates hang, then finish | [Who is blocking whom](/mysql/08-production/who-is-blocking-whom) | [lock queues](/mysql/03-locking/lock-queues) | end the blocker; [shorter transactions](/mysql/08-production/long-and-idle-transactions) |
-| Updates hang, then errno `1205` | [Who is blocking whom](/mysql/08-production/who-is-blocking-whom) | [lock wait timeout, statement rollback only!](/mysql/03-locking/nowait-skip-locked) | retry after ROLLBACK; find the blocker |
-| Errno `1213` in the logs | [the deadlock counter](/mysql/08-production/logs-and-counters) | [deadlocks](/mysql/03-locking/deadlocks), [gap locks](/mysql/03-locking/gap-locks) | consistent lock order; [retry loop](/mysql/05-patterns/retrying-deadlocks) |
-| INSERTs stuck with no row conflict | `data_locks` for `GAP` / `INSERT_INTENTION` | [gap locks](/mysql/03-locking/gap-locks) | READ COMMITTED for the writer, or narrower locking reads |
-| Numbers wrong, no errors anywhere | [the anomaly catalog](/mysql/02-isolation/anomaly-catalog) | [lost updates](/mysql/02-isolation/lost-update), [write skew](/mysql/02-isolation/serializable) | [the three fixes](/mysql/05-patterns/fixing-lost-updates) |
-| Disk grows, queries don't slow | [history list health](/mysql/08-production/history-list-health) | [an old read view pins purge](/mysql/04-mvcc/history-list-length) | end the long transaction |
-| DDL hangs and takes the app with it | processlist: `Waiting for table metadata lock` | [metadata locks](/mysql/03-locking/table-locks-and-ddl) | `lock_wait_timeout` on the DDL session |
+| Updates wait, then finish | [Waiter/blocker views](/mysql/08-production/who-is-blocking-whom) | [Row-lock waits](/mysql/03-locking/lock-queues) | Shorten the holding transaction; end it only after checking rollback and client effects |
+| Errno `1205` | Row-lock views and metadata-lock state | [Row-lock timeout](/mysql/03-locking/nowait-skip-locked) or [metadata timeout](/mysql/03-locking/table-locks-and-ddl) | For whole-operation retry, ROLLBACK first; check `innodb_rollback_on_timeout` |
+| Errno `1213` | [Deadlock reports and counter](/mysql/08-production/logs-and-counters) | [Opposite order](/mysql/03-locking/deadlocks) or another lock cycle | Retry the rolled-back transaction within a safe application boundary; investigate actual locks |
+| INSERT waits without a duplicate row | `data_locks` and wait edges | [Gap/range locks](/mysql/03-locking/gap-locks) | Narrow locking reads; READ COMMITTED changes range protection and retains constraint-related gap locks |
+| Wrong numbers with successful commits | [Anomaly catalog](/mysql/02-isolation/anomaly-catalog) and application invariants | [Lost updates](/mysql/02-isolation/lost-update) or [write skew](/mysql/02-isolation/serializable) | Select a repair for the actual rule; single-row repairs alone do not protect every cross-row invariant |
+| Storage growth | [History health](/mysql/08-production/history-list-health) and workload | Retained undo, insufficient purge capacity, or other storage growth | Investigate retaining views and purge; this metric does not measure disk bytes |
+| DDL waits and later queries queue | processlist and metadata-lock state | [Metadata-lock queue](/mysql/03-locking/table-locks-and-ddl) | Bound metadata acquisition with `lock_wait_timeout`; investigate holders |
 
-Two MySQL-specific reflexes are worth building on top of that table. Start with this one:
-errors that look alike often aren't. `1205` rolls back a single *statement* and leaves the
-transaction open, still holding its locks, while `1213` rolls back the whole *transaction*.
-Handling the two identically is [pitfall material](/mysql/07-pitfalls/compendium).
+The [InnoDB error-handling manual](https://dev.mysql.com/doc/refman/8.4/en/innodb-error-handling.html) states: "A transaction deadlock causes InnoDB to roll back the entire transaction." For an InnoDB row-lock timeout, statement-only rollback is the default, `innodb_rollback_on_timeout=OFF`; ON requests transaction rollback. The [timeout schedule](/mysql/03-locking/nowait-skip-locked) asserts the OFF case. Do not infer identical rollback scope from identical error numbers in different operations.
 
-The second reflex: silence isn't health. The costliest failures on this table (lost
-updates, write skew, purge lag) throw no error at all, so you catch them with
-[counters](/mysql/08-production/logs-and-counters) and
-[invariant checks](/mysql/02-isolation/serializable), never by grepping logs.
+Successful commits do not establish a valid application invariant. Concurrency counters can expose waits and purge history; they do not detect the business-rule violations shown in the anomaly catalog. Application checks and coordinated writer protocols are separate work.
 
 ## Further reading
 

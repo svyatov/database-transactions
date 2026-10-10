@@ -1,9 +1,9 @@
 title: One idle reader, and history piles up
 claim: >-
-  While any read view stays open, purge cannot remove the undo history behind
-  it: every committed write transaction adds to the history list, and the
-  history list length — InnoDB's bloat metric — grows for as long as the
-  reader lives.
+  On MySQL 8.4 InnoDB, R retains a REPEATABLE READ view at v=0 while
+  200 single-row UPDATE transactions commit. The history-list counter is
+  at least 200 and R still reads zero. The run does not measure retained bytes,
+  an exact counter delta, or purge completion after R commits.
 setup: |
   CREATE TABLE counters (id int PRIMARY KEY, v int NOT NULL);
   INSERT INTO counters VALUES (1, 0);
@@ -19,14 +19,14 @@ steps:
   - note: >-
       Meanwhile the application hums along: 200 small transactions, each
       updating one row and committing. Every one of them must keep its undo —
-      R's read view might still need any of those versions.
+      R's old read view prevents purge from advancing past the retained history.
   - A: CALL bump(200)
     comment: 200 committed single-row updates
     tl: 200 commits pile up undo
 
   - A: SELECT count >= 200 AS pinned_by_reader FROM information_schema.INNODB_METRICS WHERE name = 'trx_rseg_history_len'
     expect: [{ pinned_by_reader: 1 }]
-    comment: none of those 200 undo logs can be purged while R's read view lives
+    comment: the history-list counter is at least 200 while R retains its view
     tl: history_len ≥ 200 — pinned
 
   - R: SELECT v FROM counters
@@ -37,6 +37,6 @@ steps:
   - R: COMMIT
     tl: COMMIT → purge can drain it
   - note: >-
-      With the read view gone, purge is free to reclaim all 200 versions in
-      the background. The one number to watch in production is exactly this
-      counter — trx_rseg_history_len.
+      R's commit removes its read-view retention requirement. Background purge
+      and other readers determine later cleanup; this run does not wait for
+      or assert history-list drainage.

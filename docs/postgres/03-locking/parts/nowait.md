@@ -17,7 +17,7 @@ A> SELECT id FROM accounts WHERE id = 1 FOR UPDATE;
   1 
 (1 row)
 
-B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- lock_not_available — instantly, no waiting
+B> SELECT id FROM accounts WHERE id = 1 FOR UPDATE NOWAIT; -- lock_not_available from the conflicting row-lock request
 ERROR:  55P03: could not obtain lock on row in relation "accounts"
 ```
 

@@ -34,7 +34,7 @@ C> UPDATE accounts SET balance = balance + 100 WHERE id = 1;
 ⏳ C is waiting for a lock…
 ```
 
-*A commits — the waiters drain. (InnoDB's CATS scheduler does not promise strict FIFO order, but every update lands.)*
+*A commits — the waiters drain. (InnoDB's CATS scheduler does not promise strict FIFO order; this run checks both completions, not their order.)*
 
 ```transcript
 A> COMMIT;

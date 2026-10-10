@@ -1,61 +1,27 @@
 # Deadlocks
 
-A deadlock is the lock queue's dead end: A waits for B while B waits for A. Neither can ever
-proceed, so PostgreSQL breaks the tie by force: it detects the cycle and kills one of the
-transactions with SQLSTATE `40P01` (`deadlock_detected`).
+A lock deadlock is a cycle of conflicting requests: A waits for B while B waits for A. PostgreSQL 18 [detects such cycles and aborts one transaction](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-DEADLOCKS), reporting `40P01`. Do not depend on which transaction becomes the victim.
 
 ## Two transfers, opposite directions
 
-The setup is two money transfers going opposite ways. A grabs alice's row, B grabs bob's row,
-and then each reaches for the row the other is holding. That reach is the cycle.
-
-```timeline
-Session A: UPDATE alice (id=1) → holds alice
-Session B: UPDATE bob (id=2) → holds bob
-Session A: UPDATE bob (id=2) → ⏳ waits for B
-Session B: UPDATE alice (id=1) → ✋ 40P01 — the cycle is detected, B is aborted
-Session A: ⏵ UPDATE bob → completes, then COMMIT
-```
+A locks alice's row and B locks bob's. Each then updates the other's row. This schedule sets A's `deadlock_timeout` to 10 seconds and B's to 50 milliseconds to make B the observed victim:
 
 <!--@include: ./parts/deadlock.md-->
 
-How the detection works: a backend that has been waiting for `deadlock_timeout` (default
-1 s) checks whether its wait is part of a cycle, and if so, aborts itself. Two consequences are
-worth internalizing. The first is that deadlocks cost latency before they cost errors: every
-one burns at least `deadlock_timeout` of pure waiting before anything is aborted. The second is
-that the victim is effectively arbitrary: whoever's timer fires first while the cycle exists is
-the one that dies. The transcript above is only reproducible because we pinned the timers; the
-manual itself says which transaction gets aborted is
-["difficult to predict and should not be relied upon"](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-DEADLOCKS).
-Write code that survives *either* transaction being the victim.
+[`deadlock_timeout`](https://www.postgresql.org/docs/18/runtime-config-locks.html#GUC-DEADLOCK-TIMEOUT) controls how long a backend waits on a lock before checking for a deadlock, not a guaranteed minimum duration for every cycle. Its default is one second; the demonstration overrides it. Detection and scheduling latency are not benchmarked here.
 
 ## The cure: lock in a consistent order
 
-Deadlocks need a cycle, and a cycle needs disagreement about order. Remove the disagreement and
-the deadlock isn't "less likely," it's gone entirely:
+In this second schedule both transfers lock rows 1 and 2 in id order before changing either balance. B waits for A and then both transfers commit:
 
 <!--@include: ./parts/deadlock-avoidance.md-->
 
-`40P01` is retryable, exactly like the `40001` you met under serializable conflicts: roll back
-and retry the whole transaction. The other transaction finished fine, so your data is
-consistent, nothing to clean up; run yours again.
+† For this two-row workload, if every participant takes its strongest required row locks in the same order and holds no other conflicting resources, the opposite-order cycle cannot form: a waiter on row 1 cannot already hold row 2 against the holder of row 1. This is an Entailed guarantee from the [locking contract](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-DEADLOCKS), not a proof of all possible schedules. Other tables, triggers, foreign-key checks, or lock upgrades can introduce other cycles.
 
-The real fix, though, isn't retrying faster; it's never forming the cycle. That means
-consistent lock ordering, in the manual's own words: ["the best defense against deadlocks is
-generally to avoid them by being certain that all applications using a database acquire locks
-on multiple objects in a consistent order"](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-DEADLOCKS).
-Sort by primary key before `FOR UPDATE`, always update account pairs in id order, take the
-"parent" lock before the "child": one convention, zero deadlocks. Locking everything up front
-with `SELECT ... WHERE id IN (…) ORDER BY id FOR UPDATE` turns a potential deadlock into a plain
-queue wait.
-
-One last thing to watch for: because `deadlock_timeout` is a full second, deadlock-prone code
-shows up as latency spikes long before you notice the errors. Frequent `40P01` in the logs is a
-design smell, not bad luck. The [monitoring lesson](/postgres/03-locking/monitoring-locks) shows
-how to catch the wait before the timer fires.
+After `40P01`, roll back and, where the application permits it, retry the whole transaction with fresh decisions. The demonstrated victim's database changes do not commit. External effects and eventual retry success are not established. The [monitoring lesson](/postgres/03-locking/monitoring-locks) shows how to inspect waits.
 
 ## Further reading
 
-- [PostgreSQL docs: Deadlocks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-DEADLOCKS)
-- [PostgreSQL docs: `deadlock_timeout`](https://www.postgresql.org/docs/current/runtime-config-locks.html#GUC-DEADLOCK-TIMEOUT)
+- [PostgreSQL 18: Deadlocks](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-DEADLOCKS)
+- [PostgreSQL 18: deadlock_timeout](https://www.postgresql.org/docs/18/runtime-config-locks.html#GUC-DEADLOCK-TIMEOUT)
 - [The same lesson on MySQL](/mysql/03-locking/deadlocks)

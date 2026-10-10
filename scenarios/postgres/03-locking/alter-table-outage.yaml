@@ -1,14 +1,14 @@
 title: The classic migration outage, in four statements
 claim: >-
-  An ALTER TABLE queued behind one long transaction blocks every later query
-  on that table — even plain SELECTs — because they must queue behind its
-  ACCESS EXCLUSIVE request.
+  In this schedule ALTER TABLE ADD COLUMN waits behind A's retained ACCESS SHARE,
+  and C's new SELECT waits behind the queued ACCESS EXCLUSIVE request.
+  Both complete after A commits; this is not a universal queue-order guarantee.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL);
   INSERT INTO accounts VALUES (1, 'alice', 100);
 sessions: [A, B, C, M]
 steps:
-  - note: A is any long-lived transaction that has touched the table — a report, a stuck job…
+  - note: A reads accounts inside an explicit transaction and retains its table lock.
   - A: BEGIN
   - A: SELECT balance FROM accounts WHERE id = 1
     tl: SELECT (a long-lived transaction)
@@ -18,7 +18,7 @@ steps:
     blocks: p1
     tl: ALTER TABLE … ADD COLUMN
 
-  - note: — every new query on the table queues behind the *waiting* ALTER. This is the outage.
+  - note: C's new SELECT now waits behind the queued ALTER request.
   - C: SELECT balance FROM accounts WHERE id = 1
     blocks: p2
     tl: SELECT — just a read!
@@ -31,8 +31,9 @@ steps:
       ORDER BY waiter.application_name, blocker.application_name
     expect: [{ waiter: B, blocker: A }, { waiter: C, blocker: B }]
 
-  - note: Only when A ends does the pile-up drain — migration first, then the reads.
+  - note: A commits; B's standalone ALTER and C's read then complete.
   - A: COMMIT
     tl: COMMIT
   - success: p1
   - success: p2
+    expect: [{ balance: 100 }]

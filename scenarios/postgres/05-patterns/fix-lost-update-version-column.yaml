@@ -1,8 +1,8 @@
 title: "Fixing lost updates #3: optimistic locking with a version column"
 claim: >-
-  A version column makes the lost update detectable instead of silent: the
-  stale write matches 0 rows (UPDATE 0), and retrying against the new version
-  lands both deposits.
+  At READ COMMITTED, B's stale version predicate affects zero rows. B rolls
+  back, rereads, and reapplies its additive deposit; the final balance is
+  120 and version 3. Both writers check and advance the version.
 setup: |
   CREATE TABLE accounts (
     id int PRIMARY KEY, owner text NOT NULL, balance int NOT NULL, version int NOT NULL DEFAULT 1
@@ -10,7 +10,7 @@ setup: |
   INSERT INTO accounts VALUES (1, 'alice', 100, 1);
 sessions: [A, B]
 steps:
-  - note: Both app servers read the row — including its version — with no locks held.
+  - note: Both writers read the row and version without taking a FOR UPDATE row lock. Their transactions still acquire table locks.
   - A: BEGIN
   - A: SELECT balance, version FROM accounts WHERE id = 1
     capture: readA
@@ -31,7 +31,7 @@ steps:
     affected: 0
     comment: UPDATE 0 — the row moved on; B's deposit did NOT silently vanish
 
-  - note: "UPDATE 0 is the signal to retry: roll back, re-read, write against the new version."
+  - note: "For this additive deposit, B retries after UPDATE 0. Other applications may need to report or reconsider a stale edit; deletion can also yield zero rows."
   - B: ROLLBACK
   - B: BEGIN
   - B: SELECT balance, version FROM accounts WHERE id = 1

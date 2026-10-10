@@ -1,11 +1,12 @@
 title: Who is blocking whom
 claim: >-
-  One query on sys.innodb_lock_waits names the waiter and the blocker, and a
-  join to the processlist shows the blocker is sitting idle in transaction —
-  and killing it drains the queue.
+  On MySQL 8.4 InnoDB, sys.innodb_lock_waits identifies B waiting on A
+  while A's processlist command is Sleep. KILL CONNECTION A releases this
+  wait; B updates row 1 and observes A's row 2 change rolled back.
+  This one-waiter schedule does not establish recovery for every queue.
 setup: |
   CREATE TABLE accounts (id int PRIMARY KEY, balance int NOT NULL);
-  INSERT INTO accounts VALUES (1, 100);
+  INSERT INTO accounts VALUES (1, 100), (2, 100);
   CREATE PROCEDURE kill_session(sname VARCHAR(16))
   BEGIN
     DECLARE cid BIGINT;
@@ -21,7 +22,10 @@ steps:
   - note: A updates a row and then… goes to lunch. The transaction stays open.
   - A: BEGIN
   - A: UPDATE accounts SET balance = 200 WHERE id = 1
-    tl: UPDATE, then goes to lunch (idle in txn)
+    tl: UPDATE row 1, holds lock
+  - A: UPDATE accounts SET balance = 200 WHERE id = 2
+    affected: 1
+    tl: UPDATE row 2, then idle
 
   - B: UPDATE accounts SET balance = 300 WHERE id = 1
     blocks: p1
@@ -44,7 +48,8 @@ steps:
   - note: >-
       The culprit isn't running anything — command Sleep, no current statement,
       holding locks. sys.innodb_lock_waits even pre-writes the KILL statement
-      for you (sql_kill_blocking_connection). The fix is blunt:
+      for you (sql_kill_blocking_connection). This run ends the connection;
+      production use requires privileges and an application recovery decision.
   - M: CALL kill_session('A')
     tl: KILL A
 
@@ -53,4 +58,7 @@ steps:
     affected: 1
   - B: SELECT balance FROM accounts WHERE id = 1
     expect: [{ balance: 300 }]
-    comment: A's 200 rolled back with its death; B's 300 committed
+    comment: B's autocommit update completed
+  - B: SELECT balance FROM accounts WHERE id = 2
+    expect: [{ balance: 100 }]
+    comment: A's separate uncommitted change was rolled back
