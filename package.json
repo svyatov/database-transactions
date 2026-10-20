@@ -23,8 +23,8 @@
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
-    "@types/bun": "^1.4.2",
+    "@biomejs/biome": "^2.5.15",
+    "@types/bun": "^1.4.3",
     "vitepress": "^1.6.4"
   }
 }
